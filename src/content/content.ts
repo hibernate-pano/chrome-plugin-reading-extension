@@ -1,5 +1,5 @@
 import { Readability } from '@mozilla/readability';
-import { StorageKeys, getStorage } from '../storage/storage';
+import { StorageKeys, getStorage, StorageKeysType } from '../storage/storage';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -29,7 +29,24 @@ async function getSettings(): Promise<ReadingModeSettings> {
 }
 
 function applyStyles(settings: ReadingModeSettings) {
-  const style = document.createElement('style');
+  const styleId = 'reading-mode-style';
+  let style = document.getElementById(styleId);
+  
+  if (!style) {
+    style = document.createElement('style');
+    style.id = styleId;
+    document.head.appendChild(style);
+  }
+
+  // 更新所有图片的显示状态
+  const container = document.getElementById('reading-mode-container');
+  if (container) {
+    const images = container.getElementsByTagName('img');
+    for (const img of images) {
+      img.style.display = settings.showImages ? 'block' : 'none';
+    }
+  }
+
   style.textContent = `
     body {
       margin: 0;
@@ -51,13 +68,11 @@ function applyStyles(settings: ReadingModeSettings) {
       ${settings.firstLineIndent ? 'text-indent: 2em;' : ''}
     }
     #reading-mode-container img {
-      display: ${settings.showImages ? 'block' : 'none'};
       max-width: 100%;
       height: auto;
       margin: 1em auto;
     }
   `;
-  document.head.appendChild(style);
 }
 
 async function enableReadingMode() {
@@ -99,7 +114,7 @@ function disableReadingMode() {
   if (!originalContent) return;
   
   document.body.innerHTML = originalContent;
-  const style = document.querySelector('style');
+  const style = document.getElementById('reading-mode-style');
   if (style) {
     style.remove();
   }
@@ -123,4 +138,19 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     }
   }
   return true; // 保持消息通道开启
+});
+
+// 监听存储变化
+chrome.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName !== 'sync' || !isReadingMode) return;
+
+  const settingsKeys = Object.values(StorageKeys);
+  const hasSettingsChanged = Object.keys(changes).some(key => 
+    settingsKeys.includes(key as StorageKeysType)
+  );
+
+  if (hasSettingsChanged) {
+    const settings = await getSettings();
+    applyStyles(settings);
+  }
 }); 

@@ -22,17 +22,20 @@ const Switch: React.FC<SwitchProps> = ({
       <div className="relative">
         <input
           type="checkbox"
-          className="sr-only"
+          className="sr-only peer"
           checked={checked}
           onChange={handleChange}
         />
         <div
-          className={`w-10 h-6 bg-gray-200 rounded-full peer 
-            dark:bg-gray-700 peer-checked:after:translate-x-full 
-            after:content-[''] after:absolute after:top-[2px] 
-            after:left-[2px] after:bg-white after:rounded-full 
-            after:h-5 after:w-5 after:transition-all
-            ${checked ? 'bg-blue-600' : ''}`}
+          className={`block w-10 h-6 rounded-full 
+            bg-gray-200 dark:bg-gray-700
+            peer-checked:bg-blue-600
+            after:content-[''] after:absolute 
+            after:top-[2px] after:left-[2px]
+            after:bg-white after:rounded-full 
+            after:h-5 after:w-5
+            after:transition-all after:duration-300
+            peer-checked:after:translate-x-full`}
         />
       </div>
       {label && (
