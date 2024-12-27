@@ -1,0 +1,89 @@
+/* 阅读模式的基础样式 */
+#reading-mode-container {
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  padding: 20px;
+  margin: 0 auto;
+  max-width: 800px;
+}
+
+#reading-mode-container h1,
+#reading-mode-container h2,
+#reading-mode-container h3,
+#reading-mode-container h4,
+#reading-mode-container h5,
+#reading-mode-container h6 {
+  margin: 1.5em 0 0.5em;
+  line-height: 1.2;
+}
+
+#reading-mode-container p {
+  margin: 1em 0;
+}
+
+#reading-mode-container img {
+  max-width: 100%;
+  height: auto;
+  margin: 1em auto;
+  display: block;
+}
+
+#reading-mode-container a {
+  color: #0284c7;
+  text-decoration: none;
+}
+
+#reading-mode-container a:hover {
+  text-decoration: underline;
+}
+
+#reading-mode-container blockquote {
+  margin: 1em 0;
+  padding-left: 1em;
+  border-left: 4px solid #e5e7eb;
+  color: #4b5563;
+}
+
+#reading-mode-container pre,
+#reading-mode-container code {
+  font-family: ui-monospace, monospace;
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+}
+
+#reading-mode-container pre {
+  padding: 1em;
+  overflow-x: auto;
+}
+
+#reading-mode-container ul,
+#reading-mode-container ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+#reading-mode-container li {
+  margin: 0.5em 0;
+}
+
+/* 深色主题样式 */
+body.dark-theme #reading-mode-container {
+  color: #e5e7eb;
+  background-color: #1f2937;
+}
+
+body.dark-theme #reading-mode-container a {
+  color: #60a5fa;
+}
+
+body.dark-theme #reading-mode-container blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+
+body.dark-theme #reading-mode-container pre,
+body.dark-theme #reading-mode-container code {
+  background-color: #374151;
+  color: #e5e7eb;
+} 
