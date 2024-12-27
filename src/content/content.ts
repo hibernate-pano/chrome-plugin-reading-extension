@@ -258,6 +258,53 @@ function applyStyles(settings: ReadingModeSettings) {
   `;
 }
 
+function createFloatingButton() {
+  const button = document.createElement('button');
+  button.id = 'reading-mode-exit-button';
+  button.textContent = '退出阅读模式';
+  button.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    padding: 8px 16px;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    opacity: 0.8;
+  `;
+  
+  button.addEventListener('mouseover', () => {
+    button.style.opacity = '1';
+    button.style.transform = 'translateY(-2px)';
+    button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+  });
+  
+  button.addEventListener('mouseout', () => {
+    button.style.opacity = '0.8';
+    button.style.transform = 'translateY(0)';
+    button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+  });
+  
+  button.addEventListener('click', () => {
+    disableReadingMode();
+  });
+  
+  document.body.appendChild(button);
+}
+
+function removeFloatingButton() {
+  const button = document.getElementById('reading-mode-exit-button');
+  if (button) {
+    button.remove();
+  }
+}
+
 async function enableReadingMode() {
   if (!document.body) return;
   
@@ -268,7 +315,8 @@ async function enableReadingMode() {
 
   try {
     // 创建一个文档副本
-    const documentClone = document.cloneNode(true) as Document;
+    const documentClone = document.implementation.createHTMLDocument();
+    documentClone.documentElement.innerHTML = document.documentElement.innerHTML;
     
     // 处理所有图片，确保它们能正确加载
     const images = documentClone.getElementsByTagName('img');
@@ -334,6 +382,9 @@ async function enableReadingMode() {
     document.body.innerHTML = '';
     document.body.appendChild(container);
 
+    // 添加浮动退出按钮
+    createFloatingButton();
+
     // 再次处理新容器中的图片
     const containerImages = container.getElementsByTagName('img');
     for (const img of containerImages) {
@@ -374,6 +425,9 @@ async function enableReadingMode() {
 
 function disableReadingMode() {
   if (!originalContent) return;
+  
+  // 移除浮动退出按钮
+  removeFloatingButton();
   
   document.body.innerHTML = originalContent;
   const style = document.getElementById('reading-mode-style');
