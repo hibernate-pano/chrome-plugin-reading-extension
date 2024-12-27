@@ -8,8 +8,7 @@ export enum StorageKeys {
   FIRST_LINE_INDENT = 'firstLineIndent',
   SHOW_IMAGES = 'showImages',
   FONT_FAMILY = 'fontFamily',
-  BACKGROUND_COLOR = 'backgroundColor',
-  AUTO_SPACING = 'autoSpacing'
+  BACKGROUND_COLOR = 'backgroundColor'
 }
 
 export type StorageKeysType = `${StorageKeys}`;
@@ -76,8 +75,7 @@ export async function initializeDefaultSettings(): Promise<void> {
     [StorageKeys.FIRST_LINE_INDENT]: true,
     [StorageKeys.SHOW_IMAGES]: true,
     [StorageKeys.FONT_FAMILY]: "default",
-    [StorageKeys.BACKGROUND_COLOR]: "white",
-    [StorageKeys.AUTO_SPACING]: false
+    [StorageKeys.BACKGROUND_COLOR]: "white"
   };
 
   for (const [key, value] of Object.entries(defaultSettings)) {

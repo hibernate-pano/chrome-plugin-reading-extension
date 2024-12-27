@@ -3,7 +3,193 @@ import useAppStore, { initializeStore } from '../store';
 import Button from '../ui/components/Button';
 import Slider from '../ui/components/Slider';
 import Switch from '../ui/components/Switch';
-import { StorageKeys, setStorage, getStorage, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
+import { StorageKeys, setStorage, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, StorageKeysType } from '../storage/storage';
+
+// 字体标签映射
+function getFontFamilyLabel(key: keyof typeof FONT_FAMILIES): string {
+  const labels: Record<keyof typeof FONT_FAMILIES, string> = {
+    default: '系统默认',
+    songti: '宋体',
+    heiti: '黑体',
+    kaiti: '楷体',
+    pingfang: '苹方',
+    microsoft: '微软雅黑',
+  };
+  return labels[key];
+}
+
+// 背景颜色标签映射
+function getBackgroundColorLabel(key: keyof typeof BACKGROUND_COLORS): string {
+  const labels: Record<keyof typeof BACKGROUND_COLORS, string> = {
+    white: '纯白',
+    warm: '暖色',
+    cool: '冷色',
+    sepia: '复古',
+    cream: '奶油',
+    mint: '薄荷',
+    gray: '灰色',
+  };
+  return labels[key];
+}
+
+interface SettingsProps {
+  onSettingChange: (key: StorageKeysType, value: any) => void;
+  settings: {
+    theme: 'light' | 'dark';
+    fontSize: number;
+    lineHeight: number;
+    letterSpacing: number;
+    pageWidth: number;
+    textAlign: 'left' | 'center' | 'right';
+    firstLineIndent: boolean;
+    showImages: boolean;
+    fontFamily: keyof typeof FONT_FAMILIES;
+    backgroundColor: keyof typeof BACKGROUND_COLORS;
+  };
+}
+
+function Settings({ settings, onSettingChange }: SettingsProps) {
+  return (
+    <div className="settings-container">
+      <div className="settings-group">
+        <div className="settings-row">
+          <label>主题</label>
+          <select
+            value={settings.theme}
+            onChange={(e) => onSettingChange(StorageKeys.THEME, e.target.value)}
+          >
+            <option value="light">浅色</option>
+            <option value="dark">深色</option>
+          </select>
+        </div>
+
+        <div className="settings-row">
+          <label>字体</label>
+          <select
+            value={settings.fontFamily}
+            onChange={(e) => onSettingChange(StorageKeys.FONT_FAMILY, e.target.value)}
+          >
+            {Object.entries(FONT_FAMILIES).map(([key]) => (
+              <option key={key} value={key}>
+                {getFontFamilyLabel(key as keyof typeof FONT_FAMILIES)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="settings-row">
+          <label>背景颜色</label>
+          <select
+            value={settings.backgroundColor}
+            onChange={(e) => onSettingChange(StorageKeys.BACKGROUND_COLOR, e.target.value)}
+          >
+            {Object.entries(BACKGROUND_COLORS).map(([key]) => (
+              <option key={key} value={key}>
+                {getBackgroundColorLabel(key as keyof typeof BACKGROUND_COLORS)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="settings-row">
+          <label>字体大小</label>
+          <div className="slider-container">
+            <input
+              type="range"
+              min="12"
+              max="24"
+              value={settings.fontSize}
+              onChange={(e) => onSettingChange(StorageKeys.FONT_SIZE, parseInt(e.target.value))}
+            />
+            <span className="slider-value">{settings.fontSize}px</span>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <label>行高</label>
+          <div className="slider-container">
+            <input
+              type="range"
+              min="1"
+              max="2"
+              step="0.1"
+              value={settings.lineHeight}
+              onChange={(e) => onSettingChange(StorageKeys.LINE_HEIGHT, parseFloat(e.target.value))}
+            />
+            <span className="slider-value">{settings.lineHeight}</span>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <label>字间距</label>
+          <div className="slider-container">
+            <input
+              type="range"
+              min="0"
+              max="10"
+              value={settings.letterSpacing}
+              onChange={(e) => onSettingChange(StorageKeys.LETTER_SPACING, parseInt(e.target.value))}
+            />
+            <span className="slider-value">{settings.letterSpacing}px</span>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <label>页面宽度</label>
+          <div className="slider-container">
+            <input
+              type="range"
+              min="600"
+              max="1200"
+              step="50"
+              value={settings.pageWidth}
+              onChange={(e) => onSettingChange(StorageKeys.PAGE_WIDTH, parseInt(e.target.value))}
+            />
+            <span className="slider-value">{settings.pageWidth}px</span>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <label>对齐方式</label>
+          <select
+            value={settings.textAlign}
+            onChange={(e) => onSettingChange(StorageKeys.TEXT_ALIGN, e.target.value)}
+          >
+            <option value="left">左对齐</option>
+            <option value="center">居中</option>
+            <option value="right">右对齐</option>
+          </select>
+        </div>
+
+        <div className="settings-row">
+          <label>首行缩进</label>
+          <div className="toggle-switch">
+            <input
+              type="checkbox"
+              id="firstLineIndent"
+              checked={settings.firstLineIndent}
+              onChange={(e) => onSettingChange(StorageKeys.FIRST_LINE_INDENT, e.target.checked)}
+            />
+            <label htmlFor="firstLineIndent"></label>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <label>显示图片</label>
+          <div className="toggle-switch">
+            <input
+              type="checkbox"
+              id="showImages"
+              checked={settings.showImages}
+              onChange={(e) => onSettingChange(StorageKeys.SHOW_IMAGES, e.target.checked)}
+            />
+            <label htmlFor="showImages"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const Popup: React.FC = () => {
   const {
@@ -29,7 +215,6 @@ const Popup: React.FC = () => {
 
   const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
   const [backgroundColor, setBackgroundColor] = useState<keyof typeof BACKGROUND_COLORS>('white');
-  const [autoSpacing, setAutoSpacing] = useState(false);
 
   useEffect(() => {
     initializeStore();
@@ -40,9 +225,6 @@ const Popup: React.FC = () => {
       
       const savedBackgroundColor = await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR);
       if (savedBackgroundColor) setBackgroundColor(savedBackgroundColor);
-
-      const savedAutoSpacing = await getStorage<boolean>(StorageKeys.AUTO_SPACING);
-      if (savedAutoSpacing !== null) setAutoSpacing(savedAutoSpacing);
     };
     
     initializeSettings();
@@ -108,11 +290,6 @@ const Popup: React.FC = () => {
   const handleBackgroundColorChange = async (value: keyof typeof BACKGROUND_COLORS) => {
     setBackgroundColor(value);
     await setStorage(StorageKeys.BACKGROUND_COLOR, value);
-  };
-
-  const handleAutoSpacingChange = async (checked: boolean) => {
-    setAutoSpacing(checked);
-    await setStorage(StorageKeys.AUTO_SPACING, checked);
   };
 
   return (
@@ -234,14 +411,6 @@ const Popup: React.FC = () => {
               />
             ))}
           </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">字符间自动空格</span>
-          <Switch
-            checked={autoSpacing}
-            onChange={handleAutoSpacingChange}
-          />
         </div>
       </div>
     </div>
