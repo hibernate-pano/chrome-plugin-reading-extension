@@ -120,8 +120,8 @@ function applyStyles(settings: ReadingModeSettings) {
     body {
       margin: 0;
       padding: 20px;
-      background-color: ${BACKGROUND_COLORS[settings.backgroundColor]} !important;
-      color: ${settings.theme === 'light' ? '#000000' : '#eeeeee'};
+      background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
     }
     #reading-mode-container {
       max-width: ${settings.pageWidth}px;
@@ -131,7 +131,8 @@ function applyStyles(settings: ReadingModeSettings) {
       letter-spacing: ${settings.letterSpacing}px;
       text-align: ${settings.textAlign};
       font-family: ${FONT_FAMILIES[settings.fontFamily]};
-      background-color: ${BACKGROUND_COLORS[settings.backgroundColor]} !important;
+      background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
     }
     #reading-mode-container p {
       margin: 1em 0;
@@ -143,7 +144,8 @@ function applyStyles(settings: ReadingModeSettings) {
       margin: 1em auto;
     }
     .reading-mode-code {
-      background-color: ${settings.theme === 'light' ? '#f5f5f5' : '#2d2d2d'} !important;
+      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'} !important;
+      border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e0e0e0'};
       border-radius: 6px;
       padding: 1em;
       margin: 1em 0;
@@ -156,7 +158,7 @@ function applyStyles(settings: ReadingModeSettings) {
     
     .reading-mode-code code {
       display: block;
-      color: ${settings.theme === 'light' ? '#24292e' : '#e1e4e8'};
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#24292e'};
       background: none !important;
       padding: 0 !important;
       font-family: inherit;
@@ -172,13 +174,13 @@ function applyStyles(settings: ReadingModeSettings) {
     .token.prolog,
     .token.doctype,
     .token.cdata {
-      color: #8e908c;
+      color: ${settings.theme === 'dark' ? '#6a9955' : '#8e908c'};
       font-style: italic;
     }
     
     .token.operator,
     .token.punctuation {
-      color: ${settings.theme === 'light' ? '#666666' : '#a9a9a9'};
+      color: ${settings.theme === 'dark' ? '#d4d4d4' : '#666666'};
     }
     
     .token.property,
@@ -187,7 +189,7 @@ function applyStyles(settings: ReadingModeSettings) {
     .token.number,
     .token.constant,
     .token.symbol {
-      color: #e45649;
+      color: ${settings.theme === 'dark' ? '#b5cea8' : '#e45649'};
     }
     
     .token.selector,
@@ -195,26 +197,26 @@ function applyStyles(settings: ReadingModeSettings) {
     .token.string,
     .token.char,
     .token.builtin {
-      color: #50a14f;
+      color: ${settings.theme === 'dark' ? '#ce9178' : '#50a14f'};
     }
     
     .token.inserted {
-      color: #50a14f;
-      background: ${settings.theme === 'light' ? '#f0fff0' : '#1e3a1e'};
+      color: ${settings.theme === 'dark' ? '#b5cea8' : '#50a14f'};
+      background: ${settings.theme === 'dark' ? '#1e3a1e' : '#f0fff0'};
     }
     
     .token.deleted {
-      color: #e45649;
-      background: ${settings.theme === 'light' ? '#fff0f0' : '#3a1e1e'};
+      color: ${settings.theme === 'dark' ? '#f14c4c' : '#e45649'};
+      background: ${settings.theme === 'dark' ? '#3a1e1e' : '#fff0f0'};
     }
     
     .token.keyword,
     .token.variable {
-      color: #0184bc;
+      color: ${settings.theme === 'dark' ? '#569cd6' : '#0184bc'};
     }
     
     .token.function {
-      color: #c18401;
+      color: ${settings.theme === 'dark' ? '#dcdcaa' : '#c18401'};
     }
     
     .token.important,
@@ -228,8 +230,8 @@ function applyStyles(settings: ReadingModeSettings) {
     
     /* 行号样式 */
     .line-numbers .line-numbers-rows {
-      border-right: 1px solid #ddd;
-      background: ${settings.theme === 'light' ? '#f8f8f8' : '#1e1e1e'};
+      border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#ddd'};
+      background: ${settings.theme === 'dark' ? '#2d2d2d' : '#f8f8f8'};
     }
     
     /* 代码块工具栏 */
@@ -247,18 +249,30 @@ function applyStyles(settings: ReadingModeSettings) {
     }
     
     div.code-toolbar > .toolbar button {
-      background: ${settings.theme === 'light' ? '#f1f1f1' : '#2a2a2a'};
-      color: ${settings.theme === 'light' ? '#666' : '#ccc'};
+      background: ${settings.theme === 'dark' ? '#3d3d3d' : '#f1f1f1'};
+      color: ${settings.theme === 'dark' ? '#d4d4d4' : '#666'};
       padding: 4px 8px;
-      border: 1px solid ${settings.theme === 'light' ? '#ddd' : '#444'};
+      border: 1px solid ${settings.theme === 'dark' ? '#505050' : '#ddd'};
       border-radius: 3px;
       cursor: pointer;
       transition: all 0.2s;
     }
     
     div.code-toolbar > .toolbar button:hover {
-      background: ${settings.theme === 'light' ? '#e9e9e9' : '#3a3a3a'};
-      color: ${settings.theme === 'light' ? '#444' : '#fff'};
+      background: ${settings.theme === 'dark' ? '#505050' : '#e9e9e9'};
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#444'};
+    }
+
+    /* 链接样式 */
+    #reading-mode-container a {
+      color: ${settings.theme === 'dark' ? '#61afef' : '#0366d6'};
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    #reading-mode-container a:hover {
+      color: ${settings.theme === 'dark' ? '#88c6f6' : '#0451a5'};
+      text-decoration: underline;
     }
   `;
 }
