@@ -28,6 +28,21 @@ const Popup: React.FC = () => {
 
   useEffect(() => {
     initializeStore();
+    // 获取当前页面的阅读模式状态
+    chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+      if (tab.id) {
+        try {
+          const response = await chrome.tabs.sendMessage(tab.id, { 
+            action: 'GET_READING_MODE_STATE' 
+          });
+          if (response) {
+            setReadingMode(response.isReadingMode);
+          }
+        } catch (error) {
+          console.error('获取阅读模式状态时发生错误:', error);
+        }
+      }
+    });
   }, []);
 
   const toggleReadingMode = async () => {
