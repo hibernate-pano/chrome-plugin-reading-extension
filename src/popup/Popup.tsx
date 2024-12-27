@@ -124,7 +124,7 @@ const Popup: React.FC = () => {
           size="small"
           onClick={toggleReadingMode}
         >
-          {readingMode ? '退出阅读模式' : '进入阅读模式'}
+          阅读模式
         </Button>
       </div>
 
@@ -239,7 +239,6 @@ const Popup: React.FC = () => {
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">字符间自动空格</span>
           <Switch
-            label="字符间自动空格"
             checked={autoSpacing}
             onChange={handleAutoSpacingChange}
           />
