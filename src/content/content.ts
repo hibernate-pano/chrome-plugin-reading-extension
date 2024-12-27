@@ -14,6 +14,7 @@ import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 import 'prismjs/plugins/toolbar/prism-toolbar';
 import 'prismjs/plugins/toolbar/prism-toolbar.css';
 import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
+import pangu from 'pangu';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -26,6 +27,7 @@ interface ReadingModeSettings {
   showImages: boolean;
   fontFamily: keyof typeof FONT_FAMILIES;
   backgroundColor: keyof typeof BACKGROUND_COLORS;
+  autoSpacing: boolean;
 }
 
 let originalContent: string | null = null;
@@ -43,6 +45,7 @@ async function getSettings(): Promise<ReadingModeSettings> {
     showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? true,
     fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? 'default',
     backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? 'white',
+    autoSpacing: await getStorage<boolean>(StorageKeys.AUTO_SPACING) ?? false,
   };
 }
 
@@ -324,6 +327,33 @@ function removeFloatingButton() {
   }
 }
 
+async function applyAutoSpacing() {
+  const container = document.getElementById('reading-mode-container');
+  if (!container) return;
+
+  // 处理文本节点，但跳过代码块
+  const processNode = (node: Element) => {
+    if (node.tagName === 'PRE' || node.tagName === 'CODE') {
+      return; // 跳过代码块
+    }
+    
+    const childNodes = Array.from(node.childNodes);
+    childNodes.forEach(child => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        // 使用 pangu.js 处理文本
+        const spacedText = pangu.spacing(child.textContent || '');
+        if (child.textContent !== spacedText) {
+          child.textContent = spacedText;
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        processNode(child as Element);
+      }
+    });
+  };
+
+  processNode(container);
+}
+
 async function enableReadingMode() {
   if (!document.body) return;
   
@@ -396,6 +426,11 @@ async function enableReadingMode() {
     const container = document.createElement('div');
     container.id = 'reading-mode-container';
     container.innerHTML = article.content;
+
+    // 如果启用了自动空格，应用 pangu.js
+    if (settings.autoSpacing) {
+      await applyAutoSpacing();
+    }
 
     // 清空页面并添加阅读模式内容
     document.body.innerHTML = '';
@@ -495,6 +530,17 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 
   if (hasSettingsChanged) {
     const settings = await getSettings();
+    
+    // 如果自动空格设置发生变化，重新应用空格
+    if (changes[StorageKeys.AUTO_SPACING]) {
+      if (settings.autoSpacing) {
+        await applyAutoSpacing();
+      } else {
+        // 如果关闭了自动空格，重新加载内容
+        await enableReadingMode();
+      }
+    }
+    
     applyStyles(settings);
   }
 }); 

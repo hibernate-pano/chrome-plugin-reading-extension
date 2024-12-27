@@ -29,6 +29,7 @@ const Popup: React.FC = () => {
 
   const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
   const [backgroundColor, setBackgroundColor] = useState<keyof typeof BACKGROUND_COLORS>('white');
+  const [autoSpacing, setAutoSpacing] = useState(false);
 
   useEffect(() => {
     initializeStore();
@@ -39,6 +40,9 @@ const Popup: React.FC = () => {
       
       const savedBackgroundColor = await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR);
       if (savedBackgroundColor) setBackgroundColor(savedBackgroundColor);
+
+      const savedAutoSpacing = await getStorage<boolean>(StorageKeys.AUTO_SPACING);
+      if (savedAutoSpacing !== null) setAutoSpacing(savedAutoSpacing);
     };
     
     initializeSettings();
@@ -104,6 +108,11 @@ const Popup: React.FC = () => {
   const handleBackgroundColorChange = async (value: keyof typeof BACKGROUND_COLORS) => {
     setBackgroundColor(value);
     await setStorage(StorageKeys.BACKGROUND_COLOR, value);
+  };
+
+  const handleAutoSpacingChange = async (checked: boolean) => {
+    setAutoSpacing(checked);
+    await setStorage(StorageKeys.AUTO_SPACING, checked);
   };
 
   return (
@@ -225,6 +234,15 @@ const Popup: React.FC = () => {
               />
             ))}
           </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">字符间自动空格</span>
+          <Switch
+            label="字符间自动空格"
+            checked={autoSpacing}
+            onChange={handleAutoSpacingChange}
+          />
         </div>
       </div>
     </div>
