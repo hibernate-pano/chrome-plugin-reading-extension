@@ -111,7 +111,7 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
             <input
               type="range"
               min="1"
-              max="2"
+              max="3"
               step="0.1"
               value={settings.lineHeight}
               onChange={(e) => onSettingChange(StorageKeys.LINE_HEIGHT, parseFloat(e.target.value))}
@@ -126,7 +126,7 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
             <input
               type="range"
               min="0"
-              max="10"
+              max="3"
               value={settings.letterSpacing}
               onChange={(e) => onSettingChange(StorageKeys.LETTER_SPACING, parseInt(e.target.value))}
             />
@@ -327,7 +327,7 @@ const Popup: React.FC = () => {
         <Slider
           label="行高"
           min={1}
-          max={2}
+          max={3}
           step={0.1}
           value={lineHeight}
           onChange={setLineHeight}
@@ -336,7 +336,7 @@ const Popup: React.FC = () => {
         <Slider
           label="字间距"
           min={0}
-          max={2}
+          max={3}
           step={0.1}
           value={letterSpacing}
           onChange={setLetterSpacing}
