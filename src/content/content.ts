@@ -1,5 +1,19 @@
 import { Readability } from '@mozilla/readability';
 import { StorageKeys, getStorage, StorageKeysType } from '../storage/storage';
+import Prism from 'prismjs';
+import 'prismjs/themes/prism-tomorrow.css';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/plugins/line-numbers/prism-line-numbers';
+import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
+import 'prismjs/plugins/toolbar/prism-toolbar';
+import 'prismjs/plugins/toolbar/prism-toolbar.css';
+import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -38,12 +52,52 @@ function applyStyles(settings: ReadingModeSettings) {
     document.head.appendChild(style);
   }
 
-  // 更新所有图片的显示状态
+  // 更新所有图片的显示状态和代码块样式
   const container = document.getElementById('reading-mode-container');
   if (container) {
+    // 处理图片
     const images = container.getElementsByTagName('img');
     for (const img of images) {
       img.style.display = settings.showImages ? 'block' : 'none';
+      // 确保图片加载
+      if (settings.showImages && !img.src && img.dataset.src) {
+        img.src = img.dataset.src;
+      }
+    }
+
+    // 处理代码块
+    const preElements = container.getElementsByTagName('pre');
+    for (const pre of preElements) {
+      pre.classList.add('reading-mode-code', 'line-numbers');
+      
+      const code = pre.querySelector('code');
+      if (code) {
+        // 检查是否已经有语言类
+        const hasLanguageClass = Array.from(code.classList)
+          .some(cls => cls.startsWith('language-'));
+        
+        if (!hasLanguageClass) {
+          // 尝试从父元素获取语言信息
+          const preLanguage = pre.getAttribute('data-language') || 
+                            pre.className.match(/language-(\w+)/)?.[1];
+          
+          if (preLanguage) {
+            code.classList.add(`language-${preLanguage}`);
+          } else {
+            code.classList.add('language-plaintext');
+          }
+        }
+        
+        // 重新应用高亮
+        Prism.highlightElement(code);
+      } else {
+        const newCode = document.createElement('code');
+        newCode.classList.add('language-plaintext');
+        newCode.textContent = pre.textContent || '';
+        pre.textContent = '';
+        pre.appendChild(newCode);
+        Prism.highlightElement(newCode);
+      }
     }
   }
 
@@ -72,6 +126,124 @@ function applyStyles(settings: ReadingModeSettings) {
       height: auto;
       margin: 1em auto;
     }
+    .reading-mode-code {
+      background-color: ${settings.theme === 'light' ? '#f5f5f5' : '#2d2d2d'} !important;
+      border-radius: 6px;
+      padding: 1em;
+      margin: 1em 0;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9em;
+      line-height: 1.4;
+      position: relative;
+    }
+    
+    .reading-mode-code code {
+      display: block;
+      color: ${settings.theme === 'light' ? '#24292e' : '#e1e4e8'};
+      background: none !important;
+      padding: 0 !important;
+      font-family: inherit;
+      white-space: pre;
+    }
+    
+    /* Prism.js 样式增强 */
+    .token {
+      background: none !important;
+    }
+    
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata {
+      color: #8e908c;
+      font-style: italic;
+    }
+    
+    .token.operator,
+    .token.punctuation {
+      color: ${settings.theme === 'light' ? '#666666' : '#a9a9a9'};
+    }
+    
+    .token.property,
+    .token.tag,
+    .token.boolean,
+    .token.number,
+    .token.constant,
+    .token.symbol {
+      color: #e45649;
+    }
+    
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin {
+      color: #50a14f;
+    }
+    
+    .token.inserted {
+      color: #50a14f;
+      background: ${settings.theme === 'light' ? '#f0fff0' : '#1e3a1e'};
+    }
+    
+    .token.deleted {
+      color: #e45649;
+      background: ${settings.theme === 'light' ? '#fff0f0' : '#3a1e1e'};
+    }
+    
+    .token.keyword,
+    .token.variable {
+      color: #0184bc;
+    }
+    
+    .token.function {
+      color: #c18401;
+    }
+    
+    .token.important,
+    .token.bold {
+      font-weight: bold;
+    }
+    
+    .token.italic {
+      font-style: italic;
+    }
+    
+    /* 行号样式 */
+    .line-numbers .line-numbers-rows {
+      border-right: 1px solid #ddd;
+      background: ${settings.theme === 'light' ? '#f8f8f8' : '#1e1e1e'};
+    }
+    
+    /* 代码块工具栏 */
+    div.code-toolbar > .toolbar {
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    div.code-toolbar:hover > .toolbar {
+      opacity: 1;
+    }
+    
+    div.code-toolbar > .toolbar .toolbar-item {
+      margin-left: 6px;
+    }
+    
+    div.code-toolbar > .toolbar button {
+      background: ${settings.theme === 'light' ? '#f1f1f1' : '#2a2a2a'};
+      color: ${settings.theme === 'light' ? '#666' : '#ccc'};
+      padding: 4px 8px;
+      border: 1px solid ${settings.theme === 'light' ? '#ddd' : '#444'};
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    div.code-toolbar > .toolbar button:hover {
+      background: ${settings.theme === 'light' ? '#e9e9e9' : '#3a3a3a'};
+      color: ${settings.theme === 'light' ? '#444' : '#fff'};
+    }
   `;
 }
 
@@ -84,7 +256,25 @@ async function enableReadingMode() {
   }
 
   try {
-    const article = new Readability(document.cloneNode(true) as Document).parse();
+    // 创建一个文档副本
+    const documentClone = document.cloneNode(true) as Document;
+    
+    // 确保所有图片的 src 都被正确复制
+    const images = documentClone.getElementsByTagName('img');
+    for (const img of images) {
+      if (!img.src && img.dataset.src) {
+        img.src = img.dataset.src;
+      }
+      // 处理懒加载图片
+      if (img.getAttribute('loading') === 'lazy') {
+        img.removeAttribute('loading');
+      }
+    }
+
+    // 正确初始化 Readability
+    const reader = new Readability(documentClone);
+    const article = reader.parse();
+    
     if (!article) {
       console.error('无法解析页面内容');
       return;
@@ -103,6 +293,16 @@ async function enableReadingMode() {
 
     // 应用样式
     applyStyles(settings);
+    
+    // 高亮代码块
+    const codeBlocks = container.querySelectorAll('pre code');
+    codeBlocks.forEach(block => {
+      if (!block.classList.contains('language-')) {
+        block.classList.add('language-plaintext');
+      }
+      Prism.highlightElement(block);
+    });
+
     isReadingMode = true;
 
   } catch (error) {
@@ -130,12 +330,21 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       } else {
         enableReadingMode();
       }
-      sendResponse({ success: true, isReadingMode });
+      sendResponse({ 
+        success: true, 
+        isReadingMode,
+        buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+      });
     } catch (error) {
       console.error('处理消息时发生错误:', error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       sendResponse({ success: false, error: errorMessage });
     }
+  } else if (request.action === 'GET_READING_MODE_STATE') {
+    sendResponse({ 
+      isReadingMode,
+      buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+    });
   }
   return true; // 保持消息通道开启
 });
