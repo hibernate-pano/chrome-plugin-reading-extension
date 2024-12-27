@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import useAppStore, { initializeStore } from '../store';
 import Button from '../ui/components/Button';
 import Slider from '../ui/components/Slider';
 import Switch from '../ui/components/Switch';
+import { StorageKeys, setStorage, getStorage, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
 
 const Popup: React.FC = () => {
   const {
@@ -26,8 +27,22 @@ const Popup: React.FC = () => {
     setShowImages,
   } = useAppStore();
 
+  const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
+  const [backgroundColor, setBackgroundColor] = useState<keyof typeof BACKGROUND_COLORS>('white');
+
   useEffect(() => {
     initializeStore();
+    
+    const initializeSettings = async () => {
+      const savedFontFamily = await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY);
+      if (savedFontFamily) setFontFamily(savedFontFamily);
+      
+      const savedBackgroundColor = await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR);
+      if (savedBackgroundColor) setBackgroundColor(savedBackgroundColor);
+    };
+    
+    initializeSettings();
+    
     // 向 content script 请求当前阅读模式状态
     const getReadingModeState = async () => {
       try {
@@ -79,6 +94,16 @@ const Popup: React.FC = () => {
     } catch (error) {
       console.error('切换阅读模式时发生错误:', error);
     }
+  };
+
+  const handleFontFamilyChange = async (value: keyof typeof FONT_FAMILIES) => {
+    setFontFamily(value);
+    await setStorage(StorageKeys.FONT_FAMILY, value);
+  };
+
+  const handleBackgroundColorChange = async (value: keyof typeof BACKGROUND_COLORS) => {
+    setBackgroundColor(value);
+    await setStorage(StorageKeys.BACKGROUND_COLOR, value);
   };
 
   return (
@@ -145,7 +170,7 @@ const Popup: React.FC = () => {
           <select
             value={textAlign}
             onChange={(e) => setTextAlign(e.target.value as 'left' | 'center' | 'right')}
-            className="rounded-md border border-gray-300 py-1 px-2 text-sm"
+            className="w-24 rounded-md border border-gray-300 py-1 px-2 text-sm bg-white"
           >
             <option value="left">左对齐</option>
             <option value="center">居中</option>
@@ -168,9 +193,55 @@ const Popup: React.FC = () => {
             onChange={setShowImages}
           />
         </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">字体选择</span>
+          <select
+            value={fontFamily}
+            onChange={(e) => handleFontFamilyChange(e.target.value as keyof typeof FONT_FAMILIES)}
+            className="w-24 rounded-md border border-gray-300 py-1 px-2 text-sm bg-white"
+          >
+            <option value="default">系统默认</option>
+            <option value="songti">宋体</option>
+            <option value="heiti">黑体</option>
+            <option value="kaiti">楷体</option>
+            <option value="pingfang">苹方</option>
+            <option value="microsoft">微软雅黑</option>
+          </select>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">背景颜色</span>
+          <div className="flex gap-2">
+            {Object.entries(BACKGROUND_COLORS).map(([key, color]) => (
+              <button
+                key={key}
+                className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                  backgroundColor === key ? 'border-blue-600' : 'border-transparent'
+                }`}
+                style={{ backgroundColor: color }}
+                onClick={() => handleBackgroundColorChange(key as keyof typeof BACKGROUND_COLORS)}
+                title={getBackgroundColorName(key as keyof typeof BACKGROUND_COLORS)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
+
+function getBackgroundColorName(key: keyof typeof BACKGROUND_COLORS): string {
+  const nameMap: Record<keyof typeof BACKGROUND_COLORS, string> = {
+    white: '纯白',
+    warm: '暖色',
+    cool: '冷色',
+    sepia: '复古',
+    cream: '奶油',
+    mint: '薄荷',
+    gray: '灰色',
+  };
+  return nameMap[key];
+}
 
 export default Popup; 

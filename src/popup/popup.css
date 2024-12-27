@@ -1,0 +1,68 @@
+.setting-select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.setting-select:hover {
+  border-color: #1a73e8;
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.color-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.color-option {
+  width: 32px;
+  height: 32px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.color-option.active {
+  border-color: #1a73e8;
+}
+
+.color-option::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  transition: border-color 0.2s;
+}
+
+.color-option:focus {
+  outline: none;
+}
+
+.color-option:focus::after {
+  border-color: rgba(26, 115, 232, 0.5);
+}
+
+/* 确保弹窗有足够的宽度 */
+.popup-container {
+  min-width: 320px;
+} 

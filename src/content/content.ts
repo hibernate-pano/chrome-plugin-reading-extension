@@ -1,5 +1,5 @@
 import { Readability } from '@mozilla/readability';
-import { StorageKeys, getStorage, StorageKeysType } from '../storage/storage';
+import { StorageKeys, getStorage, StorageKeysType, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/components/prism-javascript';
@@ -24,6 +24,8 @@ interface ReadingModeSettings {
   textAlign: 'left' | 'center' | 'right';
   firstLineIndent: boolean;
   showImages: boolean;
+  fontFamily: keyof typeof FONT_FAMILIES;
+  backgroundColor: keyof typeof BACKGROUND_COLORS;
 }
 
 let originalContent: string | null = null;
@@ -39,6 +41,8 @@ async function getSettings(): Promise<ReadingModeSettings> {
     textAlign: await getStorage<'left' | 'center' | 'right'>(StorageKeys.TEXT_ALIGN) ?? 'left',
     firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? true,
     showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? true,
+    fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? 'default',
+    backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? 'white',
   };
 }
 
@@ -116,7 +120,7 @@ function applyStyles(settings: ReadingModeSettings) {
     body {
       margin: 0;
       padding: 20px;
-      background-color: ${settings.theme === 'light' ? '#ffffff' : '#222222'};
+      background-color: ${BACKGROUND_COLORS[settings.backgroundColor]} !important;
       color: ${settings.theme === 'light' ? '#000000' : '#eeeeee'};
     }
     #reading-mode-container {
@@ -126,7 +130,8 @@ function applyStyles(settings: ReadingModeSettings) {
       line-height: ${settings.lineHeight};
       letter-spacing: ${settings.letterSpacing}px;
       text-align: ${settings.textAlign};
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: ${FONT_FAMILIES[settings.fontFamily]};
+      background-color: ${BACKGROUND_COLORS[settings.backgroundColor]} !important;
     }
     #reading-mode-container p {
       margin: 1em 0;
@@ -471,7 +476,7 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 
   const settingsKeys = Object.values(StorageKeys);
   const hasSettingsChanged = Object.keys(changes).some(key => 
-    settingsKeys.includes(key as StorageKeysType)
+    settingsKeys.includes(key as any)
   );
 
   if (hasSettingsChanged) {
