@@ -130,15 +130,23 @@ function applyStyles(settings: ReadingModeSettings) {
   }
 
   style.textContent = `
+    /* 基础样式 */
     body {
       margin: 0;
-      padding: 20px;
+      padding: 0;
       background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
       color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+      transition: background-color 0.3s ease, color 0.3s ease;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
+
+    /* 阅读容器样式 */
     #reading-mode-container {
-      max-width: ${settings.pageWidth}px;
+      width: ${settings.pageWidth}px;
       margin: 0 auto;
+      padding: 2rem;
       font-size: ${settings.fontSize}px;
       line-height: ${settings.lineHeight};
       letter-spacing: ${settings.letterSpacing}px;
@@ -146,239 +154,166 @@ function applyStyles(settings: ReadingModeSettings) {
       font-family: ${FONT_FAMILIES[settings.fontFamily]};
       background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
       color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
-      padding: 2rem;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
     }
 
-    /* 标题样式 */
-    #reading-mode-container h1 {
-      font-size: 2em;
-      font-weight: 600;
-      margin: 1.5em 0 0.8em;
-      line-height: 1.3;
+    @media screen and (max-width: ${settings.pageWidth + 64}px) {
+      #reading-mode-container {
+        width: calc(100vw - 32px);
+        margin: 0 auto;
+      }
+    }
+
+    @media screen and (max-width: 600px) {
+      #reading-mode-container {
+        width: calc(100vw - 16px);
+        padding: 1rem;
+      }
+    }
+
+    /* 文章标题样式 */
+    #reading-mode-container h1:first-child {
+      font-size: 2.5em;
+      font-weight: 700;
+      margin: 0 0 1em;
+      line-height: 1.2;
       color: ${settings.theme === 'dark' ? '#ffffff' : '#1a1a1a'};
+      letter-spacing: -0.02em;
     }
 
+    /* 标题层级样式 */
     #reading-mode-container h2 {
-      font-size: 1.5em;
+      font-size: 1.75em;
       font-weight: 600;
-      margin: 1.4em 0 0.8em;
+      margin: 2em 0 0.8em;
       line-height: 1.3;
       color: ${settings.theme === 'dark' ? '#f0f0f0' : '#2c3e50'};
+      letter-spacing: -0.01em;
     }
 
     #reading-mode-container h3 {
-      font-size: 1.3em;
+      font-size: 1.4em;
       font-weight: 600;
-      margin: 1.3em 0 0.7em;
+      margin: 1.8em 0 0.7em;
       line-height: 1.3;
       color: ${settings.theme === 'dark' ? '#e0e0e0' : '#34495e'};
     }
 
-    #reading-mode-container h4 {
-      font-size: 1.2em;
-      font-weight: 600;
-      margin: 1.2em 0 0.6em;
-      line-height: 1.3;
-      color: ${settings.theme === 'dark' ? '#d0d0d0' : '#3c4858'};
-    }
-
-    #reading-mode-container h5 {
-      font-size: 1.1em;
-      font-weight: 600;
-      margin: 1.1em 0 0.5em;
-      line-height: 1.3;
-      color: ${settings.theme === 'dark' ? '#c0c0c0' : '#4a5568'};
-    }
-
-    #reading-mode-container h6 {
-      font-size: 1em;
-      font-weight: 600;
-      margin: 1em 0 0.5em;
-      line-height: 1.3;
-      color: ${settings.theme === 'dark' ? '#b0b0b0' : '#4a5568'};
-    }
-
     /* 段落样式 */
     #reading-mode-container p {
-      margin: 1em 0;
+      margin: 1.2em 0;
       ${settings.firstLineIndent ? 'text-indent: 2em;' : ''}
       line-height: ${settings.lineHeight};
+      opacity: 0.95;
     }
 
-    /* 列表样式 */
+    /* 列表样式优化 */
     #reading-mode-container ul,
     #reading-mode-container ol {
-      margin: 1em 0;
-      padding-left: 2em;
+      margin: 1.2em 0;
+      padding-left: 2.5em;
       line-height: ${settings.lineHeight};
-    }
-
-    #reading-mode-container ul {
-      list-style-type: disc;
-    }
-
-    #reading-mode-container ul ul {
-      list-style-type: circle;
-    }
-
-    #reading-mode-container ul ul ul {
-      list-style-type: square;
-    }
-
-    #reading-mode-container ol {
-      list-style-type: decimal;
-    }
-
-    #reading-mode-container ol ol {
-      list-style-type: lower-alpha;
-    }
-
-    #reading-mode-container ol ol ol {
-      list-style-type: lower-roman;
     }
 
     #reading-mode-container li {
-      margin: 0.5em 0;
-      padding-left: 0.5em;
+      margin: 0.6em 0;
+      padding-left: 0.3em;
     }
 
-    /* 引用样式 */
+    #reading-mode-container li::marker {
+      color: ${settings.theme === 'dark' ? '#808080' : '#666666'};
+    }
+
+    /* 引用块样式优化 */
     #reading-mode-container blockquote {
-      margin: 1.5em 0;
+      margin: 2em 0;
       padding: 1em 2em;
       border-left: 4px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
       background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f8f9fa'};
       color: ${settings.theme === 'dark' ? '#b0b0b0' : '#4a5568'};
       font-style: italic;
+      border-radius: 0.25em;
+      transition: all 0.3s ease;
     }
 
-    /* 链接样式 */
+    #reading-mode-container blockquote p {
+      margin: 0.5em 0;
+      text-indent: 0;
+    }
+
+    /* 链接样式优化 */
     #reading-mode-container a {
       color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
       text-decoration: none;
-      transition: color 0.2s;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid transparent;
     }
 
     #reading-mode-container a:hover {
       color: ${settings.theme === 'dark' ? '#93c5fd' : '#2563eb'};
-      text-decoration: underline;
+      border-bottom-color: currentColor;
     }
 
-    /* 图片样式 */
+    /* 图片容器样式 */
+    #reading-mode-container figure {
+      margin: 2em 0;
+      text-align: center;
+    }
+
+    #reading-mode-container figcaption {
+      margin-top: 0.8em;
+      font-size: 0.9em;
+      color: ${settings.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+      font-style: italic;
+    }
+
+    /* 图片样式优化 */
     #reading-mode-container img {
       max-width: 100%;
       height: auto;
-      margin: 1.5em auto;
+      margin: 0 auto;
       display: block;
-      border-radius: 4px;
-      box-shadow: ${settings.theme === 'dark' ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 4px 6px rgba(0, 0, 0, 0.1)'};
+      border-radius: 0.5em;
+      box-shadow: ${settings.theme === 'dark' ? 
+        '0 4px 6px rgba(0, 0, 0, 0.3)' : 
+        '0 4px 6px rgba(0, 0, 0, 0.1)'};
+      transition: all 0.3s ease;
     }
 
-    /* 表格样式 */
-    #reading-mode-container table {
-      width: 100%;
-      margin: 1.5em 0;
-      border-collapse: collapse;
-      border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
+    /* 水平分割线样式 */
+    #reading-mode-container hr {
+      margin: 2.5em 0;
+      border: none;
+      height: 1px;
+      background: ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
+      transition: background-color 0.3s ease;
     }
 
-    #reading-mode-container th,
-    #reading-mode-container td {
-      padding: 0.75em 1em;
-      border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
-    }
-
-    #reading-mode-container th {
-      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f8f9fa'};
-      font-weight: 600;
-    }
-
-    #reading-mode-container tr:nth-child(even) {
-      background-color: ${settings.theme === 'dark' ? '#262626' : '#f8f9fa'};
-    }
-
-    /* 文字效果样式 */
-    #reading-mode-container strong,
-    #reading-mode-container b {
-      font-weight: 600;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#000000'};
-    }
-
-    #reading-mode-container em,
-    #reading-mode-container i {
-      font-style: italic;
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
-    }
-
-    #reading-mode-container mark {
-      background-color: ${settings.theme === 'dark' ? '#4a5d7c' : '#fef3c7'};
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#000000'};
-      padding: 0.2em 0.4em;
-      border-radius: 0.2em;
-    }
-
-    #reading-mode-container del {
-      text-decoration: line-through;
-      color: ${settings.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-    }
-
-    #reading-mode-container ins {
-      text-decoration: underline;
-      color: ${settings.theme === 'dark' ? '#34d399' : '#059669'};
-      background-color: ${settings.theme === 'dark' ? '#064e3b1a' : '#ecfdf5'};
-      padding: 0.2em 0;
-    }
-
-    #reading-mode-container code:not(pre code) {
-      font-family: 'Fira Code', 'Consolas', monospace;
-      background-color: ${settings.theme === 'dark' ? '#374151' : '#f3f4f6'};
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
-      padding: 0.2em 0.4em;
-      border-radius: 0.2em;
-      font-size: 0.9em;
-      border: 1px solid ${settings.theme === 'dark' ? '#4b5563' : '#e5e7eb'};
-    }
-
-    #reading-mode-container kbd {
-      font-family: 'Fira Code', 'Consolas', monospace;
-      background-color: ${settings.theme === 'dark' ? '#374151' : '#f3f4f6'};
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
-      padding: 0.2em 0.4em;
-      border-radius: 0.3em;
-      font-size: 0.9em;
-      border: 1px solid ${settings.theme === 'dark' ? '#4b5563' : '#d1d5db'};
-      box-shadow: 0 1px 0 ${settings.theme === 'dark' ? '#4b5563' : '#d1d5db'};
-    }
-
-    #reading-mode-container small {
-      font-size: 0.875em;
-      color: ${settings.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-    }
-
-    #reading-mode-container sub,
-    #reading-mode-container sup {
-      font-size: 0.75em;
-      line-height: 0;
-      position: relative;
-      vertical-align: baseline;
-    }
-
-    #reading-mode-container sub {
-      bottom: -0.25em;
-    }
-
-    #reading-mode-container sup {
-      top: -0.5em;
-    }
-
-    #reading-mode-container abbr[title] {
-      text-decoration: underline dotted;
-      cursor: help;
-    }
-
+    /* 文字选择样式 */
     #reading-mode-container ::selection {
       background-color: ${settings.theme === 'dark' ? '#4a5d7c' : '#bfdbfe'};
       color: ${settings.theme === 'dark' ? '#ffffff' : '#1e40af'};
+    }
+
+    /* 滚动条样式 */
+    #reading-mode-container::-webkit-scrollbar {
+      width: 12px;
+    }
+
+    #reading-mode-container::-webkit-scrollbar-track {
+      background: ${settings.theme === 'dark' ? '#2d2d2d' : '#f1f1f1'};
+      border-radius: 6px;
+    }
+
+    #reading-mode-container::-webkit-scrollbar-thumb {
+      background: ${settings.theme === 'dark' ? '#404040' : '#c1c1c1'};
+      border-radius: 6px;
+      border: 3px solid ${settings.theme === 'dark' ? '#2d2d2d' : '#f1f1f1'};
+    }
+
+    #reading-mode-container::-webkit-scrollbar-thumb:hover {
+      background: ${settings.theme === 'dark' ? '#4a4a4a' : '#a1a1a1'};
     }
 
     /* 代码块和行号样式增强 */
@@ -492,6 +427,73 @@ function applyStyles(settings: ReadingModeSettings) {
       font-style: italic;
     }
   `;
+
+  // 创建浮动工具栏
+  const toolbar = document.createElement('div');
+  toolbar.id = 'reading-mode-toolbar';
+  toolbar.style.cssText = `
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#ffffff'};
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, ${settings.theme === 'dark' ? '0.4' : '0.1'});
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(-10px);
+  `;
+
+  // 添加工具栏到页面
+  document.body.appendChild(toolbar);
+
+  // 显示工具栏的动画
+  setTimeout(() => {
+    toolbar.style.opacity = '1';
+    toolbar.style.transform = 'translateY(0)';
+  }, 300);
+
+  // 监听滚动事件，自动隐藏/显示工具栏
+  let lastScrollY = window.scrollY;
+  let toolbarTimeout: number | undefined;
+
+  window.addEventListener('scroll', () => {
+    const currentScrollY = window.scrollY;
+    
+    // 清除之前的定时器
+    if (toolbarTimeout) {
+      clearTimeout(toolbarTimeout);
+    }
+
+    if (currentScrollY > lastScrollY) {
+      // 向下滚动，隐藏工具栏
+      toolbar.style.opacity = '0';
+      toolbar.style.transform = 'translateY(-10px)';
+    } else {
+      // 向上滚动，显示工具栏
+      toolbar.style.opacity = '1';
+      toolbar.style.transform = 'translateY(0)';
+    }
+
+    lastScrollY = currentScrollY;
+
+    // 3秒后自动隐藏工具栏
+    toolbarTimeout = window.setTimeout(() => {
+      toolbar.style.opacity = '0';
+      toolbar.style.transform = 'translateY(-10px)';
+    }, 3000);
+  });
+
+  // 鼠标移入工具栏时保持显示
+  toolbar.addEventListener('mouseenter', () => {
+    if (toolbarTimeout) {
+      clearTimeout(toolbarTimeout);
+    }
+    toolbar.style.opacity = '1';
+    toolbar.style.transform = 'translateY(0)';
+  });
 }
 
 function createFloatingButton() {
