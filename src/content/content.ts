@@ -136,7 +136,6 @@ function applyStyles(settings: ReadingModeSettings) {
       padding: 0;
       background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
       color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
-      transition: background-color 0.3s ease, color 0.3s ease;
       min-height: 100vh;
       display: flex;
       justify-content: center;
@@ -144,9 +143,10 @@ function applyStyles(settings: ReadingModeSettings) {
 
     /* 阅读容器样式 */
     #reading-mode-container {
-      width: min(${settings.pageWidth}px, calc(100vw - 300px));
-      margin-left: 250px;
+      box-sizing: border-box;
+      width: ${settings.pageWidth}px;
       padding: 2rem;
+      margin-left: 250px;
       font-size: ${settings.fontSize}px;
       line-height: ${settings.lineHeight};
       letter-spacing: ${settings.letterSpacing}px;
@@ -155,10 +155,9 @@ function applyStyles(settings: ReadingModeSettings) {
       background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
       color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
       transition: all 0.3s ease;
-      box-sizing: border-box;
-      flex: 0 1 auto;
     }
 
+    /* 响应式布局 */
     @media screen and (max-width: ${settings.pageWidth + 250}px) {
       #reading-mode-toc {
         transform: translateX(-100%);
@@ -170,7 +169,7 @@ function applyStyles(settings: ReadingModeSettings) {
       }
       
       #reading-mode-container {
-        width: min(${settings.pageWidth}px, calc(100vw - 4rem));
+        width: min(${settings.pageWidth}px, 100vw - 4rem);
         margin: 0 auto;
         padding: 2rem;
       }
@@ -744,7 +743,7 @@ async function enableReadingMode() {
     document.body.innerHTML = '';
     document.body.appendChild(container);
 
-    // 应用自动空格（在添加到 DOM ���后）
+    // 应用自动空格（在添加到 DOM 后）
     await applyAutoSpacing();
 
     // 生成目录（在应用样式之前）
