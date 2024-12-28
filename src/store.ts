@@ -11,6 +11,7 @@ interface AppState {
   textAlign: 'left' | 'center' | 'right';
   firstLineIndent: boolean;
   showImages: boolean;
+  showDirectory: boolean;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setFontSize: (fontSize: number) => Promise<void>;
   setReadingMode: (readingMode: boolean) => Promise<void>;
@@ -20,6 +21,7 @@ interface AppState {
   setTextAlign: (textAlign: 'left' | 'center' | 'right') => Promise<void>;
   setFirstLineIndent: (firstLineIndent: boolean) => Promise<void>;
   setShowImages: (showImages: boolean) => Promise<void>;
+  setShowDirectory: (showDirectory: boolean) => Promise<void>;
 }
 
 const useAppStore = create<AppState>((set) => ({
@@ -32,6 +34,7 @@ const useAppStore = create<AppState>((set) => ({
   textAlign: 'left',
   firstLineIndent: true,
   showImages: true,
+  showDirectory: true,
 
   setTheme: async (theme) => {
     await setStorage(StorageKeys.THEME, theme);
@@ -77,6 +80,11 @@ const useAppStore = create<AppState>((set) => ({
     await setStorage(StorageKeys.SHOW_IMAGES, showImages);
     set({ showImages });
   },
+
+  setShowDirectory: async (showDirectory) => {
+    await setStorage(StorageKeys.SHOW_DIRECTORY, showDirectory);
+    set({ showDirectory });
+  },
 }));
 
 // 初始化 store 的状态
@@ -90,6 +98,7 @@ export const initializeStore = async () => {
   const textAlign = await getStorage<'left' | 'center' | 'right'>(StorageKeys.TEXT_ALIGN) ?? 'left';
   const firstLineIndent = await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? true;
   const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? true;
+  const showDirectory = await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? true;
 
   useAppStore.setState({
     theme,
@@ -101,6 +110,7 @@ export const initializeStore = async () => {
     textAlign,
     firstLineIndent,
     showImages,
+    showDirectory,
   });
 };
 

@@ -7,6 +7,7 @@ export enum StorageKeys {
   TEXT_ALIGN = 'textAlign',
   FIRST_LINE_INDENT = 'firstLineIndent',
   SHOW_IMAGES = 'showImages',
+  SHOW_DIRECTORY = 'showDirectory',
   FONT_FAMILY = 'fontFamily',
   BACKGROUND_COLOR = 'backgroundColor'
 }
@@ -74,6 +75,7 @@ export async function initializeDefaultSettings(): Promise<void> {
     [StorageKeys.TEXT_ALIGN]: "left",
     [StorageKeys.FIRST_LINE_INDENT]: true,
     [StorageKeys.SHOW_IMAGES]: true,
+    [StorageKeys.SHOW_DIRECTORY]: true,
     [StorageKeys.FONT_FAMILY]: "default",
     [StorageKeys.BACKGROUND_COLOR]: "white"
   };

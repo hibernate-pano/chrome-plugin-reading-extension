@@ -202,6 +202,7 @@ const Popup: React.FC = () => {
     textAlign,
     firstLineIndent,
     showImages,
+    showDirectory,
     setTheme,
     setFontSize,
     setReadingMode,
@@ -211,6 +212,7 @@ const Popup: React.FC = () => {
     setTextAlign,
     setFirstLineIndent,
     setShowImages,
+    setShowDirectory,
   } = useAppStore();
 
   const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
@@ -377,6 +379,14 @@ const Popup: React.FC = () => {
           <Switch
             checked={showImages}
             onChange={setShowImages}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">显示目录</span>
+          <Switch
+            checked={showDirectory}
+            onChange={setShowDirectory}
           />
         </div>
 

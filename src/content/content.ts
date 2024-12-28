@@ -30,6 +30,7 @@ interface ReadingModeSettings {
   showImages: boolean;
   fontFamily: keyof typeof FONT_FAMILIES;
   backgroundColor: keyof typeof BACKGROUND_COLORS;
+  showDirectory: boolean;
 }
 
 let originalContent: string | null = null;
@@ -47,6 +48,7 @@ async function getSettings(): Promise<ReadingModeSettings> {
     showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? true,
     fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? 'default',
     backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? 'white',
+    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? true,
   };
 }
 
@@ -685,8 +687,10 @@ async function enableReadingMode() {
     // 应用自动空格（在添加到 DOM 后）
     await applyAutoSpacing();
 
-    // 生成目录（在应用样式之前）
-    generateTableOfContents(container);
+    // 根据设置决定是否生成目录
+    if (settings.showDirectory) {
+      generateTableOfContents(container);
+    }
 
     // 添加浮动退出按钮
     createFloatingButton();
@@ -789,14 +793,47 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (hasSettingsChanged) {
     const settings = await getSettings();
     applyStyles(settings);
+
+    // 处理目录的显示/隐藏
+    const tocElement = document.getElementById('reading-mode-toc');
+    if (changes[StorageKeys.SHOW_DIRECTORY]) {
+      if (changes[StorageKeys.SHOW_DIRECTORY].newValue) {
+        // 如果目录不存在且设置为显示，则创建目录
+        if (!tocElement) {
+          const container = document.getElementById('reading-mode-container');
+          if (container) {
+            generateTableOfContents(container);
+          }
+        } else {
+          // 如果目录存在，则显示
+          tocElement.style.display = 'block';
+        }
+      } else {
+        // 如果设置为隐藏，则隐藏目录
+        if (tocElement) {
+          tocElement.style.display = 'none';
+        }
+      }
+    }
   }
 });
 
-// 添加目录生成和处理的函数
+// 修改 generateTableOfContents 函数，添加显示状态的控制
 function generateTableOfContents(container: HTMLElement) {
+  // 如果已经存在目录，则移除
+  const existingToc = document.getElementById('reading-mode-toc');
+  if (existingToc) {
+    existingToc.remove();
+  }
+
   // 创建目录容器
   const tocContainer = document.createElement('div');
   tocContainer.id = 'reading-mode-toc';
+  
+  // 根据当前设置决定是否显示
+  getStorage<boolean>(StorageKeys.SHOW_DIRECTORY).then(showDirectory => {
+    tocContainer.style.display = showDirectory ? 'block' : 'none';
+  });
   
   // 添加目录标题
   const tocTitle = document.createElement('div');
