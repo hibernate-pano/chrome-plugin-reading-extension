@@ -19,6 +19,7 @@
     "@types/node": "^22.10.2",
     "@types/prismjs": "^1.26.5",
     "autoprefixer": "^10.4.20",
+    "highlightjs": "^9.16.2",
     "pangu": "^4.0.7",
     "postcss": "^8.4.49",
     "prismjs": "^1.29.0",

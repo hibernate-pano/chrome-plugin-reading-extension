@@ -87,42 +87,45 @@ function applyStyles(settings: ReadingModeSettings) {
     // 处理代码块
     const preElements = container.getElementsByTagName('pre');
     for (const pre of preElements) {
-      pre.classList.add('reading-mode-code', 'line-numbers');
-      console.log('找到 pre 元素:', pre);
-
-      const code = pre.querySelector('code');
-      if (code) {
-        console.log('找到 code 元素:', code);
-        // 检查是否已经有语言类
-        const hasLanguageClass = Array.from(code.classList)
-          .some(cls => cls.startsWith('language-'));
-        
-        if (!hasLanguageClass) {
-          // 尝试从父元素获取语言信息，优先使用 data-lang
-          const preLanguage = pre.getAttribute('data-lang') || pre.getAttribute('data-language') ||
-                            pre.className.match(/language-(\w+)/)?.[1];
-          
-          if (preLanguage) {
-            code.classList.add(`language-${preLanguage}`);
-            console.log('添加语言类:', `language-${preLanguage}`);
-          } else {
-            code.classList.add('language-plaintext');
-            console.log('添加默认语言类: language-plaintext');
-          }
-        }
-        
-        // 重新应用高亮
-        Prism.highlightElement(code);
-        console.log('执行 Prism.highlightElement:', code);
-      } else {
-        const newCode = document.createElement('code');
-        newCode.classList.add('language-plaintext');
-        newCode.textContent = pre.textContent || '';
+      // 确保 pre 元素有正确的类名
+      pre.classList.add('line-numbers');
+      
+      // 获取或创建 code 元素
+      let code = pre.querySelector('code');
+      if (!code) {
+        code = document.createElement('code');
+        code.textContent = pre.textContent || '';
         pre.textContent = '';
-        pre.appendChild(newCode);
-        Prism.highlightElement(newCode);
-        console.log('创建并高亮 code 元素:', newCode);
+        pre.appendChild(code);
       }
+
+      // 确保 code 元素有语言类
+      const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
+      if (!hasLanguageClass) {
+        const preLanguage = pre.getAttribute('data-lang') || 
+                          pre.getAttribute('data-language') ||
+                          pre.className.match(/language-(\w+)/)?.[1];
+        
+        code.classList.add(`language-${preLanguage || 'plaintext'}`);
+      }
+
+      // 确保代码内容被正确格式化
+      const codeContent = code.textContent || '';
+      const lineCount = (codeContent.match(/\n/g) || []).length + 1;
+      
+      // 添加行号容器（如果不存在）
+      if (!pre.querySelector('.line-numbers-rows')) {
+        const lineNumbersRows = document.createElement('span');
+        lineNumbersRows.className = 'line-numbers-rows';
+        for (let i = 0; i < lineCount; i++) {
+          const lineSpan = document.createElement('span');
+          lineNumbersRows.appendChild(lineSpan);
+        }
+        code.after(lineNumbersRows);
+      }
+
+      // 重新应用高亮
+      Prism.highlightElement(code);
     }
   }
 
@@ -153,30 +156,55 @@ function applyStyles(settings: ReadingModeSettings) {
       height: auto;
       margin: 1em auto;
     }
-    .reading-mode-code {
+
+    /* 代码块和行号样式增强 */
+    pre.line-numbers {
+      position: relative;
+      padding-left: 3.8em !important;
+      counter-reset: linenumber;
+      white-space: pre;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9em;
+      line-height: 1.4;
       background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'} !important;
       border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e0e0e0'};
       border-radius: 6px;
       padding: 1em;
       margin: 1em 0;
       overflow-x: auto;
-      font-family: 'Fira Code', 'Consolas', monospace;
-      font-size: 0.9em;
-      line-height: 1.4;
+    }
+
+    pre.line-numbers > code {
       position: relative;
-      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    
-    .reading-mode-code code {
-      display: block;
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#24292e'};
-      background: none !important;
-      padding: 0 !important;
+      white-space: inherit;
       font-family: inherit;
-      white-space: pre;
-      line-height: 1.6;
     }
-    
+
+    .line-numbers .line-numbers-rows {
+      position: absolute;
+      pointer-events: none;
+      top: 0;
+      left: -3.8em;
+      width: 3em;
+      letter-spacing: -1px;
+      border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#999'};
+      user-select: none;
+    }
+
+    .line-numbers-rows > span {
+      display: block;
+      counter-increment: linenumber;
+      pointer-events: none;
+    }
+
+    .line-numbers-rows > span:before {
+      content: counter(linenumber);
+      display: block;
+      padding-right: 0.8em;
+      text-align: right;
+      color: ${settings.theme === 'dark' ? '#666' : '#999'};
+    }
+
     /* Prism.js 样式增强 */
     .token {
       background: none !important;
@@ -238,60 +266,6 @@ function applyStyles(settings: ReadingModeSettings) {
     
     .token.italic {
       font-style: italic;
-    }
-    
-    /* 行号样式 */
-    .line-numbers .line-numbers-rows {
-      border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#ddd'};
-      background: ${settings.theme === 'dark' ? '#2d2d2d' : '#f8f8f8'};
-    }
-    
-    /* 代码块工具栏 */
-    div.code-toolbar > .toolbar {
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    
-    div.code-toolbar:hover > .toolbar {
-      opacity: 1;
-    }
-    
-    div.code-toolbar > .toolbar .toolbar-item {
-      margin-left: 6px;
-    }
-    
-    div.code-toolbar > .toolbar button {
-      background: ${settings.theme === 'dark' ? '#3d3d3d' : '#f1f1f1'};
-      color: ${settings.theme === 'dark' ? '#d4d4d4' : '#666'};
-      padding: 4px 8px;
-      border: 1px solid ${settings.theme === 'dark' ? '#505050' : '#ddd'};
-      border-radius: 3px;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-      background-color: rgba(0, 0, 0, 0.05);
-    }
-    
-    div.code-toolbar > .toolbar button:hover {
-      background: ${settings.theme === 'dark' ? '#505050' : '#e9e9e9'};
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#444'};
-    }
-
-    /* 链接样式 */
-    #reading-mode-container a {
-      color: ${settings.theme === 'dark' ? '#61afef' : '#0366d6'};
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    #reading-mode-container a:hover {
-      color: ${settings.theme === 'dark' ? '#88c6f6' : '#0451a5'};
-      text-decoration: underline;
-    }
-
-    .reading-mode-code .line-numbers-rows > span:before {
-      color: #999;
-      opacity: 0.7;
     }
   `;
 }
