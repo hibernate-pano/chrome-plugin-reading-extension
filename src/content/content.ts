@@ -297,6 +297,90 @@ function applyStyles(settings: ReadingModeSettings) {
       background-color: ${settings.theme === 'dark' ? '#262626' : '#f8f9fa'};
     }
 
+    /* 文字效果样式 */
+    #reading-mode-container strong,
+    #reading-mode-container b {
+      font-weight: 600;
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#000000'};
+    }
+
+    #reading-mode-container em,
+    #reading-mode-container i {
+      font-style: italic;
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+    }
+
+    #reading-mode-container mark {
+      background-color: ${settings.theme === 'dark' ? '#4a5d7c' : '#fef3c7'};
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#000000'};
+      padding: 0.2em 0.4em;
+      border-radius: 0.2em;
+    }
+
+    #reading-mode-container del {
+      text-decoration: line-through;
+      color: ${settings.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+    }
+
+    #reading-mode-container ins {
+      text-decoration: underline;
+      color: ${settings.theme === 'dark' ? '#34d399' : '#059669'};
+      background-color: ${settings.theme === 'dark' ? '#064e3b1a' : '#ecfdf5'};
+      padding: 0.2em 0;
+    }
+
+    #reading-mode-container code:not(pre code) {
+      font-family: 'Fira Code', 'Consolas', monospace;
+      background-color: ${settings.theme === 'dark' ? '#374151' : '#f3f4f6'};
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+      padding: 0.2em 0.4em;
+      border-radius: 0.2em;
+      font-size: 0.9em;
+      border: 1px solid ${settings.theme === 'dark' ? '#4b5563' : '#e5e7eb'};
+    }
+
+    #reading-mode-container kbd {
+      font-family: 'Fira Code', 'Consolas', monospace;
+      background-color: ${settings.theme === 'dark' ? '#374151' : '#f3f4f6'};
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+      padding: 0.2em 0.4em;
+      border-radius: 0.3em;
+      font-size: 0.9em;
+      border: 1px solid ${settings.theme === 'dark' ? '#4b5563' : '#d1d5db'};
+      box-shadow: 0 1px 0 ${settings.theme === 'dark' ? '#4b5563' : '#d1d5db'};
+    }
+
+    #reading-mode-container small {
+      font-size: 0.875em;
+      color: ${settings.theme === 'dark' ? '#9ca3af' : '#6b7280'};
+    }
+
+    #reading-mode-container sub,
+    #reading-mode-container sup {
+      font-size: 0.75em;
+      line-height: 0;
+      position: relative;
+      vertical-align: baseline;
+    }
+
+    #reading-mode-container sub {
+      bottom: -0.25em;
+    }
+
+    #reading-mode-container sup {
+      top: -0.5em;
+    }
+
+    #reading-mode-container abbr[title] {
+      text-decoration: underline dotted;
+      cursor: help;
+    }
+
+    #reading-mode-container ::selection {
+      background-color: ${settings.theme === 'dark' ? '#4a5d7c' : '#bfdbfe'};
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#1e40af'};
+    }
+
     /* 代码块和行号样式增强 */
     pre.line-numbers {
       position: relative;
