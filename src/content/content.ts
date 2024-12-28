@@ -426,6 +426,110 @@ function applyStyles(settings: ReadingModeSettings) {
     .token.italic {
       font-style: italic;
     }
+
+    /* 目录样式 */
+    #reading-mode-toc {
+      position: fixed;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 250px;
+      max-height: 80vh;
+      overflow-y: auto;
+      background-color: ${settings.theme === 'dark' ? '#2a2a2a' : '#ffffff'};
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      border-radius: 0 8px 8px 0;
+      padding: 20px;
+      font-size: 14px;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+    
+    #reading-mode-toc .toc-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid ${settings.theme === 'dark' ? '#404040' : '#eee'};
+      color: ${settings.theme === 'dark' ? '#fff' : '#333'};
+    }
+    
+    #reading-mode-toc .toc-empty {
+      color: ${settings.theme === 'dark' ? '#888' : '#999'};
+      font-style: italic;
+      text-align: center;
+      padding: 20px 0;
+    }
+    
+    #reading-mode-toc::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    #reading-mode-toc::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 2px;
+    }
+    
+    #reading-mode-toc ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    #reading-mode-toc li {
+      margin: 4px 0;
+      line-height: 1.4;
+    }
+    
+    #reading-mode-toc a {
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#333'};
+      text-decoration: none;
+      display: block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      border-left: 2px solid transparent;
+    }
+    
+    #reading-mode-toc a:hover {
+      background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
+      border-left-color: ${settings.theme === 'dark' ? '#666' : '#ddd'};
+    }
+    
+    #reading-mode-toc a.active {
+      background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
+      border-left-color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
+      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
+    }
+    
+    #reading-mode-toc .toc-level-1 { margin-left: 0; }
+    #reading-mode-toc .toc-level-2 { margin-left: 12px; }
+    #reading-mode-toc .toc-level-3 { margin-left: 24px; }
+    #reading-mode-toc .toc-level-4 { margin-left: 36px; }
+    #reading-mode-toc .toc-level-5 { margin-left: 48px; }
+    #reading-mode-toc .toc-level-6 { margin-left: 60px; }
+    
+    /* 调整阅读容器的边距，为目录留出空间 */
+    #reading-mode-container {
+      margin-left: 250px !important;
+      width: calc(${settings.pageWidth}px - 250px) !important;
+    }
+    
+    @media screen and (max-width: ${settings.pageWidth + 250}px) {
+      #reading-mode-toc {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      
+      #reading-mode-toc:hover {
+        transform: translateX(0);
+      }
+      
+      #reading-mode-container {
+        margin-left: 0 !important;
+        width: ${settings.pageWidth}px !important;
+      }
+    }
   `;
 
   // 创建浮动工具栏
@@ -631,6 +735,9 @@ async function enableReadingMode() {
     // 应用自动空格（在添加到 DOM 之后）
     await applyAutoSpacing();
 
+    // 生成目录（在应用样式之前）
+    generateTableOfContents(container);
+
     // 添加浮动退出按钮
     createFloatingButton();
 
@@ -677,6 +784,12 @@ function disableReadingMode() {
   
   // 移除浮动退出按钮
   removeFloatingButton();
+  
+  // 移除目录
+  const toc = document.getElementById('reading-mode-toc');
+  if (toc) {
+    toc.remove();
+  }
   
   document.body.innerHTML = originalContent;
   const style = document.getElementById('reading-mode-style');
@@ -727,4 +840,87 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
     const settings = await getSettings();
     applyStyles(settings);
   }
-}); 
+});
+
+// 添加目录生成和处理的函数
+function generateTableOfContents(container: HTMLElement) {
+  // 创建目录容器
+  const tocContainer = document.createElement('div');
+  tocContainer.id = 'reading-mode-toc';
+  
+  // 添加目录标题
+  const tocTitle = document.createElement('div');
+  tocTitle.className = 'toc-title';
+  tocTitle.textContent = '目录';
+  tocContainer.appendChild(tocTitle);
+  
+  // 获取所有标题元素
+  const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  const toc = document.createElement('ul');
+  
+  // 如果没有标题，显示提示信息
+  if (headings.length === 0) {
+    const noHeadings = document.createElement('div');
+    noHeadings.className = 'toc-empty';
+    noHeadings.textContent = '没有找到标题';
+    tocContainer.appendChild(noHeadings);
+    document.body.appendChild(tocContainer);
+    return;
+  }
+  
+  // 创建目录项
+  headings.forEach((heading, index) => {
+    const level = parseInt(heading.tagName[1]);
+    const li = document.createElement('li');
+    li.className = `toc-level-${level}`;
+    
+    // 为每个标题添加锚点
+    const id = `heading-${index}`;
+    heading.id = id;
+    
+    const link = document.createElement('a');
+    link.href = `#${id}`;
+    link.textContent = heading.textContent || `标题 ${index + 1}`;
+    link.onclick = (e) => {
+      e.preventDefault();
+      heading.scrollIntoView({ behavior: 'smooth' });
+      // 移除其他链接的激活状态
+      toc.querySelectorAll('a').forEach(a => a.classList.remove('active'));
+      // 添加当前链接的激活状态
+      link.classList.add('active');
+    };
+    
+    li.appendChild(link);
+    toc.appendChild(li);
+  });
+  
+  tocContainer.appendChild(toc);
+  document.body.appendChild(tocContainer);
+  
+  // 监听滚动事件，高亮当前可见的标题
+  let tocLinks = Array.from(toc.getElementsByTagName('a'));
+  let headingsPos = Array.from(headings).map(heading => ({
+    id: heading.id,
+    top: heading.getBoundingClientRect().top + window.pageYOffset
+  }));
+  
+  window.addEventListener('scroll', () => {
+    const scrollPos = window.pageYOffset;
+    let currentHeading = headingsPos[0];
+    
+    for (let i = 0; i < headingsPos.length; i++) {
+      if (scrollPos >= headingsPos[i].top - 100) {
+        currentHeading = headingsPos[i];
+      } else {
+        break;
+      }
+    }
+    
+    tocLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === `#${currentHeading.id}`) {
+        link.classList.add('active');
+      }
+    });
+  });
+} 
