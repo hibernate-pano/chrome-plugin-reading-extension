@@ -62,7 +62,7 @@ function applyStyles(settings: ReadingModeSettings) {
     document.head.appendChild(style);
   }
 
-  // 更新所有图片的显示状态和代码块样式
+  // 更新所有图片的显示状态
   const container = document.getElementById('reading-mode-container');
   if (container) {
     // 处理图片
@@ -657,11 +657,6 @@ async function enableReadingMode() {
       img.removeAttribute('data-lazy');
       img.removeAttribute('data-echo');
       img.classList.remove('lazyload', 'lazy');
-      
-      // 确保图片可见
-      img.style.display = 'block';
-      img.style.visibility = 'visible';
-      img.style.opacity = '1';
     }
 
     // 正确初始化 Readability
@@ -695,7 +690,7 @@ async function enableReadingMode() {
     // 添加浮动退出按钮
     createFloatingButton();
 
-    // 再次处理新容器中的图片
+    // 处理新容器中的图片
     const containerImages = container.getElementsByTagName('img');
     for (const img of containerImages) {
       // 设置图片加载事件监听
@@ -712,6 +707,10 @@ async function enableReadingMode() {
 
       // 根据设置显示或隐藏图片
       img.style.display = settings.showImages ? 'block' : 'none';
+      if (settings.showImages) {
+        img.style.visibility = 'visible';
+        img.style.opacity = '1';
+      }
     }
 
     // 应用样式
@@ -794,10 +793,35 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
     const settings = await getSettings();
     applyStyles(settings);
 
+    // 处理图片显示状态的变化
+    if (changes[StorageKeys.SHOW_IMAGES]) {
+      const container = document.getElementById('reading-mode-container');
+      if (container) {
+        const images = container.getElementsByTagName('img');
+        for (const img of images) {
+          img.style.display = settings.showImages ? 'block' : 'none';
+          
+          // 如果图片应该显示但还没有加载，尝试加载
+          if (settings.showImages) {
+            if (!img.src && img.dataset.src) {
+              img.src = img.dataset.src;
+            }
+            if (!img.src && img.getAttribute('data-original')) {
+              img.src = img.getAttribute('data-original')!;
+            }
+            // 移除可能阻止加载的属性
+            img.removeAttribute('loading');
+            img.style.visibility = 'visible';
+            img.style.opacity = '1';
+          }
+        }
+      }
+    }
+
     // 处理目录的显示/隐藏
-    const tocElement = document.getElementById('reading-mode-toc');
     if (changes[StorageKeys.SHOW_DIRECTORY]) {
-      if (changes[StorageKeys.SHOW_DIRECTORY].newValue) {
+      const tocElement = document.getElementById('reading-mode-toc');
+      if (settings.showDirectory) {
         // 如果目录不存在且设置为显示，则创建目录
         if (!tocElement) {
           const container = document.getElementById('reading-mode-container');
