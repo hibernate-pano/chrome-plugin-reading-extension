@@ -62,29 +62,56 @@ function applyStyles(settings: ReadingModeSettings) {
     document.head.appendChild(style);
   }
 
-  // 更新所有图片的显示状态
+  // 更新所有多媒体内容的显示状态
   const container = document.getElementById('reading-mode-container');
   if (container) {
-    // 处理图片
-    const images = container.getElementsByTagName('img');
-    for (const img of images) {
-      // 设置显示状态
-      img.style.display = settings.showImages ? 'block' : 'none';
-      
-      // 如果图片应该显示但还没有加载，尝试加载
-      if (settings.showImages) {
-        if (!img.src && img.dataset.src) {
-          img.src = img.dataset.src;
+    // 处理所有类型的多媒体元素
+    const mediaSelectors = [
+      'img',           // 普通图片
+      'svg',           // SVG图片
+      'video',         // 视频
+      'audio',         // 音频
+      'iframe',        // 嵌入式框架（如视频嵌入）
+      'canvas',        // 画布
+      'object',        // 嵌入式对象
+      'embed',         // 嵌入式内容
+      'picture',       // 响应式图片容器
+      'source'         // 媒体源
+    ];
+    
+    // 处理所有多媒体元素
+    mediaSelectors.forEach(selector => {
+      const elements = container.getElementsByTagName(selector);
+      for (const element of elements) {
+        // 设置显示状态
+        (element as HTMLElement).style.display = settings.showImages ? 'block' : 'none';
+        
+        if (settings.showImages) {
+          // 对于图片类型的特殊处理
+          if (element instanceof HTMLImageElement) {
+            // 处理懒加载
+            if (!element.src && element.dataset.src) {
+              element.src = element.dataset.src;
+            }
+            if (!element.src && element.getAttribute('data-original')) {
+              element.src = element.getAttribute('data-original')!;
+            }
+            // 移除可能阻止加载的属性
+            element.removeAttribute('loading');
+          }
+          (element as HTMLElement).style.visibility = 'visible';
+          (element as HTMLElement).style.opacity = '1';
         }
-        if (!img.src && img.getAttribute('data-original')) {
-          img.src = img.getAttribute('data-original')!;
-        }
-        // 移除可能阻止加载的属性
-        img.removeAttribute('loading');
-        img.style.visibility = 'visible';
-        img.style.opacity = '1';
       }
-    }
+    });
+
+    // 处理背景图片
+    const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
+    elementsWithBgImage.forEach(element => {
+      if (!settings.showImages) {
+        (element as HTMLElement).style.backgroundImage = 'none';
+      }
+    });
 
     // 处理代码块
     const preElements = container.getElementsByTagName('pre');
@@ -620,44 +647,60 @@ async function enableReadingMode() {
     const documentClone = document.implementation.createHTMLDocument();
     documentClone.documentElement.innerHTML = document.documentElement.innerHTML;
     
-    // 处理所有图片，确保它们能正确加载
-    const images = documentClone.getElementsByTagName('img');
-    for (const img of images) {
-      // 处理 data-src
-      if (!img.src && img.dataset.src) {
-        img.src = img.dataset.src;
-      }
-      
-      // 处理 data-original
-      if (!img.src && img.getAttribute('data-original')) {
-        img.src = img.getAttribute('data-original')!;
-      }
-      
-      // 处理其他常见的懒加载属性
-      const lazyAttributes = [
-        'data-lazy-src',
-        'data-lazy',
-        'data-echo',
-        'data-img',
-        'data-original-src'
-      ];
-      
-      for (const attr of lazyAttributes) {
-        if (!img.src && img.getAttribute(attr)) {
-          img.src = img.getAttribute(attr)!;
-          break;
+    // 处理所有多媒体元素，确保它们能正确加载
+    const mediaSelectors = [
+      'img',           // 普通图片
+      'svg',           // SVG图片
+      'video',         // 视频
+      'audio',         // 音频
+      'iframe',        // 嵌入式框架（如视频嵌入）
+      'canvas',        // 画布
+      'object',        // 嵌入式对象
+      'embed',         // 嵌入式内容
+      'picture',       // 响应式图片容器
+      'source'         // 媒体源
+    ];
+
+    // 处理所有多媒体元素
+    mediaSelectors.forEach(selector => {
+      const elements = documentClone.getElementsByTagName(selector);
+      for (const element of elements) {
+        if (element instanceof HTMLImageElement) {
+          // 处理图片的懒加载属性
+          if (!element.src && element.dataset.src) {
+            element.src = element.dataset.src;
+          }
+          if (!element.src && element.getAttribute('data-original')) {
+            element.src = element.getAttribute('data-original')!;
+          }
+          
+          // 处理其他常见的懒加载属性
+          const lazyAttributes = [
+            'data-lazy-src',
+            'data-lazy',
+            'data-echo',
+            'data-img',
+            'data-original-src'
+          ];
+          
+          for (const attr of lazyAttributes) {
+            if (!element.src && element.getAttribute(attr)) {
+              element.src = element.getAttribute(attr)!;
+              break;
+            }
+          }
+
+          // 移除懒加载相关属性
+          element.removeAttribute('loading');
+          element.removeAttribute('data-src');
+          element.removeAttribute('data-original');
+          element.removeAttribute('data-lazy-src');
+          element.removeAttribute('data-lazy');
+          element.removeAttribute('data-echo');
+          element.classList.remove('lazyload', 'lazy');
         }
       }
-
-      // 移除懒加载相关属性
-      img.removeAttribute('loading');
-      img.removeAttribute('data-src');
-      img.removeAttribute('data-original');
-      img.removeAttribute('data-lazy-src');
-      img.removeAttribute('data-lazy');
-      img.removeAttribute('data-echo');
-      img.classList.remove('lazyload', 'lazy');
-    }
+    });
 
     // 正确初始化 Readability
     const reader = new Readability(documentClone);
@@ -690,28 +733,40 @@ async function enableReadingMode() {
     // 添加浮动退出按钮
     createFloatingButton();
 
-    // 处理新容器中的图片
-    const containerImages = container.getElementsByTagName('img');
-    for (const img of containerImages) {
-      // 设置图片加载事件监听
-      img.addEventListener('error', function() {
-        // 如果加载失败，尝试其他可能的图片源
-        const originalSrc = img.getAttribute('data-original');
-        const lazySrc = img.getAttribute('data-lazy-src');
-        if (!img.src.includes(originalSrc || '') && originalSrc) {
-          img.src = originalSrc;
-        } else if (!img.src.includes(lazySrc || '') && lazySrc) {
-          img.src = lazySrc;
+    // 处理新容器中的所有多媒体元素
+    mediaSelectors.forEach(selector => {
+      const elements = container.getElementsByTagName(selector);
+      for (const element of elements) {
+        if (element instanceof HTMLImageElement) {
+          // 设置图片加载事件监听
+          element.addEventListener('error', function() {
+            // 如果加载失败，尝试其他可能的图片源
+            const originalSrc = element.getAttribute('data-original');
+            const lazySrc = element.getAttribute('data-lazy-src');
+            if (!element.src.includes(originalSrc || '') && originalSrc) {
+              element.src = originalSrc;
+            } else if (!element.src.includes(lazySrc || '') && lazySrc) {
+              element.src = lazySrc;
+            }
+          });
         }
-      });
 
-      // 根据设置显示或隐藏图片
-      img.style.display = settings.showImages ? 'block' : 'none';
-      if (settings.showImages) {
-        img.style.visibility = 'visible';
-        img.style.opacity = '1';
+        // 根据设置显示或隐藏多媒体元素
+        (element as HTMLElement).style.display = settings.showImages ? 'block' : 'none';
+        if (settings.showImages) {
+          (element as HTMLElement).style.visibility = 'visible';
+          (element as HTMLElement).style.opacity = '1';
+        }
       }
-    }
+    });
+
+    // 处理背景图片
+    const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
+    elementsWithBgImage.forEach(element => {
+      if (!settings.showImages) {
+        (element as HTMLElement).style.backgroundImage = 'none';
+      }
+    });
 
     // 应用样式
     applyStyles(settings);
@@ -793,28 +848,57 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
     const settings = await getSettings();
     applyStyles(settings);
 
-    // 处理图片显示状态的变化
+    // 处理多媒体内容显示状态的变化
     if (changes[StorageKeys.SHOW_IMAGES]) {
       const container = document.getElementById('reading-mode-container');
       if (container) {
-        const images = container.getElementsByTagName('img');
-        for (const img of images) {
-          img.style.display = settings.showImages ? 'block' : 'none';
-          
-          // 如果图片应该显示但还没有加载，尝试加载
-          if (settings.showImages) {
-            if (!img.src && img.dataset.src) {
-              img.src = img.dataset.src;
+        // 处理所有类型的多媒体元素
+        const mediaSelectors = [
+          'img',           // 普通图片
+          'svg',           // SVG图片
+          'video',         // 视频
+          'audio',         // 音频
+          'iframe',        // 嵌入式框架（如视频嵌入）
+          'canvas',        // 画布
+          'object',        // 嵌入式对象
+          'embed',         // 嵌入式内容
+          'picture',       // 响应式图片容器
+          'source'         // 媒体源
+        ];
+        
+        // 处理所有多媒体元素
+        mediaSelectors.forEach(selector => {
+          const elements = container.getElementsByTagName(selector);
+          for (const element of elements) {
+            // 设置显示状态
+            (element as HTMLElement).style.display = settings.showImages ? 'block' : 'none';
+            
+            if (settings.showImages) {
+              // 对于图片类型的特殊处理
+              if (element instanceof HTMLImageElement) {
+                // 处理懒加载
+                if (!element.src && element.dataset.src) {
+                  element.src = element.dataset.src;
+                }
+                if (!element.src && element.getAttribute('data-original')) {
+                  element.src = element.getAttribute('data-original')!;
+                }
+                // 移除可能阻止加载的属性
+                element.removeAttribute('loading');
+              }
+              (element as HTMLElement).style.visibility = 'visible';
+              (element as HTMLElement).style.opacity = '1';
             }
-            if (!img.src && img.getAttribute('data-original')) {
-              img.src = img.getAttribute('data-original')!;
-            }
-            // 移除可能阻止加载的属性
-            img.removeAttribute('loading');
-            img.style.visibility = 'visible';
-            img.style.opacity = '1';
           }
-        }
+        });
+
+        // 处理背景图片
+        const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
+        elementsWithBgImage.forEach(element => {
+          if (!settings.showImages) {
+            (element as HTMLElement).style.backgroundImage = 'none';
+          }
+        });
       }
     }
 
