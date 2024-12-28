@@ -155,6 +155,7 @@ function applyStyles(settings: ReadingModeSettings) {
       font-size: 0.9em;
       line-height: 1.4;
       position: relative;
+      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
     }
     
     .reading-mode-code code {
@@ -164,6 +165,7 @@ function applyStyles(settings: ReadingModeSettings) {
       padding: 0 !important;
       font-family: inherit;
       white-space: pre;
+      line-height: 1.6;
     }
     
     /* Prism.js 样式增强 */
@@ -257,6 +259,8 @@ function applyStyles(settings: ReadingModeSettings) {
       border-radius: 3px;
       cursor: pointer;
       transition: all 0.2s;
+      border: none;
+      background-color: rgba(0, 0, 0, 0.05);
     }
     
     div.code-toolbar > .toolbar button:hover {
@@ -274,6 +278,11 @@ function applyStyles(settings: ReadingModeSettings) {
     #reading-mode-container a:hover {
       color: ${settings.theme === 'dark' ? '#88c6f6' : '#0451a5'};
       text-decoration: underline;
+    }
+
+    .reading-mode-code .line-numbers-rows > span:before {
+      color: #999;
+      opacity: 0.7;
     }
   `;
 }
