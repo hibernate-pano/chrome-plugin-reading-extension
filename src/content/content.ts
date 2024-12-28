@@ -543,72 +543,11 @@ function applyStyles(settings: ReadingModeSettings) {
     }
   `;
 
-  // 创建浮动工具栏
-  const toolbar = document.createElement('div');
-  toolbar.id = 'reading-mode-toolbar';
-  toolbar.style.cssText = `
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    display: flex;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#ffffff'};
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, ${settings.theme === 'dark' ? '0.4' : '0.1'});
-    transition: all 0.3s ease;
-    opacity: 0;
-    transform: translateY(-10px);
-  `;
-
-  // 添加工具栏到页面
-  document.body.appendChild(toolbar);
-
-  // 显示工具栏的动画
-  setTimeout(() => {
-    toolbar.style.opacity = '1';
-    toolbar.style.transform = 'translateY(0)';
-  }, 300);
-
-  // 监听滚动事件，自动隐藏/显示工具栏
-  let lastScrollY = window.scrollY;
-  let toolbarTimeout: number | undefined;
-
-  window.addEventListener('scroll', () => {
-    const currentScrollY = window.scrollY;
-    
-    // 清除之前的定时器
-    if (toolbarTimeout) {
-      clearTimeout(toolbarTimeout);
-    }
-
-    if (currentScrollY > lastScrollY) {
-      // 向下滚动，隐藏工具栏
-      toolbar.style.opacity = '0';
-      toolbar.style.transform = 'translateY(-10px)';
-    } else {
-      // 向上滚动，显示工具栏
-      toolbar.style.opacity = '1';
-      toolbar.style.transform = 'translateY(0)';
-    }
-
-    lastScrollY = currentScrollY;
-
-    // 3秒后自动隐藏工具栏
-    toolbarTimeout = window.setTimeout(() => {
-      toolbar.style.opacity = '0';
-      toolbar.style.transform = 'translateY(-10px)';
-    }, 3000);
-  });
-
-  // 鼠标移入工具栏时保持显示
-  toolbar.addEventListener('mouseenter', () => {
-    if (toolbarTimeout) {
-      clearTimeout(toolbarTimeout);
-    }
-    toolbar.style.opacity = '1';
-    toolbar.style.transform = 'translateY(0)';
-  });
+  // 移除工具栏（如果存在）
+  const toolbar = document.getElementById('reading-mode-toolbar');
+  if (toolbar) {
+    toolbar.remove();
+  }
 }
 
 function createFloatingButton() {
