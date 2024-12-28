@@ -146,15 +146,155 @@ function applyStyles(settings: ReadingModeSettings) {
       font-family: ${FONT_FAMILIES[settings.fontFamily]};
       background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
       color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+      padding: 2rem;
     }
+
+    /* 标题样式 */
+    #reading-mode-container h1 {
+      font-size: 2em;
+      font-weight: 600;
+      margin: 1.5em 0 0.8em;
+      line-height: 1.3;
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#1a1a1a'};
+    }
+
+    #reading-mode-container h2 {
+      font-size: 1.5em;
+      font-weight: 600;
+      margin: 1.4em 0 0.8em;
+      line-height: 1.3;
+      color: ${settings.theme === 'dark' ? '#f0f0f0' : '#2c3e50'};
+    }
+
+    #reading-mode-container h3 {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin: 1.3em 0 0.7em;
+      line-height: 1.3;
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#34495e'};
+    }
+
+    #reading-mode-container h4 {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin: 1.2em 0 0.6em;
+      line-height: 1.3;
+      color: ${settings.theme === 'dark' ? '#d0d0d0' : '#3c4858'};
+    }
+
+    #reading-mode-container h5 {
+      font-size: 1.1em;
+      font-weight: 600;
+      margin: 1.1em 0 0.5em;
+      line-height: 1.3;
+      color: ${settings.theme === 'dark' ? '#c0c0c0' : '#4a5568'};
+    }
+
+    #reading-mode-container h6 {
+      font-size: 1em;
+      font-weight: 600;
+      margin: 1em 0 0.5em;
+      line-height: 1.3;
+      color: ${settings.theme === 'dark' ? '#b0b0b0' : '#4a5568'};
+    }
+
+    /* 段落样式 */
     #reading-mode-container p {
       margin: 1em 0;
       ${settings.firstLineIndent ? 'text-indent: 2em;' : ''}
+      line-height: ${settings.lineHeight};
     }
+
+    /* 列表样式 */
+    #reading-mode-container ul,
+    #reading-mode-container ol {
+      margin: 1em 0;
+      padding-left: 2em;
+      line-height: ${settings.lineHeight};
+    }
+
+    #reading-mode-container ul {
+      list-style-type: disc;
+    }
+
+    #reading-mode-container ul ul {
+      list-style-type: circle;
+    }
+
+    #reading-mode-container ul ul ul {
+      list-style-type: square;
+    }
+
+    #reading-mode-container ol {
+      list-style-type: decimal;
+    }
+
+    #reading-mode-container ol ol {
+      list-style-type: lower-alpha;
+    }
+
+    #reading-mode-container ol ol ol {
+      list-style-type: lower-roman;
+    }
+
+    #reading-mode-container li {
+      margin: 0.5em 0;
+      padding-left: 0.5em;
+    }
+
+    /* 引用样式 */
+    #reading-mode-container blockquote {
+      margin: 1.5em 0;
+      padding: 1em 2em;
+      border-left: 4px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
+      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f8f9fa'};
+      color: ${settings.theme === 'dark' ? '#b0b0b0' : '#4a5568'};
+      font-style: italic;
+    }
+
+    /* 链接样式 */
+    #reading-mode-container a {
+      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    #reading-mode-container a:hover {
+      color: ${settings.theme === 'dark' ? '#93c5fd' : '#2563eb'};
+      text-decoration: underline;
+    }
+
+    /* 图片样式 */
     #reading-mode-container img {
       max-width: 100%;
       height: auto;
-      margin: 1em auto;
+      margin: 1.5em auto;
+      display: block;
+      border-radius: 4px;
+      box-shadow: ${settings.theme === 'dark' ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 4px 6px rgba(0, 0, 0, 0.1)'};
+    }
+
+    /* 表格样式 */
+    #reading-mode-container table {
+      width: 100%;
+      margin: 1.5em 0;
+      border-collapse: collapse;
+      border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
+    }
+
+    #reading-mode-container th,
+    #reading-mode-container td {
+      padding: 0.75em 1em;
+      border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
+    }
+
+    #reading-mode-container th {
+      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f8f9fa'};
+      font-weight: 600;
+    }
+
+    #reading-mode-container tr:nth-child(even) {
+      background-color: ${settings.theme === 'dark' ? '#262626' : '#f8f9fa'};
     }
 
     /* 代码块和行号样式增强 */
