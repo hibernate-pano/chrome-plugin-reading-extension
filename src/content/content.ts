@@ -14,6 +14,9 @@ import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 import 'prismjs/plugins/toolbar/prism-toolbar';
 import 'prismjs/plugins/toolbar/prism-toolbar.css';
 import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-go';
 import pangu from 'pangu';
 
 interface ReadingModeSettings {
@@ -85,27 +88,32 @@ function applyStyles(settings: ReadingModeSettings) {
     const preElements = container.getElementsByTagName('pre');
     for (const pre of preElements) {
       pre.classList.add('reading-mode-code', 'line-numbers');
-      
+      console.log('找到 pre 元素:', pre);
+
       const code = pre.querySelector('code');
       if (code) {
+        console.log('找到 code 元素:', code);
         // 检查是否已经有语言类
         const hasLanguageClass = Array.from(code.classList)
           .some(cls => cls.startsWith('language-'));
         
         if (!hasLanguageClass) {
-          // 尝试从父元素获取语言信息
-          const preLanguage = pre.getAttribute('data-language') || 
+          // 尝试从父元素获取语言信息，优先使用 data-lang
+          const preLanguage = pre.getAttribute('data-lang') || pre.getAttribute('data-language') ||
                             pre.className.match(/language-(\w+)/)?.[1];
           
           if (preLanguage) {
             code.classList.add(`language-${preLanguage}`);
+            console.log('添加语言类:', `language-${preLanguage}`);
           } else {
             code.classList.add('language-plaintext');
+            console.log('添加默认语言类: language-plaintext');
           }
         }
         
         // 重新应用高亮
         Prism.highlightElement(code);
+        console.log('执行 Prism.highlightElement:', code);
       } else {
         const newCode = document.createElement('code');
         newCode.classList.add('language-plaintext');
@@ -113,6 +121,7 @@ function applyStyles(settings: ReadingModeSettings) {
         pre.textContent = '';
         pre.appendChild(newCode);
         Prism.highlightElement(newCode);
+        console.log('创建并高亮 code 元素:', newCode);
       }
     }
   }
