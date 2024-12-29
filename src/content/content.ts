@@ -1,5 +1,5 @@
 import { Readability } from '@mozilla/readability';
-import { StorageKeys, getStorage, StorageKeysType, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
+import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/components/prism-javascript';
@@ -36,7 +36,7 @@ interface ReadingModeSettings {
 let originalContent: string | null = null;
 let isReadingMode = false;
 
-async function getSettings(): Promise<ReadingModeSettings> {
+async function fetchSettings(): Promise<ReadingModeSettings> {
   return {
     theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? 'light',
     fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? 16,
@@ -52,111 +52,81 @@ async function getSettings(): Promise<ReadingModeSettings> {
   };
 }
 
+function handleMediaElements(container: HTMLElement | null, showImages: boolean) {
+  if (!container) return;
+  const mediaSelectors = [
+    'img', 'svg', 'video', 'audio', 'iframe',
+    'canvas', 'object', 'embed', 'picture', 'source'
+  ];
+  mediaSelectors.forEach(selector => {
+    const elements = container.getElementsByTagName(selector);
+    for (const element of elements) {
+      const htmlElement = element as HTMLElement;
+      htmlElement.style.display = showImages ? 'block' : 'none';
+      if (showImages && element instanceof HTMLImageElement) {
+        if (!element.src && element.dataset.src) element.src = element.dataset.src;
+        if (!element.src && element.getAttribute('data-original')) element.src = element.getAttribute('data-original')!;
+        element.removeAttribute('loading');
+        htmlElement.style.visibility = 'visible';
+        htmlElement.style.opacity = '1';
+      }
+    }
+  });
+  const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
+  elementsWithBgImage.forEach(element => {
+    if (!showImages) {
+      (element as HTMLElement).style.backgroundImage = 'none';
+    }
+  });
+}
+
+function handleCodeBlocks(container: HTMLElement | null, theme: 'light' | 'dark') {
+  if (!container) return;
+  const preElements = container.getElementsByTagName('pre');
+  for (const pre of preElements) {
+    pre.classList.add('line-numbers');
+    let code = pre.querySelector('code');
+    if (!code) {
+      code = document.createElement('code');
+      code.textContent = pre.textContent || '';
+      pre.textContent = '';
+      pre.appendChild(code);
+    }
+    const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
+    if (!hasLanguageClass) {
+      const preLanguage = pre.getAttribute('data-lang') ||
+        pre.getAttribute('data-language') ||
+        pre.className.match(/language-(\w+)/)?.[1];
+      code.classList.add(`language-${preLanguage || 'plaintext'}`);
+    }
+    const codeContent = code.textContent || '';
+    const lineCount = (codeContent.match(/\n/g) || []).length + 1;
+    if (!pre.querySelector('.line-numbers-rows')) {
+      const lineNumbersRows = document.createElement('span');
+      lineNumbersRows.className = 'line-numbers-rows';
+      for (let i = 0; i < lineCount; i++) {
+        const lineSpan = document.createElement('span');
+        lineNumbersRows.appendChild(lineSpan);
+      }
+      code.after(lineNumbersRows);
+    }
+    Prism.highlightElement(code);
+  }
+}
+
 function applyStyles(settings: ReadingModeSettings) {
   const styleId = 'reading-mode-style';
   let style = document.getElementById(styleId);
-  
+
   if (!style) {
     style = document.createElement('style');
     style.id = styleId;
     document.head.appendChild(style);
   }
 
-  // 更新所有多媒体内容的显示状态
   const container = document.getElementById('reading-mode-container');
-  if (container) {
-    // 处理所有类型的多媒体元素
-    const mediaSelectors = [
-      'img',           // 普通图片
-      'svg',           // SVG图片
-      'video',         // 视频
-      'audio',         // 音频
-      'iframe',        // 嵌入式框架（如视频嵌入）
-      'canvas',        // 画布
-      'object',        // 嵌入式对象
-      'embed',         // 嵌入式内容
-      'picture',       // 响应式图片容器
-      'source'         // 媒体源
-    ];
-    
-    // 处理所有多媒体元素
-    mediaSelectors.forEach(selector => {
-      const elements = container.getElementsByTagName(selector);
-      for (const element of elements) {
-        // 设置显示状态
-        (element as HTMLElement).style.display = settings.showImages ? 'block' : 'none';
-        
-        if (settings.showImages) {
-          // 对于图片类型的特殊处理
-          if (element instanceof HTMLImageElement) {
-            // 处理懒加载
-            if (!element.src && element.dataset.src) {
-              element.src = element.dataset.src;
-            }
-            if (!element.src && element.getAttribute('data-original')) {
-              element.src = element.getAttribute('data-original')!;
-            }
-            // 移除可能阻止加载的属性
-            element.removeAttribute('loading');
-          }
-          (element as HTMLElement).style.visibility = 'visible';
-          (element as HTMLElement).style.opacity = '1';
-        }
-      }
-    });
-
-    // 处理背景图片
-    const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
-    elementsWithBgImage.forEach(element => {
-      if (!settings.showImages) {
-        (element as HTMLElement).style.backgroundImage = 'none';
-      }
-    });
-
-    // 处理代码块
-    const preElements = container.getElementsByTagName('pre');
-    for (const pre of preElements) {
-      // 确保 pre 元素有正确的类名
-      pre.classList.add('line-numbers');
-      
-      // 获取或创建 code 元素
-      let code = pre.querySelector('code');
-      if (!code) {
-        code = document.createElement('code');
-        code.textContent = pre.textContent || '';
-        pre.textContent = '';
-        pre.appendChild(code);
-      }
-
-      // 确保 code 元素有语言类
-      const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
-      if (!hasLanguageClass) {
-        const preLanguage = pre.getAttribute('data-lang') || 
-                          pre.getAttribute('data-language') ||
-                          pre.className.match(/language-(\w+)/)?.[1];
-        
-        code.classList.add(`language-${preLanguage || 'plaintext'}`);
-      }
-
-      // 确保代码内容被正确格式化
-      const codeContent = code.textContent || '';
-      const lineCount = (codeContent.match(/\n/g) || []).length + 1;
-      
-      // 添加行号容器（如果不存在）
-      if (!pre.querySelector('.line-numbers-rows')) {
-        const lineNumbersRows = document.createElement('span');
-        lineNumbersRows.className = 'line-numbers-rows';
-        for (let i = 0; i < lineCount; i++) {
-          const lineSpan = document.createElement('span');
-          lineNumbersRows.appendChild(lineSpan);
-        }
-        code.after(lineNumbersRows);
-      }
-
-      // 重新应用高亮
-      Prism.highlightElement(code);
-    }
-  }
+  handleMediaElements(container, settings.showImages);
+  handleCodeBlocks(container, settings.theme);
 
   style.textContent = `
     /* 基础样式 */
@@ -192,11 +162,11 @@ function applyStyles(settings: ReadingModeSettings) {
         transform: translateX(-100%);
         transition: transform 0.3s ease;
       }
-      
+
       #reading-mode-toc:hover {
         transform: translateX(0);
       }
-      
+
       #reading-mode-container {
         width: min(${settings.pageWidth}px, 100vw - 4rem);
         margin: 0 auto;
@@ -315,8 +285,8 @@ function applyStyles(settings: ReadingModeSettings) {
       margin: 0 auto;
       display: block;
       border-radius: 0.5em;
-      box-shadow: ${settings.theme === 'dark' ? 
-        '0 4px 6px rgba(0, 0, 0, 0.3)' : 
+      box-shadow: ${settings.theme === 'dark' ?
+        '0 4px 6px rgba(0, 0, 0, 0.3)' :
         '0 4px 6px rgba(0, 0, 0, 0.1)'};
       transition: all 0.3s ease;
     }
@@ -636,149 +606,63 @@ async function applyAutoSpacing() {
 
 async function enableReadingMode() {
   if (!document.body) return;
-  
-  // 保存原始内容
+
   if (!originalContent) {
     originalContent = document.body.innerHTML;
   }
 
   try {
-    // 创建一个文档副本
     const documentClone = document.implementation.createHTMLDocument();
     documentClone.documentElement.innerHTML = document.documentElement.innerHTML;
-    
-    // 处理所有多媒体元素，确保它们能正确加载
-    const mediaSelectors = [
-      'img',           // 普通图片
-      'svg',           // SVG图片
-      'video',         // 视频
-      'audio',         // 音频
-      'iframe',        // 嵌入式框架（如视频嵌入）
-      'canvas',        // 画布
-      'object',        // 嵌入式对象
-      'embed',         // 嵌入式内容
-      'picture',       // 响应式图片容器
-      'source'         // 媒体源
-    ];
 
-    // 处理所有多媒体元素
-    mediaSelectors.forEach(selector => {
-      const elements = documentClone.getElementsByTagName(selector);
-      for (const element of elements) {
-        if (element instanceof HTMLImageElement) {
-          // 处理图片的懒加载属性
-          if (!element.src && element.dataset.src) {
-            element.src = element.dataset.src;
-          }
-          if (!element.src && element.getAttribute('data-original')) {
-            element.src = element.getAttribute('data-original')!;
-          }
-          
-          // 处理其他常见的懒加载属性
-          const lazyAttributes = [
-            'data-lazy-src',
-            'data-lazy',
-            'data-echo',
-            'data-img',
-            'data-original-src'
-          ];
-          
-          for (const attr of lazyAttributes) {
-            if (!element.src && element.getAttribute(attr)) {
-              element.src = element.getAttribute(attr)!;
-              break;
-            }
-          }
+    // 复用处理多媒体元素的函数，确保图片加载
+    handleMediaElements(documentClone, true);
 
-          // 移除懒加载相关属性
-          element.removeAttribute('loading');
-          element.removeAttribute('data-src');
-          element.removeAttribute('data-original');
-          element.removeAttribute('data-lazy-src');
-          element.removeAttribute('data-lazy');
-          element.removeAttribute('data-echo');
-          element.classList.remove('lazyload', 'lazy');
-        }
-      }
-    });
-
-    // 正确初始化 Readability
     const reader = new Readability(documentClone);
     const article = reader.parse();
-    
+
     if (!article) {
       console.error('无法解析页面内容');
       return;
     }
 
-    const settings = await getSettings();
-    
-    // 创建阅读模式容器
+    const settings = await fetchSettings();
+
     const container = document.createElement('div');
     container.id = 'reading-mode-container';
     container.innerHTML = article.content;
 
-    // 清空页面并添加阅读模式内容
     document.body.innerHTML = '';
     document.body.appendChild(container);
 
-    // 应用自动空格（在添加到 DOM 后）
     await applyAutoSpacing();
 
-    // 根据设置决定是否生成目录
     if (settings.showDirectory) {
       generateTableOfContents(container);
     }
 
-    // 添加浮动退出按钮
     createFloatingButton();
 
-    // 处理新容器中的所有多媒体元素
-    mediaSelectors.forEach(selector => {
-      const elements = container.getElementsByTagName(selector);
-      for (const element of elements) {
-        if (element instanceof HTMLImageElement) {
-          // 设置图片加载事件监听
-          element.addEventListener('error', function() {
-            // 如果加载失败，尝试其他可能的图片源
-            const originalSrc = element.getAttribute('data-original');
-            const lazySrc = element.getAttribute('data-lazy-src');
-            if (!element.src.includes(originalSrc || '') && originalSrc) {
-              element.src = originalSrc;
-            } else if (!element.src.includes(lazySrc || '') && lazySrc) {
-              element.src = lazySrc;
-            }
-          });
+    // 再次处理新容器中的多媒体元素，应用显示设置和处理加载错误
+    handleMediaElements(container, settings.showImages);
+    const images = container.getElementsByTagName('img');
+    for (const image of images) {
+      image.addEventListener('error', function () {
+        const originalSrc = this.getAttribute('data-original');
+        const lazySrc = this.getAttribute('data-lazy-src');
+        if (!this.src.includes(originalSrc || '') && originalSrc) {
+          this.src = originalSrc;
+        } else if (!this.src.includes(lazySrc || '') && lazySrc) {
+          this.src = lazySrc;
         }
-
-        // 根据设置显示或隐藏多媒体元素
-        (element as HTMLElement).style.display = settings.showImages ? 'block' : 'none';
-        if (settings.showImages) {
-          (element as HTMLElement).style.visibility = 'visible';
-          (element as HTMLElement).style.opacity = '1';
-        }
-      }
-    });
-
-    // 处理背景图片
-    const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
-    elementsWithBgImage.forEach(element => {
-      if (!settings.showImages) {
-        (element as HTMLElement).style.backgroundImage = 'none';
-      }
-    });
+      });
+    }
 
     // 应用样式
     applyStyles(settings);
-    
+
     // 高亮代码块
-    const codeBlocks = container.querySelectorAll('pre code');
-    codeBlocks.forEach(block => {
-      if (!block.classList.contains('language-')) {
-        block.classList.add('language-plaintext');
-      }
-      Prism.highlightElement(block);
-    });
+    handleCodeBlocks(container, settings.theme);
 
     isReadingMode = true;
 
@@ -840,84 +724,32 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (areaName !== 'sync' || !isReadingMode) return;
 
   const settingsKeys = Object.values(StorageKeys);
-  const hasSettingsChanged = Object.keys(changes).some(key => 
+  const hasSettingsChanged = Object.keys(changes).some(key =>
     settingsKeys.includes(key as any)
   );
 
   if (hasSettingsChanged) {
-    const settings = await getSettings();
+    const settings = await fetchSettings();
     applyStyles(settings);
 
-    // 处理多媒体内容显示状态的变化
+    // 使用提取的函数处理多媒体内容显示状态的变化
     if (changes[StorageKeys.SHOW_IMAGES]) {
       const container = document.getElementById('reading-mode-container');
-      if (container) {
-        // 处理所有类型的多媒体元素
-        const mediaSelectors = [
-          'img',           // 普通图片
-          'svg',           // SVG图片
-          'video',         // 视频
-          'audio',         // 音频
-          'iframe',        // 嵌入式框架（如视频嵌入）
-          'canvas',        // 画布
-          'object',        // 嵌入式对象
-          'embed',         // 嵌入式内容
-          'picture',       // 响应式图片容器
-          'source'         // 媒体源
-        ];
-        
-        // 处理所有多媒体元素
-        mediaSelectors.forEach(selector => {
-          const elements = container.getElementsByTagName(selector);
-          for (const element of elements) {
-            // 设置显示状态
-            (element as HTMLElement).style.display = settings.showImages ? 'block' : 'none';
-            
-            if (settings.showImages) {
-              // 对于图片类型的特殊处理
-              if (element instanceof HTMLImageElement) {
-                // 处理懒加载
-                if (!element.src && element.dataset.src) {
-                  element.src = element.dataset.src;
-                }
-                if (!element.src && element.getAttribute('data-original')) {
-                  element.src = element.getAttribute('data-original')!;
-                }
-                // 移除可能阻止加载的属性
-                element.removeAttribute('loading');
-              }
-              (element as HTMLElement).style.visibility = 'visible';
-              (element as HTMLElement).style.opacity = '1';
-            }
-          }
-        });
-
-        // 处理背景图片
-        const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
-        elementsWithBgImage.forEach(element => {
-          if (!settings.showImages) {
-            (element as HTMLElement).style.backgroundImage = 'none';
-          }
-        });
-      }
+      handleMediaElements(container, settings.showImages);
     }
 
-    // 处理目录的显示/隐藏
     if (changes[StorageKeys.SHOW_DIRECTORY]) {
       const tocElement = document.getElementById('reading-mode-toc');
       if (settings.showDirectory) {
-        // 如果目录不存在且设置为显示，则创建目录
         if (!tocElement) {
           const container = document.getElementById('reading-mode-container');
           if (container) {
             generateTableOfContents(container);
           }
         } else {
-          // 如果目录存在，则显示
           tocElement.style.display = 'block';
         }
       } else {
-        // 如果设置为隐藏，则隐藏目录
         if (tocElement) {
           tocElement.style.display = 'none';
         }
