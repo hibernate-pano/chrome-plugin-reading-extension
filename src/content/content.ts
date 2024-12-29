@@ -441,18 +441,17 @@ function applyStyles(settings: ReadingModeSettings) {
     #reading-mode-toc {
       position: fixed;
       left: 0;
-      top: 50%;
-      transform: translateY(-50%);
+      top: 0;
+      height: 100vh;
       width: 250px;
-      max-height: 80vh;
       overflow-y: auto;
       background-color: ${settings.theme === 'dark' ? '#2a2a2a' : '#ffffff'};
       box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-      border-radius: 0 8px 8px 0;
       padding: 20px;
       font-size: 14px;
       z-index: 1000;
       transition: all 0.3s ease;
+      border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
     }
     
     #reading-mode-toc .toc-title {
@@ -616,7 +615,7 @@ async function enableReadingMode() {
     documentClone.documentElement.innerHTML = document.documentElement.innerHTML;
 
     // 复用处理多媒体元素的函数，确保图片加载
-    handleMediaElements(documentClone, true);
+    handleMediaElements(documentClone.documentElement as HTMLElement, true);
 
     const reader = new Readability(documentClone);
     const article = reader.parse();
