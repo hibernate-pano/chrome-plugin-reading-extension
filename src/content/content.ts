@@ -1,7 +1,11 @@
 import { Readability } from '@mozilla/readability';
 import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 import Prism from 'prismjs';
-import 'prismjs/themes/prism-tomorrow.css';
+// 先导入主题样式
+import 'prismjs/themes/prism.css';
+import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
+import 'prismjs/plugins/toolbar/prism-toolbar.css';
+// 再导入语言支持
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-jsx';
@@ -9,14 +13,13 @@ import 'prismjs/components/prism-tsx';
 import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-markdown';
-import 'prismjs/plugins/line-numbers/prism-line-numbers';
-import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
-import 'prismjs/plugins/toolbar/prism-toolbar';
-import 'prismjs/plugins/toolbar/prism-toolbar.css';
-import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
 import 'prismjs/components/prism-python';
 import 'prismjs/components/prism-java';
 import 'prismjs/components/prism-go';
+// 最后导入插件
+import 'prismjs/plugins/line-numbers/prism-line-numbers';
+import 'prismjs/plugins/toolbar/prism-toolbar';
+import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
 import pangu from 'pangu';
 
 interface ReadingModeSettings {
@@ -87,19 +90,24 @@ function handleMediaElements(container: HTMLElement | null, showImages: boolean)
 function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings) {
   if (!container) return;
 
-  // 加载选中的代码主题
-  loadCodeTheme(settings.codeTheme);
-
   const preElements = container.getElementsByTagName('pre');
   for (const pre of preElements) {
+    // 添加行号类
     pre.classList.add('line-numbers');
+    
     let code = pre.querySelector('code');
     if (!code) {
       code = document.createElement('code');
-      code.textContent = pre.textContent || '';
+      code.textContent = pre.textContent;
       pre.textContent = '';
       pre.appendChild(code);
     }
+
+    // 设置代码字体
+    pre.style.fontFamily = 'Fira Code, Consolas, Monaco, monospace';
+    code.style.fontFamily = 'inherit';
+
+    // 确保代码块有语言类名
     const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
     if (!hasLanguageClass) {
       const preLanguage = pre.getAttribute('data-lang') ||
@@ -107,8 +115,238 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
         pre.className.match(/language-(\w+)/)?.[1];
       code.classList.add(`language-${preLanguage || 'plaintext'}`);
     }
+
+    // 重新高亮代码
     Prism.highlightElement(code);
   }
+}
+
+// 代码主题的样式映射
+const CODE_THEME_STYLES = {
+  'github': {
+    background: '#ffffff',
+    text: '#24292e',
+    selection: '#b3d4fc',
+    comment: '#6a737d',
+    punctuation: '#24292e',
+    keyword: '#d73a49',
+    function: '#6f42c1',
+    string: '#032f62',
+    number: '#005cc5',
+    class: '#22863a',
+    variable: '#24292e',
+  },
+  'one-dark': {
+    background: '#282c34',
+    text: '#abb2bf',
+    selection: '#3e4451',
+    comment: '#5c6370',
+    punctuation: '#abb2bf',
+    keyword: '#c678dd',
+    function: '#61afef',
+    string: '#98c379',
+    number: '#d19a66',
+    class: '#e5c07b',
+    variable: '#e06c75',
+  },
+  'one-light': {
+    background: '#fafafa',
+    text: '#383a42',
+    selection: '#e5e5e6',
+    comment: '#a0a1a7',
+    punctuation: '#383a42',
+    keyword: '#a626a4',
+    function: '#4078f2',
+    string: '#50a14f',
+    number: '#986801',
+    class: '#c18401',
+    variable: '#e45649',
+  },
+  'material-dark': {
+    background: '#263238',
+    text: '#eeffff',
+    selection: '#80cbc4',
+    comment: '#546e7a',
+    punctuation: '#89ddff',
+    keyword: '#c792ea',
+    function: '#82aaff',
+    string: '#c3e88d',
+    number: '#f78c6c',
+    class: '#ffcb6b',
+    variable: '#eeffff',
+  },
+  'material-light': {
+    background: '#fafafa',
+    text: '#90a4ae',
+    selection: '#80cbc4',
+    comment: '#90a4ae',
+    punctuation: '#39adb5',
+    keyword: '#7c4dff',
+    function: '#6182b8',
+    string: '#91b859',
+    number: '#f76d47',
+    class: '#f6a434',
+    variable: '#90a4ae',
+  },
+  'night-owl': {
+    background: '#011627',
+    text: '#d6deeb',
+    selection: '#1d3b53',
+    comment: '#637777',
+    punctuation: '#7fdbca',
+    keyword: '#c792ea',
+    function: '#82aaff',
+    string: '#ecc48d',
+    number: '#f78c6c',
+    class: '#ffcb8b',
+    variable: '#d7dbe0',
+  },
+  'dracula': {
+    background: '#282a36',
+    text: '#f8f8f2',
+    selection: '#44475a',
+    comment: '#6272a4',
+    punctuation: '#f8f8f2',
+    keyword: '#ff79c6',
+    function: '#50fa7b',
+    string: '#f1fa8c',
+    number: '#bd93f9',
+    class: '#8be9fd',
+    variable: '#f8f8f2',
+  },
+  'solarized-dark': {
+    background: '#002b36',
+    text: '#839496',
+    selection: '#073642',
+    comment: '#586e75',
+    punctuation: '#839496',
+    keyword: '#859900',
+    function: '#268bd2',
+    string: '#2aa198',
+    number: '#d33682',
+    class: '#b58900',
+    variable: '#b58900',
+  },
+  'solarized-light': {
+    background: '#fdf6e3',
+    text: '#657b83',
+    selection: '#eee8d5',
+    comment: '#93a1a1',
+    punctuation: '#657b83',
+    keyword: '#859900',
+    function: '#268bd2',
+    string: '#2aa198',
+    number: '#d33682',
+    class: '#b58900',
+    variable: '#b58900',
+  },
+} as const;
+
+// 生成代码主题的 CSS
+function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: ReadingModeSettings) {
+  const themeStyles = CODE_THEME_STYLES[theme] || CODE_THEME_STYLES['github'];
+  
+  return `
+    /* 代码块基础样式 */
+    pre.line-numbers {
+      background-color: ${themeStyles.background} !important;
+      color: ${themeStyles.text};
+      font-size: ${settings.codeFontSize}px !important;
+      line-height: 1.5;
+      padding: 1em;
+      margin: 1em 0;
+      border-radius: 8px;
+      overflow-x: auto;
+      position: relative;
+      padding-left: 3.8em !important;
+      counter-reset: linenumber;
+      border: 1px solid ${themeStyles.comment}40;
+      box-shadow: 0 2px 4px ${themeStyles.comment}20;
+    }
+
+    /* 行号容器样式 */
+    pre.line-numbers .line-numbers-rows {
+      position: absolute;
+      pointer-events: none;
+      top: 1em;
+      font-size: ${settings.codeFontSize}px !important;
+      left: 0;
+      width: 3em;
+      letter-spacing: -1px;
+      border-right: 1px solid ${themeStyles.comment}40;
+      user-select: none;
+    }
+
+    /* 行号样式 */
+    .line-numbers-rows > span {
+      display: block;
+      counter-increment: linenumber;
+      pointer-events: none;
+    }
+
+    .line-numbers-rows > span:before {
+      content: counter(linenumber);
+      color: ${themeStyles.comment}80;
+      display: block;
+      padding-right: 0.8em;
+      text-align: right;
+    }
+
+    /* 代码语法高亮 */
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata {
+      color: ${themeStyles.comment};
+      font-style: italic;
+    }
+
+    .token.punctuation {
+      color: ${themeStyles.punctuation};
+    }
+
+    .token.keyword,
+    .token.operator {
+      color: ${themeStyles.keyword};
+    }
+
+    .token.function {
+      color: ${themeStyles.function};
+    }
+
+    .token.string {
+      color: ${themeStyles.string};
+    }
+
+    .token.number {
+      color: ${themeStyles.number};
+    }
+
+    .token.class-name {
+      color: ${themeStyles.class};
+    }
+
+    .token.variable {
+      color: ${themeStyles.variable};
+    }
+
+    /* 代码选择样式 */
+    pre.line-numbers ::selection,
+    pre.line-numbers ::-moz-selection {
+      background: ${themeStyles.selection};
+    }
+
+    /* 内联代码样式 */
+    #reading-mode-container code:not(pre code) {
+      background-color: ${themeStyles.background}40;
+      color: ${themeStyles.keyword};
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-size: ${settings.codeFontSize}px !important;
+      font-family: 'Fira Code', Consolas, Monaco, monospace;
+      border: 1px solid ${themeStyles.comment}20;
+    }
+  `;
 }
 
 function applyStyles(settings: ReadingModeSettings) {
@@ -122,10 +360,17 @@ function applyStyles(settings: ReadingModeSettings) {
   }
 
   const container = document.getElementById('reading-mode-container');
+  
+  // 处理媒体元素
   handleMediaElements(container, settings.showImages);
+
+  // 处理代码块
   handleCodeBlocks(container, settings);
 
+  // 合并基础样式和代码主题样式
   style.textContent = `
+    ${generateCodeThemeStyles(settings.codeTheme, settings)}
+    
     /* 基础样式 */
     body {
       margin: 0;
@@ -321,130 +566,6 @@ function applyStyles(settings: ReadingModeSettings) {
 
     #reading-mode-container::-webkit-scrollbar-thumb:hover {
       background: ${settings.theme === 'dark' ? '#4a4a4a' : '#a1a1a1'};
-    }
-
-    /* 代码块和行号样式增强 */
-    pre.line-numbers {
-      position: relative;
-      padding-left: 3.8em !important;
-      counter-reset: linenumber;
-      white-space: pre;
-      font-family: 'Fira Code', 'Consolas', monospace;
-      font-size: ${settings.codeFontSize}px !important;
-      line-height: 1.4;
-      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'} !important;
-      border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e0e0e0'};
-      border-radius: 6px;
-      padding: 1em;
-      margin: 1em 0;
-      overflow-x: auto;
-    }
-
-    pre.line-numbers > code {
-      position: relative;
-      white-space: inherit;
-      font-family: inherit;
-      font-size: inherit !important;
-    }
-
-    .line-numbers .line-numbers-rows {
-      position: absolute;
-      pointer-events: none;
-      top: 0;
-      left: -3.8em;
-      width: 3em;
-      letter-spacing: -1px;
-      border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#999'};
-      user-select: none;
-      font-size: inherit !important;
-    }
-
-    .line-numbers-rows > span {
-      display: block;
-      counter-increment: linenumber;
-      pointer-events: none;
-    }
-
-    .line-numbers-rows > span:before {
-      content: counter(linenumber);
-      display: block;
-      padding-right: 0.8em;
-      text-align: right;
-      color: ${settings.theme === 'dark' ? '#666' : '#999'};
-    }
-
-    /* 内联代码样式 */
-    #reading-mode-container code:not(pre code) {
-      font-family: 'Fira Code', 'Consolas', monospace;
-      font-size: ${settings.codeFontSize}px !important;
-      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'};
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
-      padding: 0.2em 0.4em;
-      border-radius: 3px;
-      margin: 0 0.2em;
-    }
-
-    /* Prism.js 样式增强 */
-    .token {
-      background: none !important;
-    }
-    
-    .token.comment,
-    .token.prolog,
-    .token.doctype,
-    .token.cdata {
-      color: ${settings.theme === 'dark' ? '#6a9955' : '#8e908c'};
-      font-style: italic;
-    }
-    
-    .token.operator,
-    .token.punctuation {
-      color: ${settings.theme === 'dark' ? '#d4d4d4' : '#666666'};
-    }
-    
-    .token.property,
-    .token.tag,
-    .token.boolean,
-    .token.number,
-    .token.constant,
-    .token.symbol {
-      color: ${settings.theme === 'dark' ? '#b5cea8' : '#e45649'};
-    }
-    
-    .token.selector,
-    .token.attr-name,
-    .token.string,
-    .token.char,
-    .token.builtin {
-      color: ${settings.theme === 'dark' ? '#ce9178' : '#50a14f'};
-    }
-    
-    .token.inserted {
-      color: ${settings.theme === 'dark' ? '#b5cea8' : '#50a14f'};
-      background: ${settings.theme === 'dark' ? '#1e3a1e' : '#f0fff0'};
-    }
-    
-    .token.deleted {
-      color: ${settings.theme === 'dark' ? '#f14c4c' : '#e45649'};
-      background: ${settings.theme === 'dark' ? '#3a1e1e' : '#fff0f0'};
-    }
-    
-    .token.keyword,
-    .token.variable {
-      color: ${settings.theme === 'dark' ? '#569cd6' : '#0184bc'};
-    }
-    
-    .token.function {
-      color: ${settings.theme === 'dark' ? '#dcdcaa' : '#c18401'};
-    }
-    
-    .token.important,
-    .token.bold {
-      font-weight: bold;
-    }
-    
-    .token.italic {
-      font-style: italic;
     }
 
     /* 目录样式 */
@@ -692,8 +813,8 @@ async function enableReadingMode() {
     document.body.innerHTML = '';
     document.body.appendChild(container);
 
-    // 应用自动间距
-    await applyAutoSpacing();
+    // 应用样式
+    applyStyles(settings);
 
     // 生成目录（如果启用）
     if (settings.showDirectory) {
@@ -703,28 +824,8 @@ async function enableReadingMode() {
     // 创建退出按钮
     createFloatingButton();
 
-    // 处理媒体元素
-    handleMediaElements(container, settings.showImages);
-
-    // 处理图片加载错误
-    const images = container.getElementsByTagName('img');
-    for (const image of images) {
-      image.addEventListener('error', function () {
-        const originalSrc = this.getAttribute('data-original');
-        const lazySrc = this.getAttribute('data-lazy-src');
-        if (!this.src.includes(originalSrc || '') && originalSrc) {
-          this.src = originalSrc;
-        } else if (!this.src.includes(lazySrc || '') && lazySrc) {
-          this.src = lazySrc;
-        }
-      });
-    }
-
-    // 应用样式
-    applyStyles(settings);
-
-    // 处理代码块
-    handleCodeBlocks(container, settings);
+    // 应用自动间距
+    await applyAutoSpacing();
 
     isReadingMode = true;
 
@@ -935,32 +1036,4 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
       }
     });
   });
-}
-
-// 加载代码主题的样式
-function loadCodeTheme(theme: keyof typeof CODE_THEMES) {
-  const themeStyleId = 'prism-theme-style';
-  let styleElement = document.getElementById(themeStyleId) as HTMLLinkElement;
-  
-  if (!styleElement) {
-    styleElement = document.createElement('link') as HTMLLinkElement;
-    styleElement.id = themeStyleId;
-    styleElement.rel = 'stylesheet';
-    document.head.appendChild(styleElement);
-  }
-
-  // 根据主题名称加载对应的样式文件
-  const themeMap = {
-    'github': 'prism-github',
-    'one-dark': 'prism-one-dark',
-    'one-light': 'prism-one-light',
-    'material-dark': 'prism-material-dark',
-    'material-light': 'prism-material-light',
-    'night-owl': 'prism-night-owl',
-    'dracula': 'prism-dracula',
-    'solarized-dark': 'prism-solarized-dark',
-    'solarized-light': 'prism-solarized-light',
-  };
-
-  styleElement.href = `https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/${themeMap[theme]}.min.css`;
 } 
