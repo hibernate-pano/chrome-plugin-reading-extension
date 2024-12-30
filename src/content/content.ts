@@ -1037,3 +1037,26 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
     });
   });
 } 
+
+// 监听存储变化
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.lineHeight) {
+    const container = document.getElementById('reading-mode-container');
+    if (container) {
+      container.style.lineHeight = changes.lineHeight.newValue.toString();
+    }
+  }
+  // ... existing storage change handlers ...
+});
+
+// 初始化时应用行间距
+const initializeLineHeight = async () => {
+  const { lineHeight } = await chrome.storage.sync.get('lineHeight');
+  const container = document.getElementById('reading-mode-container');
+  if (container && lineHeight) {
+    container.style.lineHeight = lineHeight.toString();
+  }
+};
+
+// 在适当的时机调用初始化函数
+initializeLineHeight(); 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useAppStore, { initializeStore } from '../store';
 import Button from '../ui/components/Button';
-import Slider from '../ui/components/Slider';
+import { Slider } from '../ui/components/Slider';
 import Switch from '../ui/components/Switch';
 import { StorageKeys, setStorage, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES, StorageKeysType } from '../storage/storage';
 
@@ -92,75 +92,78 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
           </select>
         </div>
 
-        <div className="settings-row">
-          <label>字体大小</label>
-          <div className="slider-container">
-            <input
-              type="range"
-              min="12"
-              max="24"
-              value={settings.fontSize}
-              onChange={(e) => onSettingChange(StorageKeys.FONT_SIZE, parseInt(e.target.value))}
-            />
-            <span className="slider-value">{settings.fontSize}px</span>
+        <div className="space-y-2">
+          <Slider
+            label="字体大小"
+            value={settings.fontSize}
+            onChange={(value) => onSettingChange(StorageKeys.FONT_SIZE, value)}
+            min={12}
+            max={24}
+            step={1}
+            className="w-full"
+          />
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            当前值: {settings.fontSize}px
           </div>
         </div>
 
-        <div className="settings-row">
-          <label>代码字体大小</label>
-          <div className="slider-container">
-            <input
-              type="range"
-              min="12"
-              max="24"
-              value={settings.codeFontSize}
-              onChange={(e) => onSettingChange(StorageKeys.CODE_FONT_SIZE, parseInt(e.target.value))}
-            />
-            <span className="slider-value">{settings.codeFontSize}px</span>
+        <div className="space-y-2 mt-4">
+          <Slider
+            label="行间距"
+            value={settings.lineHeight}
+            onChange={(value) => onSettingChange(StorageKeys.LINE_HEIGHT, value)}
+            min={1}
+            max={3}
+            step={0.1}
+            className="w-full"
+          />
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            当前值: {settings.lineHeight.toFixed(1)}
           </div>
         </div>
 
-        <div className="settings-row">
-          <label>行高</label>
-          <div className="slider-container">
-            <input
-              type="range"
-              min="1"
-              max="3"
-              step="0.1"
-              value={settings.lineHeight}
-              onChange={(e) => onSettingChange(StorageKeys.LINE_HEIGHT, parseFloat(e.target.value))}
-            />
-            <span className="slider-value">{settings.lineHeight}</span>
+        <div className="space-y-2 mt-4">
+          <Slider
+            label="字间距"
+            value={settings.letterSpacing}
+            onChange={(value) => onSettingChange(StorageKeys.LETTER_SPACING, value)}
+            min={-2}
+            max={10}
+            step={0.5}
+            className="w-full"
+          />
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            当前值: {settings.letterSpacing}px
           </div>
         </div>
 
-        <div className="settings-row">
-          <label>字间距</label>
-          <div className="slider-container">
-            <input
-              type="range"
-              min="0"
-              max="3"
-              value={settings.letterSpacing}
-              onChange={(e) => onSettingChange(StorageKeys.LETTER_SPACING, parseInt(e.target.value))}
-            />
-            <span className="slider-value">{settings.letterSpacing}px</span>
+        <div className="space-y-2 mt-4">
+          <Slider
+            label="代码字体大小"
+            value={settings.codeFontSize}
+            onChange={(value) => onSettingChange(StorageKeys.CODE_FONT_SIZE, value)}
+            min={12}
+            max={20}
+            step={1}
+            className="w-full"
+          />
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            当前值: {settings.codeFontSize}px
           </div>
         </div>
 
-        <div className="settings-row">
-          <label>页面宽度</label>
-          <div className="slider-container">
-            <input
-              type="range"
-              min="600"
-              max="1200"
-              step="50"
-              value={settings.pageWidth}
-              onChange={(e) => onSettingChange(StorageKeys.PAGE_WIDTH, parseInt(e.target.value))}
-            />
-            <span className="slider-value">{settings.pageWidth}px</span>
+        <div className="space-y-2 mt-4">
+          <Slider
+            label="页面宽度"
+            value={settings.pageWidth}
+            onChange={(value) => onSettingChange(StorageKeys.PAGE_WIDTH, value)}
+            min={500}
+            max={1200}
+            step={50}
+            className="w-full"
+          />
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            当前值: {settings.pageWidth}px
           </div>
         </div>
 
@@ -242,7 +245,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, isSelected }) => (
   </div>
 );
 
-const Popup: React.FC = () => {
+export const Popup = () => {
   const {
     theme,
     fontSize,
@@ -436,32 +439,50 @@ const Popup: React.FC = () => {
             </select>
           </div>
 
-          <Slider
-            label="字体大小"
-            min={12}
-            max={24}
-            step={1}
-            value={fontSize}
-            onChange={setFontSize}
-          />
+          <div className="space-y-2">
+            <Slider
+              label="字体大小"
+              value={fontSize}
+              onChange={setFontSize}
+              min={12}
+              max={24}
+              step={1}
+              className="w-full"
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              当前值: {fontSize}px
+            </div>
+          </div>
 
-          <Slider
-            label="行高"
-            min={1}
-            max={3}
-            step={0.1}
-            value={lineHeight}
-            onChange={setLineHeight}
-          />
+          <div className="space-y-2 mt-4">
+            <Slider
+              label="行间距"
+              value={lineHeight}
+              onChange={setLineHeight}
+              min={1}
+              max={3}
+              step={0.1}
+              className="w-full"
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              当前值: {lineHeight.toFixed(1)}
+            </div>
+          </div>
 
-          <Slider
-            label="字间距"
-            min={0}
-            max={3}
-            step={0.1}
-            value={letterSpacing}
-            onChange={setLetterSpacing}
-          />
+          <div className="space-y-2 mt-4">
+            <Slider
+              label="字间距"
+              value={letterSpacing}
+              onChange={setLetterSpacing}
+              min={-2}
+              max={10}
+              step={0.5}
+              className="w-full"
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              当前值: {letterSpacing}px
+            </div>
+          </div>
         </div>
       </TabPanel>
 
@@ -483,28 +504,40 @@ const Popup: React.FC = () => {
             </select>
           </div>
 
-          <Slider
-            label="代码字体大小"
-            min={12}
-            max={24}
-            step={1}
-            value={codeFontSize}
-            onChange={setCodeFontSize}
-          />
+          <div className="space-y-2 mt-4">
+            <Slider
+              label="代码字体大小"
+              value={codeFontSize}
+              onChange={setCodeFontSize}
+              min={12}
+              max={20}
+              step={1}
+              className="w-full"
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              当前值: {codeFontSize}px
+            </div>
+          </div>
         </div>
       </TabPanel>
 
       {/* 布局设置面板 */}
       <TabPanel isSelected={selectedTab === 3}>
         <div className="space-y-4">
-          <Slider
-            label="页面宽度"
-            min={400}
-            max={1200}
-            step={50}
-            value={pageWidth}
-            onChange={setPageWidth}
-          />
+          <div className="space-y-2 mt-4">
+            <Slider
+              label="页面宽度"
+              value={pageWidth}
+              onChange={setPageWidth}
+              min={500}
+              max={1200}
+              step={50}
+              className="w-full"
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              当前值: {pageWidth}px
+            </div>
+          </div>
 
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">对齐方式</span>

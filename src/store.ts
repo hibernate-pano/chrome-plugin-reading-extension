@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { StorageKeys, getStorage, setStorage, CODE_THEMES } from './storage/storage';
+import { DEFAULT_LINE_HEIGHT } from './constants/options';
 
 interface AppState {
   theme: 'light' | 'dark';
@@ -34,7 +35,7 @@ const useAppStore = create<AppState>((set) => ({
   codeFontSize: 14,
   codeTheme: 'github',
   readingMode: false,
-  lineHeight: 1.5,
+  lineHeight: DEFAULT_LINE_HEIGHT,
   letterSpacing: 0,
   pageWidth: 800,
   textAlign: 'left',
@@ -122,7 +123,7 @@ export const initializeStore = async () => {
     codeFontSize: codeFontSize ?? 14,
     codeTheme: codeTheme ?? 'github',
     readingMode: false,
-    lineHeight: lineHeight ?? 1.5,
+    lineHeight: lineHeight ?? DEFAULT_LINE_HEIGHT,
     letterSpacing: letterSpacing ?? 0,
     pageWidth: pageWidth ?? 800,
     textAlign: textAlign ?? 'left',

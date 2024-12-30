@@ -1,3 +1,5 @@
+import { DEFAULT_LINE_HEIGHT } from '../constants/options';
+
 export enum StorageKeys {
   THEME = 'theme',
   FONT_SIZE = 'fontSize',
@@ -94,4 +96,14 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.SHOW_DIRECTORY, true);
   await setStorage(StorageKeys.FONT_FAMILY, 'default');
   await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
-} 
+}
+
+export interface StorageData {
+  lineHeight: number;
+  // ... existing fields ...
+}
+
+export const defaultStorage: StorageData = {
+  lineHeight: DEFAULT_LINE_HEIGHT,
+  // ... existing fields ...
+}; 
