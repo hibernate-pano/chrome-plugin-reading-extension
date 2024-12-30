@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { StorageKeys, getStorage, setStorage } from './storage/storage';
+import { StorageKeys, getStorage, setStorage, CODE_THEMES } from './storage/storage';
 
 interface AppState {
   theme: 'light' | 'dark';
   fontSize: number;
   codeFontSize: number;
+  codeTheme: keyof typeof CODE_THEMES;
   readingMode: boolean;
   lineHeight: number;
   letterSpacing: number;
@@ -16,6 +17,7 @@ interface AppState {
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setFontSize: (fontSize: number) => Promise<void>;
   setCodeFontSize: (codeFontSize: number) => Promise<void>;
+  setCodeTheme: (codeTheme: keyof typeof CODE_THEMES) => Promise<void>;
   setReadingMode: (readingMode: boolean) => Promise<void>;
   setLineHeight: (lineHeight: number) => Promise<void>;
   setLetterSpacing: (letterSpacing: number) => Promise<void>;
@@ -30,6 +32,7 @@ const useAppStore = create<AppState>((set) => ({
   theme: 'light',
   fontSize: 16,
   codeFontSize: 14,
+  codeTheme: 'github',
   readingMode: false,
   lineHeight: 1.5,
   letterSpacing: 0,
@@ -52,6 +55,11 @@ const useAppStore = create<AppState>((set) => ({
   setCodeFontSize: async (codeFontSize) => {
     await setStorage(StorageKeys.CODE_FONT_SIZE, codeFontSize);
     set({ codeFontSize });
+  },
+
+  setCodeTheme: async (codeTheme) => {
+    await setStorage(StorageKeys.CODE_THEME, codeTheme);
+    set({ codeTheme });
   },
 
   setReadingMode: async (readingMode) => {
@@ -99,6 +107,7 @@ export const initializeStore = async () => {
   const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
   const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
   const codeFontSize = await getStorage<number>(StorageKeys.CODE_FONT_SIZE);
+  const codeTheme = await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME);
   const lineHeight = await getStorage<number>(StorageKeys.LINE_HEIGHT);
   const letterSpacing = await getStorage<number>(StorageKeys.LETTER_SPACING);
   const pageWidth = await getStorage<number>(StorageKeys.PAGE_WIDTH);
@@ -111,6 +120,7 @@ export const initializeStore = async () => {
     theme: theme ?? 'light',
     fontSize: fontSize ?? 16,
     codeFontSize: codeFontSize ?? 14,
+    codeTheme: codeTheme ?? 'github',
     readingMode: false,
     lineHeight: lineHeight ?? 1.5,
     letterSpacing: letterSpacing ?? 0,

@@ -10,7 +10,8 @@ export enum StorageKeys {
   SHOW_DIRECTORY = 'showDirectory',
   FONT_FAMILY = 'fontFamily',
   BACKGROUND_COLOR = 'backgroundColor',
-  CODE_FONT_SIZE = 'codeFontSize'
+  CODE_FONT_SIZE = 'codeFontSize',
+  CODE_THEME = 'codeTheme'
 }
 
 export type StorageKeysType = `${StorageKeys}`;
@@ -34,6 +35,19 @@ export const BACKGROUND_COLORS = {
   cream: '#fff9e9',
   mint: '#e9f7ef',
   gray: '#f5f5f5',
+} as const;
+
+// 预定义的代码主题选项
+export const CODE_THEMES = {
+  github: 'GitHub',
+  'one-dark': 'One Dark',
+  'one-light': 'One Light',
+  'material-dark': 'Material Dark',
+  'material-light': 'Material Light',
+  'night-owl': 'Night Owl',
+  dracula: 'Dracula',
+  'solarized-dark': 'Solarized Dark',
+  'solarized-light': 'Solarized Light',
 } as const;
 
 export async function getStorage<T>(
@@ -70,6 +84,7 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.THEME, 'light');
   await setStorage(StorageKeys.FONT_SIZE, 16);
   await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
+  await setStorage(StorageKeys.CODE_THEME, 'github');
   await setStorage(StorageKeys.LINE_HEIGHT, 1.5);
   await setStorage(StorageKeys.LETTER_SPACING, 0);
   await setStorage(StorageKeys.PAGE_WIDTH, 800);

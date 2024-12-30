@@ -1,5 +1,5 @@
 import { Readability } from '@mozilla/readability';
-import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
+import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/components/prism-javascript';
@@ -23,6 +23,7 @@ interface ReadingModeSettings {
   theme: 'light' | 'dark';
   fontSize: number;
   codeFontSize: number;
+  codeTheme: keyof typeof CODE_THEMES;
   lineHeight: number;
   letterSpacing: number;
   pageWidth: number;
@@ -42,6 +43,7 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
     theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? 'light',
     fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? 16,
     codeFontSize: await getStorage<number>(StorageKeys.CODE_FONT_SIZE) ?? 14,
+    codeTheme: await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME) ?? 'github',
     lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? 1.5,
     letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? 0,
     pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? 800,
@@ -82,8 +84,12 @@ function handleMediaElements(container: HTMLElement | null, showImages: boolean)
   });
 }
 
-function handleCodeBlocks(container: HTMLElement | null, theme: 'light' | 'dark') {
+function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings) {
   if (!container) return;
+
+  // 加载选中的代码主题
+  loadCodeTheme(settings.codeTheme);
+
   const preElements = container.getElementsByTagName('pre');
   for (const pre of preElements) {
     pre.classList.add('line-numbers');
@@ -101,17 +107,6 @@ function handleCodeBlocks(container: HTMLElement | null, theme: 'light' | 'dark'
         pre.className.match(/language-(\w+)/)?.[1];
       code.classList.add(`language-${preLanguage || 'plaintext'}`);
     }
-    const codeContent = code.textContent || '';
-    const lineCount = (codeContent.match(/\n/g) || []).length + 1;
-    if (!pre.querySelector('.line-numbers-rows')) {
-      const lineNumbersRows = document.createElement('span');
-      lineNumbersRows.className = 'line-numbers-rows';
-      for (let i = 0; i < lineCount; i++) {
-        const lineSpan = document.createElement('span');
-        lineNumbersRows.appendChild(lineSpan);
-      }
-      code.after(lineNumbersRows);
-    }
     Prism.highlightElement(code);
   }
 }
@@ -128,7 +123,7 @@ function applyStyles(settings: ReadingModeSettings) {
 
   const container = document.getElementById('reading-mode-container');
   handleMediaElements(container, settings.showImages);
-  handleCodeBlocks(container, settings.theme);
+  handleCodeBlocks(container, settings);
 
   style.textContent = `
     /* 基础样式 */
@@ -729,7 +724,7 @@ async function enableReadingMode() {
     applyStyles(settings);
 
     // 处理代码块
-    handleCodeBlocks(container, settings.theme);
+    handleCodeBlocks(container, settings);
 
     isReadingMode = true;
 
@@ -809,6 +804,12 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (hasSettingsChanged) {
     const settings = await fetchSettings();
     applyStyles(settings);
+
+    // 处理代码主题变化
+    if (changes[StorageKeys.CODE_THEME]) {
+      const container = document.getElementById('reading-mode-container');
+      handleCodeBlocks(container, settings);
+    }
 
     // 使用提取的函数处理多媒体内容显示状态的变化
     if (changes[StorageKeys.SHOW_IMAGES]) {
@@ -934,4 +935,32 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
       }
     });
   });
+}
+
+// 加载代码主题的样式
+function loadCodeTheme(theme: keyof typeof CODE_THEMES) {
+  const themeStyleId = 'prism-theme-style';
+  let styleElement = document.getElementById(themeStyleId) as HTMLLinkElement;
+  
+  if (!styleElement) {
+    styleElement = document.createElement('link') as HTMLLinkElement;
+    styleElement.id = themeStyleId;
+    styleElement.rel = 'stylesheet';
+    document.head.appendChild(styleElement);
+  }
+
+  // 根据主题名称加载对应的样式文件
+  const themeMap = {
+    'github': 'prism-github',
+    'one-dark': 'prism-one-dark',
+    'one-light': 'prism-one-light',
+    'material-dark': 'prism-material-dark',
+    'material-light': 'prism-material-light',
+    'night-owl': 'prism-night-owl',
+    'dracula': 'prism-dracula',
+    'solarized-dark': 'prism-solarized-dark',
+    'solarized-light': 'prism-solarized-light',
+  };
+
+  styleElement.href = `https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/${themeMap[theme]}.min.css`;
 } 
