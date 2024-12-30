@@ -22,6 +22,7 @@ import pangu from 'pangu';
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
   fontSize: number;
+  codeFontSize: number;
   lineHeight: number;
   letterSpacing: number;
   pageWidth: number;
@@ -40,6 +41,7 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
   return {
     theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? 'light',
     fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? 16,
+    codeFontSize: await getStorage<number>(StorageKeys.CODE_FONT_SIZE) ?? 14,
     lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? 1.5,
     letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? 0,
     pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? 800,
@@ -333,7 +335,7 @@ function applyStyles(settings: ReadingModeSettings) {
       counter-reset: linenumber;
       white-space: pre;
       font-family: 'Fira Code', 'Consolas', monospace;
-      font-size: 0.9em;
+      font-size: ${settings.codeFontSize}px !important;
       line-height: 1.4;
       background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'} !important;
       border: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e0e0e0'};
@@ -347,6 +349,7 @@ function applyStyles(settings: ReadingModeSettings) {
       position: relative;
       white-space: inherit;
       font-family: inherit;
+      font-size: inherit !important;
     }
 
     .line-numbers .line-numbers-rows {
@@ -358,6 +361,7 @@ function applyStyles(settings: ReadingModeSettings) {
       letter-spacing: -1px;
       border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#999'};
       user-select: none;
+      font-size: inherit !important;
     }
 
     .line-numbers-rows > span {
@@ -372,6 +376,17 @@ function applyStyles(settings: ReadingModeSettings) {
       padding-right: 0.8em;
       text-align: right;
       color: ${settings.theme === 'dark' ? '#666' : '#999'};
+    }
+
+    /* 内联代码样式 */
+    #reading-mode-container code:not(pre code) {
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: ${settings.codeFontSize}px !important;
+      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'};
+      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      margin: 0 0.2em;
     }
 
     /* Prism.js 样式增强 */
@@ -644,17 +659,17 @@ async function applyAutoSpacing() {
 async function enableReadingMode() {
   if (!document.body) return;
 
-  if (!originalContent) {
-    originalContent = document.body.innerHTML;
-  }
-
   try {
+    // 保存原始内容
+    if (!originalContent) {
+      originalContent = document.documentElement.innerHTML;
+    }
+
+    // 创建新的文档用于解析
     const documentClone = document.implementation.createHTMLDocument();
-    documentClone.documentElement.innerHTML = document.documentElement.innerHTML;
+    documentClone.documentElement.innerHTML = originalContent;
 
-    // 复用处理多媒体元素的函数，确保图片加载
-    handleMediaElements(documentClone.documentElement as HTMLElement, true);
-
+    // 使用 Readability 解析内容
     const reader = new Readability(documentClone);
     const article = reader.parse();
 
@@ -665,6 +680,7 @@ async function enableReadingMode() {
 
     const settings = await fetchSettings();
 
+    // 创建阅读模式容器
     const container = document.createElement('div');
     container.id = 'reading-mode-container';
     
@@ -672,25 +688,30 @@ async function enableReadingMode() {
     const titleElement = document.createElement('h1');
     titleElement.id = 'reading-mode-title';
     titleElement.textContent = article.title || document.title;
-    titleElement.style.textAlign = 'center';
-    titleElement.style.marginBottom = '2em';
     container.appendChild(titleElement);
     
+    // 添加文章内容
     container.innerHTML += article.content;
 
+    // 清空并重建页面
     document.body.innerHTML = '';
     document.body.appendChild(container);
 
+    // 应用自动间距
     await applyAutoSpacing();
 
+    // 生成目录（如果启用）
     if (settings.showDirectory) {
       generateTableOfContents(container, article.title || document.title);
     }
 
+    // 创建退出按钮
     createFloatingButton();
 
-    // 再次处理新容器中的多媒体元素，应用显示设置和处理加载错误
+    // 处理媒体元素
     handleMediaElements(container, settings.showImages);
+
+    // 处理图片加载错误
     const images = container.getElementsByTagName('img');
     for (const image of images) {
       image.addEventListener('error', function () {
@@ -707,34 +728,45 @@ async function enableReadingMode() {
     // 应用样式
     applyStyles(settings);
 
-    // 高亮代码块
+    // 处理代码块
     handleCodeBlocks(container, settings.theme);
 
     isReadingMode = true;
 
   } catch (error) {
     console.error('启用阅读模式时发生错误:', error);
+    throw error;
   }
 }
 
 function disableReadingMode() {
   if (!originalContent) return;
-  
-  // 移除浮动退出按钮
-  removeFloatingButton();
-  
-  // 移除目录
-  const toc = document.getElementById('reading-mode-toc');
-  if (toc) {
-    toc.remove();
+
+  try {
+    // 移除浮动退出按钮
+    removeFloatingButton();
+    
+    // 移除目录
+    const toc = document.getElementById('reading-mode-toc');
+    if (toc) {
+      toc.remove();
+    }
+    
+    // 恢复原始内容
+    document.documentElement.innerHTML = originalContent;
+    
+    // 移除样式
+    const style = document.getElementById('reading-mode-style');
+    if (style) {
+      style.remove();
+    }
+    
+    isReadingMode = false;
+    originalContent = null;
+  } catch (error) {
+    console.error('禁用阅读模式时发生错误:', error);
+    throw error;
   }
-  
-  document.body.innerHTML = originalContent;
-  const style = document.getElementById('reading-mode-style');
-  if (style) {
-    style.remove();
-  }
-  isReadingMode = false;
 }
 
 // 监听来自 popup 的消息

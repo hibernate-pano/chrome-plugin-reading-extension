@@ -37,6 +37,7 @@ interface SettingsProps {
   settings: {
     theme: 'light' | 'dark';
     fontSize: number;
+    codeFontSize: number;
     lineHeight: number;
     letterSpacing: number;
     pageWidth: number;
@@ -102,6 +103,20 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
               onChange={(e) => onSettingChange(StorageKeys.FONT_SIZE, parseInt(e.target.value))}
             />
             <span className="slider-value">{settings.fontSize}px</span>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <label>代码字体大小</label>
+          <div className="slider-container">
+            <input
+              type="range"
+              min="12"
+              max="24"
+              value={settings.codeFontSize}
+              onChange={(e) => onSettingChange(StorageKeys.CODE_FONT_SIZE, parseInt(e.target.value))}
+            />
+            <span className="slider-value">{settings.codeFontSize}px</span>
           </div>
         </div>
 
@@ -195,6 +210,7 @@ const Popup: React.FC = () => {
   const {
     theme,
     fontSize,
+    codeFontSize,
     readingMode,
     lineHeight,
     letterSpacing,
@@ -205,6 +221,7 @@ const Popup: React.FC = () => {
     showDirectory,
     setTheme,
     setFontSize,
+    setCodeFontSize,
     setReadingMode,
     setLineHeight,
     setLetterSpacing,
@@ -324,6 +341,15 @@ const Popup: React.FC = () => {
           step={1}
           value={fontSize}
           onChange={setFontSize}
+        />
+
+        <Slider
+          label="代码字体大小"
+          min={12}
+          max={24}
+          step={1}
+          value={codeFontSize}
+          onChange={setCodeFontSize}
         />
 
         <Slider

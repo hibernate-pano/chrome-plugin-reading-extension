@@ -9,7 +9,8 @@ export enum StorageKeys {
   SHOW_IMAGES = 'showImages',
   SHOW_DIRECTORY = 'showDirectory',
   FONT_FAMILY = 'fontFamily',
-  BACKGROUND_COLOR = 'backgroundColor'
+  BACKGROUND_COLOR = 'backgroundColor',
+  CODE_FONT_SIZE = 'codeFontSize'
 }
 
 export type StorageKeysType = `${StorageKeys}`;
@@ -66,24 +67,16 @@ export async function clearStorage(
 
 // 初始化默认设置
 export async function initializeDefaultSettings(): Promise<void> {
-  const defaultSettings = {
-    [StorageKeys.THEME]: "light",
-    [StorageKeys.FONT_SIZE]: 16,
-    [StorageKeys.LINE_HEIGHT]: 1.5,
-    [StorageKeys.LETTER_SPACING]: 0,
-    [StorageKeys.PAGE_WIDTH]: 800,
-    [StorageKeys.TEXT_ALIGN]: "left",
-    [StorageKeys.FIRST_LINE_INDENT]: true,
-    [StorageKeys.SHOW_IMAGES]: true,
-    [StorageKeys.SHOW_DIRECTORY]: true,
-    [StorageKeys.FONT_FAMILY]: "default",
-    [StorageKeys.BACKGROUND_COLOR]: "white"
-  };
-
-  for (const [key, value] of Object.entries(defaultSettings)) {
-    const existingValue = await getStorage(key as StorageKeysType);
-    if (existingValue === null) {
-      await setStorage(key as StorageKeysType, value);
-    }
-  }
+  await setStorage(StorageKeys.THEME, 'light');
+  await setStorage(StorageKeys.FONT_SIZE, 16);
+  await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
+  await setStorage(StorageKeys.LINE_HEIGHT, 1.5);
+  await setStorage(StorageKeys.LETTER_SPACING, 0);
+  await setStorage(StorageKeys.PAGE_WIDTH, 800);
+  await setStorage(StorageKeys.TEXT_ALIGN, 'left');
+  await setStorage(StorageKeys.FIRST_LINE_INDENT, true);
+  await setStorage(StorageKeys.SHOW_IMAGES, true);
+  await setStorage(StorageKeys.SHOW_DIRECTORY, true);
+  await setStorage(StorageKeys.FONT_FAMILY, 'default');
+  await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
 } 
