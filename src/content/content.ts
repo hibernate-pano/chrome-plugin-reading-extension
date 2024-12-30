@@ -539,6 +539,44 @@ function applyStyles(settings: ReadingModeSettings) {
         width: ${settings.pageWidth}px !important;
       }
     }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: ${BACKGROUND_COLORS[settings.backgroundColor]};
+    }
+    
+    #reading-mode-title {
+      font-size: 2em;
+      font-weight: bold;
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
+      margin: 1em 0 1.5em;
+      padding: 0;
+      text-align: center;
+      font-family: ${FONT_FAMILIES[settings.fontFamily]};
+    }
+    
+    .toc-article-title {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
+      margin: 0 0 1em;
+      padding: 0 1em;
+      text-align: center;
+      font-family: ${FONT_FAMILIES[settings.fontFamily]};
+      border-bottom: 1px solid ${settings.theme === 'dark' ? '#666666' : '#dddddd'};
+      padding-bottom: 0.5em;
+    }
+    
+    .toc-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
+      margin: 1em 0;
+      padding: 0 1em;
+      text-align: center;
+      font-family: ${FONT_FAMILIES[settings.fontFamily]};
+    }
   `;
 
   // 移除工具栏（如果存在）
@@ -629,7 +667,16 @@ async function enableReadingMode() {
 
     const container = document.createElement('div');
     container.id = 'reading-mode-container';
-    container.innerHTML = article.content;
+    
+    // 添加文章标题
+    const titleElement = document.createElement('h1');
+    titleElement.id = 'reading-mode-title';
+    titleElement.textContent = article.title || document.title;
+    titleElement.style.textAlign = 'center';
+    titleElement.style.marginBottom = '2em';
+    container.appendChild(titleElement);
+    
+    container.innerHTML += article.content;
 
     document.body.innerHTML = '';
     document.body.appendChild(container);
@@ -637,7 +684,7 @@ async function enableReadingMode() {
     await applyAutoSpacing();
 
     if (settings.showDirectory) {
-      generateTableOfContents(container);
+      generateTableOfContents(container, article.title || document.title);
     }
 
     createFloatingButton();
@@ -739,12 +786,12 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 
     if (changes[StorageKeys.SHOW_DIRECTORY]) {
       const tocElement = document.getElementById('reading-mode-toc');
-      if (settings.showDirectory) {
+      const container = document.getElementById('reading-mode-container');
+      if (!container) return;
+      
+      if (changes[StorageKeys.SHOW_DIRECTORY].newValue) {
         if (!tocElement) {
-          const container = document.getElementById('reading-mode-container');
-          if (container) {
-            generateTableOfContents(container);
-          }
+          generateTableOfContents(container, document.querySelector('#reading-mode-title')?.textContent || document.title);
         } else {
           tocElement.style.display = 'block';
         }
@@ -758,7 +805,7 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 });
 
 // 修改 generateTableOfContents 函数，添加显示状态的控制
-function generateTableOfContents(container: HTMLElement) {
+function generateTableOfContents(container: HTMLElement, articleTitle: string) {
   // 如果已经存在目录，则移除
   const existingToc = document.getElementById('reading-mode-toc');
   if (existingToc) {
@@ -773,6 +820,12 @@ function generateTableOfContents(container: HTMLElement) {
   getStorage<boolean>(StorageKeys.SHOW_DIRECTORY).then(showDirectory => {
     tocContainer.style.display = showDirectory ? 'block' : 'none';
   });
+  
+  // 添加文章标题
+  const tocArticleTitle = document.createElement('div');
+  tocArticleTitle.className = 'toc-article-title';
+  tocArticleTitle.textContent = articleTitle;
+  tocContainer.appendChild(tocArticleTitle);
   
   // 添加目录标题
   const tocTitle = document.createElement('div');
