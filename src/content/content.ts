@@ -94,7 +94,7 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
   for (const pre of preElements) {
     // 添加行号类
     pre.classList.add('line-numbers');
-    
+
     let code = pre.querySelector('code');
     if (!code) {
       code = document.createElement('code');
@@ -245,7 +245,7 @@ const CODE_THEME_STYLES = {
 // 生成代码主题的 CSS
 function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: ReadingModeSettings) {
   const themeStyles = CODE_THEME_STYLES[theme] || CODE_THEME_STYLES['github'];
-  
+
   return `
     /* 代码块基础样式 */
     pre.line-numbers {
@@ -360,7 +360,7 @@ function applyStyles(settings: ReadingModeSettings) {
   }
 
   const container = document.getElementById('reading-mode-container');
-  
+
   // 处理媒体元素
   handleMediaElements(container, settings.showImages);
 
@@ -528,8 +528,8 @@ function applyStyles(settings: ReadingModeSettings) {
       display: block;
       border-radius: 0.5em;
       box-shadow: ${settings.theme === 'dark' ?
-        '0 4px 6px rgba(0, 0, 0, 0.3)' :
-        '0 4px 6px rgba(0, 0, 0, 0.1)'};
+      '0 4px 6px rgba(0, 0, 0, 0.3)' :
+      '0 4px 6px rgba(0, 0, 0, 0.1)'};
       transition: all 0.3s ease;
     }
 
@@ -737,23 +737,23 @@ function createFloatingButton() {
     transition: all 0.2s ease;
     opacity: 0.8;
   `;
-  
+
   button.addEventListener('mouseover', () => {
     button.style.opacity = '1';
     button.style.transform = 'translateY(-2px)';
     button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
   });
-  
+
   button.addEventListener('mouseout', () => {
     button.style.opacity = '0.8';
     button.style.transform = 'translateY(0)';
     button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
   });
-  
+
   button.addEventListener('click', () => {
     disableReadingMode();
   });
-  
+
   document.body.appendChild(button);
 }
 
@@ -799,13 +799,13 @@ async function enableReadingMode() {
     // 创建阅读模式容器
     const container = document.createElement('div');
     container.id = 'reading-mode-container';
-    
+
     // 添加文章标题
     const titleElement = document.createElement('h1');
     titleElement.id = 'reading-mode-title';
     titleElement.textContent = article.title || document.title;
     container.appendChild(titleElement);
-    
+
     // 添加文章内容
     container.innerHTML += article.content;
 
@@ -841,22 +841,22 @@ function disableReadingMode() {
   try {
     // 移除浮动退出按钮
     removeFloatingButton();
-    
+
     // 移除目录
     const toc = document.getElementById('reading-mode-toc');
     if (toc) {
       toc.remove();
     }
-    
+
     // 恢复原始内容
     document.documentElement.innerHTML = originalContent;
-    
+
     // 移除样式
     const style = document.getElementById('reading-mode-style');
     if (style) {
       style.remove();
     }
-    
+
     isReadingMode = false;
     originalContent = null;
   } catch (error) {
@@ -874,8 +874,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       } else {
         enableReadingMode();
       }
-      sendResponse({ 
-        success: true, 
+      sendResponse({
+        success: true,
         isReadingMode,
         buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
       });
@@ -885,7 +885,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       sendResponse({ success: false, error: errorMessage });
     }
   } else if (request.action === 'GET_READING_MODE_STATE') {
-    sendResponse({ 
+    sendResponse({
       isReadingMode,
       buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
     });
@@ -922,7 +922,7 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
       const tocElement = document.getElementById('reading-mode-toc');
       const container = document.getElementById('reading-mode-container');
       if (!container) return;
-      
+
       if (changes[StorageKeys.SHOW_DIRECTORY].newValue) {
         if (!tocElement) {
           generateTableOfContents(container, document.querySelector('#reading-mode-title')?.textContent || document.title);
@@ -949,28 +949,28 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
   // 创建目录容器
   const tocContainer = document.createElement('div');
   tocContainer.id = 'reading-mode-toc';
-  
+
   // 根据当前设置决定是否显示
   getStorage<boolean>(StorageKeys.SHOW_DIRECTORY).then(showDirectory => {
     tocContainer.style.display = showDirectory ? 'block' : 'none';
   });
-  
+
   // 添加文章标题
   const tocArticleTitle = document.createElement('div');
   tocArticleTitle.className = 'toc-article-title';
   tocArticleTitle.textContent = articleTitle;
   tocContainer.appendChild(tocArticleTitle);
-  
+
   // 添加目录标题
   const tocTitle = document.createElement('div');
   tocTitle.className = 'toc-title';
   tocTitle.textContent = '目录';
   tocContainer.appendChild(tocTitle);
-  
+
   // 获取所有标题元素
   const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
   const toc = document.createElement('ul');
-  
+
   // 如果没有标题，显示提示信息
   if (headings.length === 0) {
     const noHeadings = document.createElement('div');
@@ -980,17 +980,17 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
     document.body.appendChild(tocContainer);
     return;
   }
-  
+
   // 创建目录项
   headings.forEach((heading, index) => {
     const level = parseInt(heading.tagName[1]);
     const li = document.createElement('li');
     li.className = `toc-level-${level}`;
-    
+
     // 为每个标题添加锚点
     const id = `heading-${index}`;
     heading.id = id;
-    
+
     const link = document.createElement('a');
     link.href = `#${id}`;
     link.textContent = heading.textContent || `标题 ${index + 1}`;
@@ -1002,25 +1002,25 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
       // 添加当前链接的激活状态
       link.classList.add('active');
     };
-    
+
     li.appendChild(link);
     toc.appendChild(li);
   });
-  
+
   tocContainer.appendChild(toc);
   document.body.appendChild(tocContainer);
-  
+
   // 监听滚动事件，高亮当前可见的标题
   let tocLinks = Array.from(toc.getElementsByTagName('a'));
   let headingsPos = Array.from(headings).map(heading => ({
     id: heading.id,
     top: heading.getBoundingClientRect().top + window.pageYOffset
   }));
-  
+
   window.addEventListener('scroll', () => {
     const scrollPos = window.pageYOffset;
     let currentHeading = headingsPos[0];
-    
+
     for (let i = 0; i < headingsPos.length; i++) {
       if (scrollPos >= headingsPos[i].top - 100) {
         currentHeading = headingsPos[i];
@@ -1028,7 +1028,7 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
         break;
       }
     }
-    
+
     tocLinks.forEach(link => {
       link.classList.remove('active');
       if (link.getAttribute('href') === `#${currentHeading.id}`) {
@@ -1036,7 +1036,7 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
       }
     });
   });
-} 
+}
 
 // 监听存储变化
 chrome.storage.onChanged.addListener((changes) => {
