@@ -54,7 +54,7 @@ export const CODE_THEMES = {
 
 export async function getStorage<T>(
   key: StorageKeysType,
-  storageArea: "sync" | "local" = "sync"
+  storageArea: "sync" | "local" = "local"
 ): Promise<T | null> {
   const result = await chrome.storage[storageArea].get(key);
   return result[key] ?? null;
@@ -63,20 +63,20 @@ export async function getStorage<T>(
 export async function setStorage<T>(
   key: StorageKeysType,
   value: T,
-  storageArea: "sync" | "local" = "sync"
+  storageArea: "sync" | "local" = "local"
 ): Promise<void> {
   await chrome.storage[storageArea].set({ [key]: value });
 }
 
 export async function removeStorage(
   key: StorageKeysType,
-  storageArea: "sync" | "local" = "sync"
+  storageArea: "sync" | "local" = "local"
 ): Promise<void> {
   await chrome.storage[storageArea].remove(key);
 }
 
 export async function clearStorage(
-  storageArea: "sync" | "local" = "sync"
+  storageArea: "sync" | "local" = "local"
 ): Promise<void> {
   await chrome.storage[storageArea].clear();
 }

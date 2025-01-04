@@ -895,7 +895,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
 // 监听存储变化
 chrome.storage.onChanged.addListener(async (changes, areaName) => {
-  if (areaName !== 'sync' || !isReadingMode) return;
+  if (areaName !== 'local' || !isReadingMode) return;
 
   const settingsKeys = Object.values(StorageKeys);
   const hasSettingsChanged = Object.keys(changes).some(key =>
@@ -1051,7 +1051,7 @@ chrome.storage.onChanged.addListener((changes) => {
 
 // 初始化时应用行间距
 const initializeLineHeight = async () => {
-  const { lineHeight } = await chrome.storage.sync.get('lineHeight');
+  const { lineHeight } = await chrome.storage.local.get('lineHeight');
   const container = document.getElementById('reading-mode-container');
   if (container && lineHeight) {
     container.style.lineHeight = lineHeight.toString();
