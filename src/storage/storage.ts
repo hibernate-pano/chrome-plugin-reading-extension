@@ -84,14 +84,14 @@ export async function clearStorage(
 // 初始化默认设置
 export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.THEME, 'light');
-  await setStorage(StorageKeys.FONT_SIZE, 16);
+  await setStorage(StorageKeys.FONT_SIZE, 18);
   await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
   await setStorage(StorageKeys.CODE_THEME, 'github');
   await setStorage(StorageKeys.LINE_HEIGHT, 1.5);
   await setStorage(StorageKeys.LETTER_SPACING, 0);
-  await setStorage(StorageKeys.PAGE_WIDTH, 800);
+  await setStorage(StorageKeys.PAGE_WIDTH, 1000);
   await setStorage(StorageKeys.TEXT_ALIGN, 'left');
-  await setStorage(StorageKeys.FIRST_LINE_INDENT, true);
+  await setStorage(StorageKeys.FIRST_LINE_INDENT, false);
   await setStorage(StorageKeys.SHOW_IMAGES, true);
   await setStorage(StorageKeys.SHOW_DIRECTORY, true);
   await setStorage(StorageKeys.FONT_FAMILY, 'default');
