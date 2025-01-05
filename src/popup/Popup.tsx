@@ -92,7 +92,7 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
           </select>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 mb-8">
           <Slider
             label="字体大小"
             value={settings.fontSize}
@@ -102,12 +102,9 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
             step={1}
             className="w-full"
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            当前值: {settings.fontSize}px
-          </div>
         </div>
 
-        <div className="space-y-2 mt-4">
+        <div className="space-y-2 mb-8">
           <Slider
             label="行间距"
             value={settings.lineHeight}
@@ -117,12 +114,9 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
             step={0.1}
             className="w-full"
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            当前值: {settings.lineHeight.toFixed(1)}
-          </div>
         </div>
 
-        <div className="space-y-2 mt-4">
+        <div className="space-y-2 mb-8">
           <Slider
             label="字间距"
             value={settings.letterSpacing}
@@ -132,12 +126,9 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
             step={0.5}
             className="w-full"
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            当前值: {settings.letterSpacing}px
-          </div>
         </div>
 
-        <div className="space-y-2 mt-4">
+        <div className="space-y-2 mb-8">
           <Slider
             label="代码字体大小"
             value={settings.codeFontSize}
@@ -147,12 +138,9 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
             step={1}
             className="w-full"
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            当前值: {settings.codeFontSize}px
-          </div>
         </div>
 
-        <div className="space-y-2 mt-4">
+        <div className="space-y-2 mb-8">
           <Slider
             label="页面宽度"
             value={settings.pageWidth}
@@ -162,9 +150,6 @@ function Settings({ settings, onSettingChange }: SettingsProps) {
             step={50}
             className="w-full"
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            当前值: {settings.pageWidth}px
-          </div>
         </div>
 
         <div className="settings-row">
@@ -439,7 +424,7 @@ export const Popup = () => {
             </select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 mb-8">
             <Slider
               label="字体大小"
               value={fontSize}
@@ -449,12 +434,9 @@ export const Popup = () => {
               step={1}
               className="w-full"
             />
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              当前值: {fontSize}px
-            </div>
           </div>
 
-          <div className="space-y-2 mt-4">
+          <div className="space-y-2 mb-8">
             <Slider
               label="行间距"
               value={lineHeight}
@@ -464,12 +446,9 @@ export const Popup = () => {
               step={0.1}
               className="w-full"
             />
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              当前值: {lineHeight.toFixed(1)}
-            </div>
           </div>
 
-          <div className="space-y-2 mt-4">
+          <div className="space-y-2 mb-8">
             <Slider
               label="字间距"
               value={letterSpacing}
@@ -479,9 +458,6 @@ export const Popup = () => {
               step={0.5}
               className="w-full"
             />
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              当前值: {letterSpacing}px
-            </div>
           </div>
         </div>
       </TabPanel>
@@ -504,7 +480,7 @@ export const Popup = () => {
             </select>
           </div>
 
-          <div className="space-y-2 mt-4">
+          <div className="space-y-2 mb-8">
             <Slider
               label="代码字体大小"
               value={codeFontSize}
@@ -514,9 +490,6 @@ export const Popup = () => {
               step={1}
               className="w-full"
             />
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              当前值: {codeFontSize}px
-            </div>
           </div>
         </div>
       </TabPanel>
@@ -524,7 +497,7 @@ export const Popup = () => {
       {/* 布局设置面板 */}
       <TabPanel isSelected={selectedTab === 3}>
         <div className="space-y-4">
-          <div className="space-y-2 mt-4">
+          <div className="space-y-2 mb-8">
             <Slider
               label="页面宽度"
               value={pageWidth}
@@ -534,9 +507,6 @@ export const Popup = () => {
               step={50}
               className="w-full"
             />
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              当前值: {pageWidth}px
-            </div>
           </div>
 
           <div className="flex items-center justify-between">
