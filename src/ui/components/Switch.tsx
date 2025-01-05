@@ -27,15 +27,19 @@ const Switch: React.FC<SwitchProps> = ({
           onChange={handleChange}
         />
         <div
-          className={`block w-10 h-6 rounded-full 
+          className={`relative w-11 h-6 rounded-full transition-all duration-300
             bg-gray-200 dark:bg-gray-700
             peer-checked:bg-blue-600
             after:content-[''] after:absolute 
             after:top-[2px] after:left-[2px]
             after:bg-white after:rounded-full 
-            after:h-5 after:w-5
+            after:h-5 after:w-5 after:shadow-sm
             after:transition-all after:duration-300
-            peer-checked:after:translate-x-full`}
+            peer-checked:after:translate-x-full
+            peer-checked:after:border-white
+            peer-focus:ring-2 peer-focus:ring-blue-200
+            hover:after:scale-95
+          `}
         />
       </div>
       {label && (
