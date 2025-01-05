@@ -1,17 +1,11 @@
 /* 阅读模式的基础样式 */
 #reading-mode-container {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.7;
-  padding: 3rem;
-  margin: 2rem auto;
-  max-width: 65ch;
-  background: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
-              0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  color: #1a1a1a;
-  font-size: 1.125rem;
+  @apply container mx-auto bg-gray-100 shadow-lg rounded-xl transition-all duration-300 ease-in-out text-gray-800 text-lg border border-gray-200 p-10;
+}
+
+#reading-mode-container::before {
+  @apply absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-300 rounded-t-xl;
+  content: "";
 }
 
 /* 标题系统优化 */
@@ -21,167 +15,112 @@
 #reading-mode-container h4,
 #reading-mode-container h5,
 #reading-mode-container h6 {
-  margin: 3em 0 1em;
-  line-height: 1.3;
-  font-weight: 700;
-  color: #111827;
-  letter-spacing: -0.025em;
-  position: relative;
+  @apply mt-12 mb-4 leading-tight font-bold text-gray-900 tracking-tight relative;
 }
 
 #reading-mode-container h1 {
-  font-size: 2.5rem;
-  border-bottom: 2px solid #e5e7eb;
-  padding-bottom: 0.75em;
-  margin-bottom: 1.5em;
-  text-align: center;
+  @apply text-5xl border-b-2 border-gray-200 pb-3 mb-6 text-center;
 }
 
 #reading-mode-container h1::after {
+  @apply absolute bottom-[-2px] left-1/2 -translate-x-1/2 w-24 h-0.5 bg-blue-500;
   content: "";
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 2px;
-  background: #3b82f6;
 }
 
 #reading-mode-container h2 {
-  font-size: 2rem;
-  padding-left: 1em;
-  border-left: 4px solid #3b82f6;
-  margin-left: -1.25em;
+  @apply text-4xl pl-4 border-l-4 border-blue-500 ml-[-1.25em];
 }
 
 #reading-mode-container h3 {
-  font-size: 1.75rem;
-  color: #2563eb;
+  @apply text-3xl text-blue-700;
 }
 
 #reading-mode-container h4 {
-  font-size: 1.5rem;
-  color: #4b5563;
+  @apply text-2xl text-gray-600;
 }
 
 /* 段落和内容块优化 */
 #reading-mode-container p {
-  margin: 1.75em 0;
-  line-height: 1.8;
-  color: #374151;
+  @apply my-7 leading-relaxed text-gray-700 text-justify hyphens-auto;
+  text-indent: 2em;
 }
 
 #reading-mode-container img {
-  max-width: 100%;
-  height: auto;
-  margin: 2.5em auto;
-  display: block;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1),
-              0 4px 8px -4px rgba(0, 0, 0, 0.06);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  @apply max-w-full h-auto mx-auto my-6 block rounded-lg shadow-md transition-transform duration-200;
 }
 
 #reading-mode-container img:hover {
-  transform: scale(1.02) translateY(-4px);
-  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.15),
-              0 6px 12px -6px rgba(0, 0, 0, 0.1);
+  @apply scale-105 -translate-y-1 shadow-xl;
 }
 
 /* 引用块优化 */
 #reading-mode-container blockquote {
-  margin: 2.5em 0;
-  padding: 1.5em 2em;
-  border-left: 4px solid #3b82f6;
-  background-color: #f8fafc;
-  border-radius: 0 12px 12px 0;
-  color: #4b5563;
-  font-style: italic;
-  position: relative;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  @apply my-6 p-6 border-l-4 border-blue-500 bg-blue-50 rounded-lg text-gray-700 italic shadow-sm relative;
+  font-size: 1.1em;
+  line-height: 1.6;
 }
 
 #reading-mode-container blockquote::before {
-  content: """;
-  position: absolute;
-  top: -0.5em;
-  left: 0.5em;
-  font-size: 3em;
-  color: #3b82f6;
-  opacity: 0.2;
-  font-family: serif;
+  @apply absolute top-[-0.5em] left-4 text-4xl text-blue-500 opacity-20 font-serif z-10;
+  content: "“";
+}
+
+#reading-mode-container blockquote::after {
+  @apply absolute bottom-[-0.5em] right-4 text-4xl text-blue-500 opacity-20 font-serif z-10;
+  content: "”";
 }
 
 /* 列表优化 */
 #reading-mode-container ul,
 #reading-mode-container ol {
-  margin: 1.75em 0;
-  padding-left: 1.75em;
-  color: #374151;
+  @apply my-6 pl-7 text-gray-700;
+  counter-reset: list-counter;
 }
 
 #reading-mode-container li {
-  margin: 0.85em 0;
-  padding-left: 0.75em;
-  position: relative;
+  @apply my-2 pl-4 relative leading-relaxed;
 }
 
 #reading-mode-container ul li::before {
-  content: "";
-  position: absolute;
-  left: -1em;
-  top: 0.75em;
-  width: 6px;
-  height: 6px;
-  background: #3b82f6;
-  border-radius: 50%;
+  @apply absolute left-[-1.5em] top-0 text-blue-500 text-xl;
+  content: "•";
+}
+
+#reading-mode-container ol {
+  counter-reset: list-counter;
+}
+
+#reading-mode-container ol li {
+  counter-increment: list-counter;
+}
+
+#reading-mode-container ol li::before {
+  @apply absolute left-[-2em] top-0 text-blue-500 font-bold text-sm;
+  content: counter(list-counter) ".";
 }
 
 /* 代码块优化 */
 #reading-mode-container pre {
-  margin: 2em -1em;
-  padding: 1.5em;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
-  overflow-x: auto;
+  @apply my-6 mx-[-1em] p-6 bg-gray-50 rounded-lg border border-gray-200 shadow-inner overflow-x-auto;
 }
 
 #reading-mode-container code {
-  padding: 0.2em 0.4em;
+  @apply px-2 py-1 text-red-600 bg-red-50 rounded;
   font-size: 0.875em;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-  border-radius: 4px;
 }
 
 #reading-mode-container pre code {
-  color: #374151;
-  background: transparent;
-  padding: 0;
+  @apply text-gray-700 bg-transparent p-0;
 }
 
 /* 分割线优化 */
 #reading-mode-container hr {
-  margin: 4em 0;
-  border: 0;
-  height: 2px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    #3b82f6,
-    transparent
-  );
-  opacity: 0.2;
+  @apply my-12 border-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-20;
 }
 
 /* 深色主题优化 */
 body.dark-theme #reading-mode-container {
-  color: #e5e7eb;
-  background: #111827;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  @apply text-gray-200 bg-gray-800 shadow-md;
 }
 
 body.dark-theme #reading-mode-container h1,
@@ -190,58 +129,47 @@ body.dark-theme #reading-mode-container h3,
 body.dark-theme #reading-mode-container h4,
 body.dark-theme #reading-mode-container h5,
 body.dark-theme #reading-mode-container h6 {
-  color: #f3f4f6;
+  @apply text-gray-50;
 }
 
 body.dark-theme #reading-mode-container h1::after {
-  background: #60a5fa;
+  @apply bg-blue-400;
 }
 
 body.dark-theme #reading-mode-container h2 {
-  border-left-color: #60a5fa;
+  @apply border-blue-400;
 }
 
 body.dark-theme #reading-mode-container h3 {
-  color: #60a5fa;
+  @apply text-blue-400;
 }
 
 body.dark-theme #reading-mode-container p {
-  color: #d1d5db;
+  @apply text-gray-300;
 }
 
 body.dark-theme #reading-mode-container blockquote {
-  background-color: #1f2937;
-  border-left-color: #60a5fa;
-  color: #9ca3af;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  @apply bg-gray-900 border-blue-400 text-gray-400 shadow-inner;
 }
 
 body.dark-theme #reading-mode-container blockquote::before {
-  color: #60a5fa;
+  @apply text-blue-400;
 }
 
 body.dark-theme #reading-mode-container ul li::before {
-  background: #60a5fa;
+  @apply text-blue-400;
 }
 
 body.dark-theme #reading-mode-container pre {
-  background: #1f2937;
-  border-color: #374151;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  @apply bg-gray-900 border-gray-700 shadow-inner;
 }
 
 body.dark-theme #reading-mode-container code {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
+  @apply text-red-400 bg-red-900;
 }
 
 body.dark-theme #reading-mode-container hr {
-  background: linear-gradient(
-    to right,
-    transparent,
-    #60a5fa,
-    transparent
-  );
+  @apply bg-gradient-to-r from-transparent via-blue-400 to-transparent;
 }
 
 /* 响应式优化 */
