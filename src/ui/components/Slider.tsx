@@ -34,7 +34,7 @@ export const Slider: React.FC<SliderProps> = ({
           {value}
         </span>
       </div>
-      <div className="relative py-4">
+      <div className="relative py-2">
         <div 
           className="absolute h-2 bg-blue-100 rounded-full"
           style={{ 
@@ -65,10 +65,6 @@ export const Slider: React.FC<SliderProps> = ({
                      [&::-webkit-slider-thumb]:transition-all
                      [&::-webkit-slider-thumb]:hover:scale-110"
         />
-        <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-gray-400">
-          <span>{min}</span>
-          <span>{max}</span>
-        </div>
       </div>
     </div>
   );
