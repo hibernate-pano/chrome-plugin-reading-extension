@@ -94,8 +94,8 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.FIRST_LINE_INDENT, false);
   await setStorage(StorageKeys.SHOW_IMAGES, true);
   await setStorage(StorageKeys.SHOW_DIRECTORY, true);
-  await setStorage(StorageKeys.FONT_FAMILY, 'songti');
-  await setStorage(StorageKeys.BACKGROUND_COLOR, 'gray');
+  await setStorage(StorageKeys.FONT_FAMILY, 'default');
+  await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
 }
 
 export interface StorageData {
