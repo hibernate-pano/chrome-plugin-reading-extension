@@ -89,13 +89,13 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.CODE_THEME, 'github');
   await setStorage(StorageKeys.LINE_HEIGHT, 1.5);
   await setStorage(StorageKeys.LETTER_SPACING, 0);
-  await setStorage(StorageKeys.PAGE_WIDTH, 1000);
+  await setStorage(StorageKeys.PAGE_WIDTH, 1200);
   await setStorage(StorageKeys.TEXT_ALIGN, 'left');
   await setStorage(StorageKeys.FIRST_LINE_INDENT, false);
   await setStorage(StorageKeys.SHOW_IMAGES, true);
   await setStorage(StorageKeys.SHOW_DIRECTORY, true);
-  await setStorage(StorageKeys.FONT_FAMILY, 'default');
-  await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
+  await setStorage(StorageKeys.FONT_FAMILY, 'songti');
+  await setStorage(StorageKeys.BACKGROUND_COLOR, 'gray');
 }
 
 export interface StorageData {
