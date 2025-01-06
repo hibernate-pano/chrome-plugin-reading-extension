@@ -73,30 +73,95 @@
 /* 列表优化 */
 #reading-mode-container ul,
 #reading-mode-container ol {
-  @apply my-6 pl-7 text-gray-700;
-  counter-reset: list-counter;
+  @apply my-4 pl-6 text-gray-700 space-y-2 list-outside;
 }
 
 #reading-mode-container li {
-  @apply my-2 pl-4 relative leading-relaxed;
+  @apply relative leading-relaxed mb-2;
 }
 
-#reading-mode-container ul li::before {
-  @apply absolute left-[-1.5em] top-0 text-blue-500 text-xl;
-  content: "•";
+/* 无序列表样式 */
+#reading-mode-container ul {
+  list-style: none;
 }
 
+#reading-mode-container ul > li {
+  @apply pl-5;
+}
+
+#reading-mode-container ul > li::before {
+  @apply absolute left-0 top-[0.6em] w-2 h-2 rounded-full bg-blue-500 transform scale-75;
+  content: "";
+}
+
+/* 有序列表样式 */
 #reading-mode-container ol {
-  counter-reset: list-counter;
+  @apply pl-8;
+  list-style: none;
+  counter-reset: item;
 }
 
-#reading-mode-container ol li {
-  counter-increment: list-counter;
+#reading-mode-container ol > li {
+  @apply pl-2;
+  counter-increment: item;
 }
 
-#reading-mode-container ol li::before {
-  @apply absolute left-[-2em] top-0 text-blue-500 font-bold text-sm;
-  content: counter(list-counter) ".";
+#reading-mode-container ol > li::before {
+  @apply absolute left-[-1.5em] top-0 text-blue-500 font-semibold text-sm;
+  content: counter(item) ".";
+}
+
+/* 嵌套列表样式 */
+#reading-mode-container ul ul,
+#reading-mode-container ul ol,
+#reading-mode-container ol ul,
+#reading-mode-container ol ol {
+  @apply mt-2 mb-0 ml-4;
+}
+
+#reading-mode-container ul ul > li::before {
+  @apply bg-blue-400 scale-[0.6];
+}
+
+#reading-mode-container ol ol {
+  counter-reset: subitem;
+}
+
+#reading-mode-container ol ol > li {
+  counter-increment: subitem;
+}
+
+#reading-mode-container ol ol > li::before {
+  content: counter(subitem, lower-alpha) ".";
+  @apply text-blue-400;
+}
+
+/* 列表项内容样式 */
+#reading-mode-container li > p {
+  @apply my-1 !important;
+  text-indent: 0 !important;
+}
+
+#reading-mode-container li > p:first-child {
+  @apply mt-0 !important;
+}
+
+#reading-mode-container li > p:last-child {
+  @apply mb-0 !important;
+}
+
+/* 深色主题列表样式 */
+body.dark-theme #reading-mode-container ul,
+body.dark-theme #reading-mode-container ol {
+  @apply text-gray-300;
+}
+
+body.dark-theme #reading-mode-container ul > li::before {
+  @apply bg-blue-400;
+}
+
+body.dark-theme #reading-mode-container ol > li::before {
+  @apply text-blue-400;
 }
 
 /* 代码块优化 */

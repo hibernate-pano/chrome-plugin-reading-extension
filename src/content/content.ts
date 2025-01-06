@@ -466,11 +466,75 @@ function applyStyles(settings: ReadingModeSettings) {
       margin: 1.2em 0;
       padding-left: 2.5em;
       line-height: ${settings.lineHeight};
+      list-style-position: outside;
     }
 
     #reading-mode-container li {
       margin: 0.6em 0;
       padding-left: 0.3em;
+      position: relative;
+    }
+
+    #reading-mode-container ul {
+      list-style: none;
+    }
+
+    #reading-mode-container ul > li {
+      padding-left: 1.5em;
+    }
+
+    #reading-mode-container ul > li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.6em;
+      width: 6px;
+      height: 6px;
+      background-color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
+      border-radius: 50%;
+      transform: scale(0.75);
+    }
+
+    #reading-mode-container ol {
+      list-style: none;
+      counter-reset: item;
+    }
+
+    #reading-mode-container ol > li {
+      counter-increment: item;
+    }
+
+    #reading-mode-container ol > li::before {
+      content: counter(item) ".";
+      position: absolute;
+      left: -1.5em;
+      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
+      font-weight: 600;
+    }
+
+    #reading-mode-container ul ul,
+    #reading-mode-container ul ol,
+    #reading-mode-container ol ul,
+    #reading-mode-container ol ol {
+      margin: 0.5em 0 0.5em 1em;
+    }
+
+    #reading-mode-container ol ol {
+      counter-reset: subitem;
+    }
+
+    #reading-mode-container ol ol > li {
+      counter-increment: subitem;
+    }
+
+    #reading-mode-container ol ol > li::before {
+      content: counter(subitem, lower-alpha) ".";
+      color: ${settings.theme === 'dark' ? '#93c5fd' : '#60a5fa'};
+    }
+
+    #reading-mode-container li > p {
+      margin: 0.25em 0 !important;
+      text-indent: 0 !important;
     }
 
     #reading-mode-container li::marker {
@@ -785,6 +849,12 @@ async function enableReadingMode() {
     const documentClone = document.implementation.createHTMLDocument();
     documentClone.documentElement.innerHTML = originalContent;
 
+    // 清理和规范化 HTML
+    cleanupHtml(documentClone);
+
+    // 预处理列表样式
+    preserveListStyles(documentClone);
+
     // 使用 Readability 解析内容
     const reader = new Readability(documentClone);
     const article = reader.parse();
@@ -807,7 +877,14 @@ async function enableReadingMode() {
     container.appendChild(titleElement);
 
     // 添加文章内容
-    container.innerHTML += article.content;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = article.content;
+    
+    // 处理列表结构
+    processLists(tempDiv);
+    
+    // 将处理后的内容添加到容器
+    container.appendChild(tempDiv);
 
     // 清空并重建页面
     document.body.innerHTML = '';
@@ -833,6 +910,117 @@ async function enableReadingMode() {
     console.error('启用阅读模式时发生错误:', error);
     throw error;
   }
+}
+
+// 清理和规范化 HTML
+function cleanupHtml(doc: Document) {
+  // 移除空的列表项
+  const emptyListItems = doc.querySelectorAll('li:empty');
+  emptyListItems.forEach(item => item.remove());
+
+  // 修复嵌套错误的列表
+  const lists = doc.querySelectorAll('ul, ol');
+  lists.forEach(list => {
+    // 确保列表项直接在列表元素下
+    const directChildren = Array.from(list.children);
+    directChildren.forEach(child => {
+      if (child.tagName !== 'LI') {
+        // 如果不是列表项，将其包装在列表项中
+        const li = doc.createElement('li');
+        child.parentNode?.insertBefore(li, child);
+        li.appendChild(child);
+      }
+    });
+
+    // 修复嵌套列表的位置
+    const nestedLists = list.querySelectorAll('ul, ol');
+    nestedLists.forEach(nestedList => {
+      const parent = nestedList.parentElement;
+      if (parent && parent.tagName !== 'LI') {
+        // 如果嵌套列表不在列表项中，将其移动到前一个列表项中
+        const previousLi = nestedList.previousElementSibling;
+        if (previousLi && previousLi.tagName === 'LI') {
+          previousLi.appendChild(nestedList);
+        } else {
+          // 如果没有前一个列表项，创建一个新的
+          const li = doc.createElement('li');
+          nestedList.parentNode?.insertBefore(li, nestedList);
+          li.appendChild(nestedList);
+        }
+      }
+    });
+  });
+
+  // 修复列表项中的段落
+  const listItems = doc.querySelectorAll('li');
+  listItems.forEach(li => {
+    const paragraphs = li.getElementsByTagName('p');
+    if (paragraphs.length === 1) {
+      // 如果只有一个段落，去掉段落标签
+      const p = paragraphs[0];
+      li.innerHTML = p.innerHTML;
+    }
+  });
+}
+
+// 预处理列表样式
+function preserveListStyles(doc: Document) {
+  const lists = doc.querySelectorAll('ul, ol');
+  lists.forEach(list => {
+    // 添加自定义属性来标记列表类型
+    list.setAttribute('data-list-type', list.tagName.toLowerCase());
+    
+    // 保存列表样式类型
+    const style = window.getComputedStyle(list);
+    const listStyleType = style.getPropertyValue('list-style-type');
+    if (listStyleType && listStyleType !== 'none') {
+      list.setAttribute('data-list-style', listStyleType);
+    }
+  });
+}
+
+// 处理列表结构的函数
+function processLists(container: HTMLElement) {
+  // 处理所有列表
+  const lists = container.querySelectorAll('ul, ol');
+  lists.forEach(list => {
+    // 恢复列表类型
+    const listType = list.getAttribute('data-list-type');
+    if (listType) {
+      list.classList.add(`list-${listType}`);
+    }
+
+    // 恢复列表样式
+    const listStyle = list.getAttribute('data-list-style');
+    if (listStyle && list instanceof HTMLElement) {
+      list.style.listStyleType = listStyle;
+    }
+
+    // 处理列表项
+    const items = list.querySelectorAll('li');
+    items.forEach(item => {
+      if (!(item instanceof HTMLElement)) return;
+      
+      // 移除可能影响样式的属性
+      item.removeAttribute('style');
+      
+      // 处理嵌套列表
+      const nestedLists = item.querySelectorAll('ul, ol');
+      nestedLists.forEach(nestedList => {
+        // 确保嵌套列表在 li 的直接子级
+        if (nestedList.parentElement !== item) {
+          item.appendChild(nestedList);
+        }
+      });
+
+      // 处理列表项内容的格式
+      const textContent = item.textContent?.trim();
+      if (textContent) {
+        // 移除多余的空白字符
+        item.innerHTML = item.innerHTML.replace(/\s+/g, ' ').trim();
+      }
+    });
+  });
 }
 
 function disableReadingMode() {
