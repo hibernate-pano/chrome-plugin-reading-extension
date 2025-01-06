@@ -437,7 +437,7 @@ export const Popup = () => {
 
       {/* 版本信息 */}
       <div className="mt-6 text-center">
-        <span className="text-xs text-gray-400">版本 1.1.1</span>
+        <span className="text-xs text-gray-400">版本 1.1.2</span>
       </div>
     </div>
   );
