@@ -89,8 +89,8 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.FONT_SIZE, 18);
   await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
   await setStorage(StorageKeys.CODE_THEME, 'github');
-  await setStorage(StorageKeys.LINE_HEIGHT, 1.5);
-  await setStorage(StorageKeys.LINE_SPACING, 0.5);
+  await setStorage(StorageKeys.LINE_HEIGHT, 1.3);
+  await setStorage(StorageKeys.LINE_SPACING, 1.7);
   await setStorage(StorageKeys.LETTER_SPACING, 0);
   await setStorage(StorageKeys.PAGE_WIDTH, 1200);
   await setStorage(StorageKeys.TEXT_ALIGN, 'left');

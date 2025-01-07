@@ -379,7 +379,7 @@ export const Popup = () => {
                     value={pageWidth}
                     onChange={setPageWidth}
                     min={500}
-                    max={1200}
+                    max={1400}
                     step={50}
                     className="w-full"
                   />
