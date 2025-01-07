@@ -65,4 +65,16 @@
 /* 确保弹窗有足够的宽度 */
 .popup-container {
   min-width: 320px;
-} 
+}
+
+/* 自定义滚动条样式 */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}

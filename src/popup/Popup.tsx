@@ -193,10 +193,10 @@ export const Popup = () => {
   ];
 
   return (
-    <div className="w-[480px] min-h-[600px] p-6 bg-gray-50">
+    <div className="w-[420px] h-[580px] p-6 bg-gradient-to-br from-gray-100 to-gray-50 rounded-xl shadow-2xl border border-gray-200/50 overflow-y-auto scrollbar-hide relative [&::-webkit-scrollbar]:hidden">
       {/* 标题栏 */}
-      <div className="relative mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">阅读模式设置</h1>
+      <div className="relative mb-8 flex items-center justify-between p-5 bg-white/50 backdrop-blur-sm rounded-lg border border-gray-200/30 shadow-sm">
+        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">阅读模式设置</h1>
         <Button
           variant={readingMode ? 'primary' : 'outline'}
           size="small"
@@ -208,7 +208,7 @@ export const Popup = () => {
       </div>
 
       {/* 标签页导航 */}
-      <div className="flex space-x-1 rounded-xl bg-white shadow-sm p-1 mb-6 border border-gray-100">
+      <div className="flex space-x-2 rounded-xl bg-white/80 backdrop-blur-sm p-2 mb-8 border border-gray-200/30 shadow-sm">
         {tabs.map((tab, index) => (
           <TabButton
             key={tab.name}
@@ -223,7 +223,7 @@ export const Popup = () => {
       {/* 基础设置面板 */}
       <TabPanel isSelected={selectedTab === 0}>
         <div className="space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/30 hover:shadow-md transition-all hover:scale-[1.005] space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-medium text-gray-900">主题设置</h3>
@@ -240,13 +240,13 @@ export const Popup = () => {
 
             <div className="mt-6">
               <label className="text-sm font-medium text-gray-700">背景颜色</label>
-              <div className="grid grid-cols-7 gap-3 mt-3">
+              <div className="grid grid-cols-7 gap-4 mt-4 p-3 bg-gray-50/50 rounded-lg border border-gray-200/20">
                 {Object.entries(BACKGROUND_COLORS).map(([key, color]) => (
                   <button
                     key={key}
                     className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${backgroundColor === key
-                        ? 'border-blue-600 ring-2 ring-blue-200 scale-110'
-                        : 'border-transparent hover:border-gray-200'
+                      ? 'border-blue-600 ring-2 ring-blue-200 scale-110 shadow-md'
+                      : 'border-gray-200/50 hover:border-gray-300 shadow-sm'
                       }`}
                     style={{ backgroundColor: color }}
                     onClick={() => handleBackgroundColorChange(key as keyof typeof BACKGROUND_COLORS)}
@@ -262,10 +262,10 @@ export const Popup = () => {
       {/* 样式设置面板 */}
       <TabPanel isSelected={selectedTab === 1}>
         <div className="space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/30 space-y-8">
             <div className="mb-6">
               <h3 className="text-base font-medium text-gray-900">字体设置</h3>
-              <div className="space-y-6 divide-y divide-gray-100">
+              <div className="space-y-6 divide-y divide-gray-100/50">
                 <div>
                   <label className="text-sm font-medium text-gray-700">字体选择</label>
                   <select
@@ -355,7 +355,7 @@ export const Popup = () => {
       {/* 高级设置面板 */}
       <TabPanel isSelected={selectedTab === 2}>
         <div className="space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/30 space-y-8">
             <div className="space-y-6">
               <div className="mb-6">
                 <h3 className="text-base font-medium text-gray-900">页面布局</h3>
@@ -426,8 +426,8 @@ export const Popup = () => {
       </TabPanel>
 
       {/* 版本信息 */}
-      <div className="mt-6 text-center">
-        <span className="text-xs text-gray-400">版本 1.1.2</span>
+      <div className="mt-8 text-center p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-gray-200/30 shadow-sm">
+        <span className="text-xs text-gray-500 tracking-tight">版本 1.1.2</span>
       </div>
     </div>
   );
