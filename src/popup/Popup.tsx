@@ -8,6 +8,9 @@ import {
   MIN_LINE_HEIGHT,
   MAX_LINE_HEIGHT,
   LINE_HEIGHT_STEP,
+  MIN_LINE_SPACING,
+  MAX_LINE_SPACING,
+  LINE_SPACING_STEP,
   MIN_PARAGRAPH_SPACING,
   MAX_PARAGRAPH_SPACING,
   PARAGRAPH_SPACING_STEP
@@ -79,6 +82,7 @@ export const Popup = () => {
     codeFontSize,
     readingMode,
     lineHeight,
+    lineSpacing,
     letterSpacing,
     pageWidth,
     textAlign,
@@ -91,6 +95,7 @@ export const Popup = () => {
     setCodeFontSize,
     setReadingMode,
     setLineHeight,
+    setLineSpacing,
     setLetterSpacing,
     setPageWidth,
     setTextAlign,
@@ -291,12 +296,21 @@ export const Popup = () => {
                   className="w-full"
                 />
                 <Slider
-                  label="行间距"
+                  label="行高"
                   value={lineHeight}
                   onChange={setLineHeight}
                   min={MIN_LINE_HEIGHT}
                   max={MAX_LINE_HEIGHT}
                   step={LINE_HEIGHT_STEP}
+                  className="w-full"
+                />
+                <Slider
+                  label="行间距"
+                  value={lineSpacing}
+                  onChange={setLineSpacing}
+                  min={MIN_LINE_SPACING}
+                  max={MAX_LINE_SPACING}
+                  step={LINE_SPACING_STEP}
                   className="w-full"
                 />
                 <Slider

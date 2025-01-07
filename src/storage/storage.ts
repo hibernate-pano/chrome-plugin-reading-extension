@@ -4,6 +4,7 @@ export enum StorageKeys {
   THEME = 'theme',
   FONT_SIZE = 'fontSize',
   LINE_HEIGHT = 'lineHeight',
+  LINE_SPACING = 'lineSpacing',
   LETTER_SPACING = 'letterSpacing',
   PAGE_WIDTH = 'pageWidth',
   TEXT_ALIGN = 'textAlign',
@@ -89,6 +90,7 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
   await setStorage(StorageKeys.CODE_THEME, 'github');
   await setStorage(StorageKeys.LINE_HEIGHT, 1.5);
+  await setStorage(StorageKeys.LINE_SPACING, 0.5);
   await setStorage(StorageKeys.LETTER_SPACING, 0);
   await setStorage(StorageKeys.PAGE_WIDTH, 1200);
   await setStorage(StorageKeys.TEXT_ALIGN, 'left');
@@ -102,10 +104,12 @@ export async function initializeDefaultSettings(): Promise<void> {
 
 export interface StorageData {
   lineHeight: number;
+  lineSpacing: number;
   // ... existing fields ...
 }
 
 export const defaultStorage: StorageData = {
   lineHeight: DEFAULT_LINE_HEIGHT,
+  lineSpacing: 0.5,
   // ... existing fields ...
-}; 
+};

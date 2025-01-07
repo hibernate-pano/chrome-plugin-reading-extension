@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { StorageKeys, getStorage, setStorage, CODE_THEMES } from './storage/storage';
-import { DEFAULT_LINE_HEIGHT, DEFAULT_PARAGRAPH_SPACING } from './constants/options';
+import { DEFAULT_LINE_HEIGHT, DEFAULT_PARAGRAPH_SPACING, DEFAULT_LINE_SPACING } from './constants/options';
 
 interface AppState {
   theme: 'light' | 'dark';
@@ -9,6 +9,7 @@ interface AppState {
   codeTheme: keyof typeof CODE_THEMES;
   readingMode: boolean;
   lineHeight: number;
+  lineSpacing: number;
   letterSpacing: number;
   pageWidth: number;
   textAlign: 'left' | 'center' | 'right';
@@ -22,6 +23,7 @@ interface AppState {
   setCodeTheme: (codeTheme: keyof typeof CODE_THEMES) => Promise<void>;
   setReadingMode: (readingMode: boolean) => Promise<void>;
   setLineHeight: (lineHeight: number) => Promise<void>;
+  setLineSpacing: (lineSpacing: number) => Promise<void>;
   setLetterSpacing: (letterSpacing: number) => Promise<void>;
   setPageWidth: (pageWidth: number) => Promise<void>;
   setTextAlign: (textAlign: 'left' | 'center' | 'right') => Promise<void>;
@@ -38,6 +40,7 @@ const useAppStore = create<AppState>((set) => ({
   codeTheme: 'github',
   readingMode: false,
   lineHeight: DEFAULT_LINE_HEIGHT,
+  lineSpacing: DEFAULT_LINE_SPACING,
   letterSpacing: 0,
   pageWidth: 800,
   textAlign: 'left',
@@ -73,6 +76,11 @@ const useAppStore = create<AppState>((set) => ({
   setLineHeight: async (lineHeight) => {
     await setStorage(StorageKeys.LINE_HEIGHT, lineHeight);
     set({ lineHeight });
+  },
+
+  setLineSpacing: async (lineSpacing) => {
+    await setStorage(StorageKeys.LINE_SPACING, lineSpacing);
+    set({ lineSpacing });
   },
 
   setLetterSpacing: async (letterSpacing) => {

@@ -29,6 +29,7 @@ interface ReadingModeSettings {
   codeTheme: keyof typeof CODE_THEMES;
   lineHeight: number;
   letterSpacing: number;
+  lineSpacing: number;
   pageWidth: number;
   textAlign: 'left' | 'center' | 'right';
   firstLineIndent: boolean;
@@ -50,6 +51,7 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
     codeTheme: await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME) ?? 'github',
     lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? 1.5,
     letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? 0,
+    lineSpacing: await getStorage<number>(StorageKeys.LINE_SPACING) ?? 0.5,
     pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? 800,
     textAlign: await getStorage<'left' | 'center' | 'right'>(StorageKeys.TEXT_ALIGN) ?? 'left',
     firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? true,
@@ -456,9 +458,13 @@ function applyStyles(settings: ReadingModeSettings) {
 
     /* 段落样式 */
     #reading-mode-container p {
-      margin: 1.2em 0;
+      margin: 0;
       ${settings.firstLineIndent ? 'text-indent: 2em;' : ''}
-      line-height: ${settings.lineHeight};
+      line-height: ${settings.lineSpacing}; /* 直接使用行间距值控制行高 */
+      margin-bottom: ${settings.paragraphSpacing}em; /* 段间距 */
+      padding-bottom: ${settings.paragraphSpacing > 1 ? '0.5em' : '0'}; /* 当段间距较大时添加下边框 */
+      border-bottom: ${settings.paragraphSpacing > 1 ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}` : 'none'}; /* 视觉分隔 */
+      letter-spacing: ${settings.letterSpacing}px;
       opacity: 0.95;
     }
 
@@ -467,7 +473,7 @@ function applyStyles(settings: ReadingModeSettings) {
     #reading-mode-container ol {
       margin: 1.2em 0;
       padding-left: 2.5em;
-      line-height: ${settings.lineHeight};
+      line-height: ${settings.lineSpacing}; /* 与段落保持一致的行间距 */
       list-style-position: outside;
     }
 
@@ -1239,24 +1245,61 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
 }
 
 // 监听存储变化
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes.lineHeight) {
-    const container = document.getElementById('reading-mode-container');
-    if (container) {
-      container.style.lineHeight = changes.lineHeight.newValue.toString();
+chrome.storage.onChanged.addListener(async (changes) => {
+  const container = document.getElementById('reading-mode-container');
+  if (!container) return;
+
+  const settings = await fetchSettings();
+
+  if (changes.lineSpacing) {
+    // 更新所有需要行间距的元素
+    const elements = container.querySelectorAll('p, ul, ol, li');
+    elements.forEach(el => {
+      (el as HTMLElement).style.lineHeight = changes.lineSpacing.newValue;
+    });
+  }
+
+  if (changes.paragraphSpacing) {
+    // 更新段落间距和视觉分隔
+    const paragraphs = container.getElementsByTagName('p');
+    const newSpacing = changes.paragraphSpacing.newValue;
+    for (const p of paragraphs) {
+      p.style.marginBottom = `${newSpacing}em`;
+      p.style.paddingBottom = newSpacing > 1 ? '0.5em' : '0';
+      p.style.borderBottom = newSpacing > 1 
+        ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}`
+        : 'none';
     }
   }
-  // ... existing storage change handlers ...
 });
 
-// 初始化时应用行间距
-const initializeLineHeight = async () => {
-  const { lineHeight } = await chrome.storage.local.get('lineHeight');
+// 初始化时应用行间距和段间距
+const initializeSpacing = async () => {
+  const { lineSpacing, paragraphSpacing } = await chrome.storage.local.get(['lineSpacing', 'paragraphSpacing']);
+  const settings = await fetchSettings();
   const container = document.getElementById('reading-mode-container');
-  if (container && lineHeight) {
-    container.style.lineHeight = lineHeight.toString();
+  if (!container) return;
+
+  if (lineSpacing !== undefined) {
+    // 更新所有需要行间距的元素
+    const elements = container.querySelectorAll('p, ul, ol, li');
+    elements.forEach(el => {
+      (el as HTMLElement).style.lineHeight = lineSpacing;
+    });
+  }
+
+  if (paragraphSpacing !== undefined) {
+    // 更新段落间距和视觉分隔
+    const paragraphs = container.getElementsByTagName('p');
+    for (const p of paragraphs) {
+      p.style.marginBottom = `${paragraphSpacing}em`;
+      p.style.paddingBottom = paragraphSpacing > 1 ? '0.5em' : '0';
+      p.style.borderBottom = paragraphSpacing > 1
+        ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}`
+        : 'none';
+    }
   }
 };
 
 // 在适当的时机调用初始化函数
-initializeLineHeight(); 
+initializeSpacing(); 

@@ -8,12 +8,23 @@ import {
   DEFAULT_PARAGRAPH_SPACING,
   MIN_PARAGRAPH_SPACING,
   MAX_PARAGRAPH_SPACING,
-  PARAGRAPH_SPACING_STEP
+  PARAGRAPH_SPACING_STEP,
+  DEFAULT_LINE_SPACING,
+  MIN_LINE_SPACING,
+  MAX_LINE_SPACING,
+  LINE_SPACING_STEP
 } from '../../constants/options';
 import useAppStore from '../../store';
 
 export const SettingsPanel: React.FC = () => {
-  const { lineHeight, setLineHeight, paragraphSpacing, setParagraphSpacing } = useAppStore();
+  const {
+    lineHeight,
+    setLineHeight,
+    paragraphSpacing,
+    setParagraphSpacing,
+    lineSpacing,
+    setLineSpacing
+  } = useAppStore();
 
   const handleLineHeightChange = async (value: number) => {
     await setLineHeight(value);
@@ -23,11 +34,15 @@ export const SettingsPanel: React.FC = () => {
     await setParagraphSpacing(value);
   };
 
+  const handleLineSpacingChange = async (value: number) => {
+    await setLineSpacing(value);
+  };
+
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          行间距
+          行高
         </label>
         <Slider
           value={lineHeight}
@@ -39,6 +54,23 @@ export const SettingsPanel: React.FC = () => {
         />
         <div className="text-xs text-gray-500 dark:text-gray-400">
           当前值: {lineHeight.toFixed(1)}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          行间距
+        </label>
+        <Slider
+          value={lineSpacing}
+          onChange={handleLineSpacingChange}
+          min={MIN_LINE_SPACING}
+          max={MAX_LINE_SPACING}
+          step={LINE_SPACING_STEP}
+          className="w-full"
+        />
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          当前值: {lineSpacing.toFixed(1)}
         </div>
       </div>
 
