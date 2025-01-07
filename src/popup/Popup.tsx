@@ -51,8 +51,8 @@ const TabButton: React.FC<TabProps> = ({ label, icon, isSelected, onClick }) => 
   <button
     onClick={onClick}
     className={`flex items-center justify-center w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-all
-      ${isSelected 
-        ? 'bg-white shadow-sm text-blue-600 ring-1 ring-black/5' 
+      ${isSelected
+        ? 'bg-white shadow-sm text-blue-600 ring-1 ring-black/5'
         : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
       }`}
   >
@@ -107,17 +107,17 @@ export const Popup = () => {
 
   useEffect(() => {
     initializeStore();
-    
+
     const initializeSettings = async () => {
       const savedFontFamily = await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY);
       if (savedFontFamily) setFontFamily(savedFontFamily);
-      
+
       const savedBackgroundColor = await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR);
       if (savedBackgroundColor) setBackgroundColor(savedBackgroundColor);
     };
-    
+
     initializeSettings();
-    
+
     // 向 content script 请求当前阅读模式状态
     const getReadingModeState = async () => {
       try {
@@ -188,10 +188,8 @@ export const Popup = () => {
 
   const tabs = [
     { name: '基础', icon: '📝' },
-    { name: '字体', icon: '🔤' },
-    { name: '代码', icon: '💻' },
-    { name: '布局', icon: '📐' },
-    { name: '其他', icon: '⚙️' },
+    { name: '样式', icon: '🎨' },
+    { name: '高级', icon: '⚙️' },
   ];
 
   return (
@@ -210,7 +208,7 @@ export const Popup = () => {
       </div>
 
       {/* 标签页导航 */}
-      <div className="flex space-x-1 rounded-xl bg-white shadow-sm p-1 mb-6">
+      <div className="flex space-x-1 rounded-xl bg-white shadow-sm p-1 mb-6 border border-gray-100">
         {tabs.map((tab, index) => (
           <TabButton
             key={tab.name}
@@ -225,7 +223,7 @@ export const Popup = () => {
       {/* 基础设置面板 */}
       <TabPanel isSelected={selectedTab === 0}>
         <div className="space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-medium text-gray-900">主题设置</h3>
@@ -242,13 +240,14 @@ export const Popup = () => {
 
             <div className="mt-6">
               <label className="text-sm font-medium text-gray-700">背景颜色</label>
-              <div className="flex gap-3 mt-3">
+              <div className="grid grid-cols-7 gap-3 mt-3">
                 {Object.entries(BACKGROUND_COLORS).map(([key, color]) => (
                   <button
                     key={key}
-                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
-                      backgroundColor === key ? 'border-blue-600 ring-2 ring-blue-200' : 'border-transparent'
-                    }`}
+                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${backgroundColor === key
+                        ? 'border-blue-600 ring-2 ring-blue-200 scale-110'
+                        : 'border-transparent hover:border-gray-200'
+                      }`}
                     style={{ backgroundColor: color }}
                     onClick={() => handleBackgroundColorChange(key as keyof typeof BACKGROUND_COLORS)}
                     title={getBackgroundColorLabel(key as keyof typeof BACKGROUND_COLORS)}
@@ -260,100 +259,84 @@ export const Popup = () => {
         </div>
       </TabPanel>
 
-      {/* 字体设置面板 */}
+      {/* 样式设置面板 */}
       <TabPanel isSelected={selectedTab === 1}>
         <div className="space-y-6">
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900">字体选择</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                选择合适的字体，提升阅读体验
-              </p>
-              <select
-                value={fontFamily}
-                onChange={(e) => handleFontFamilyChange(e.target.value as keyof typeof FONT_FAMILIES)}
-                className="mt-3 w-full rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              >
-                {Object.entries(FONT_FAMILIES).map(([key]) => (
-                  <option key={key} value={key}>
-                    {getFontFamilyLabel(key as keyof typeof FONT_FAMILIES)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-8">
-              <div>
-                <h3 className="text-base font-medium text-gray-900 mb-4">字体调整</h3>
-                <div className="space-y-6">
-                  <Slider
-                    label="字体大小"
-                    value={fontSize}
-                    onChange={setFontSize}
-                    min={12}
-                    max={24}
-                    step={1}
-                    className="w-full"
-                  />
-                  <Slider
-                    label="行间距"
-                    value={lineHeight}
-                    onChange={setLineHeight}
-                    min={MIN_LINE_HEIGHT}
-                    max={MAX_LINE_HEIGHT}
-                    step={LINE_HEIGHT_STEP}
-                    className="w-full"
-                  />
-                  <Slider
-                    label="段间距"
-                    value={paragraphSpacing}
-                    onChange={setParagraphSpacing}
-                    min={MIN_PARAGRAPH_SPACING}
-                    max={MAX_PARAGRAPH_SPACING}
-                    step={PARAGRAPH_SPACING_STEP}
-                    className="w-full"
-                  />
-                  <Slider
-                    label="字间距"
-                    value={letterSpacing}
-                    onChange={setLetterSpacing}
-                    min={-2}
-                    max={10}
-                    step={0.5}
-                    className="w-full"
-                  />
+              <h3 className="text-base font-medium text-gray-900">字体设置</h3>
+              <div className="space-y-6 divide-y divide-gray-100">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">字体选择</label>
+                  <select
+                    value={fontFamily}
+                    onChange={(e) => handleFontFamilyChange(e.target.value as keyof typeof FONT_FAMILIES)}
+                    className="mt-2 w-full rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    {Object.entries(FONT_FAMILIES).map(([key]) => (
+                      <option key={key} value={key}>
+                        {getFontFamilyLabel(key as keyof typeof FONT_FAMILIES)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                <Slider
+                  label="字体大小"
+                  value={fontSize}
+                  onChange={setFontSize}
+                  min={12}
+                  max={24}
+                  step={1}
+                  className="w-full"
+                />
+                <Slider
+                  label="行间距"
+                  value={lineHeight}
+                  onChange={setLineHeight}
+                  min={MIN_LINE_HEIGHT}
+                  max={MAX_LINE_HEIGHT}
+                  step={LINE_HEIGHT_STEP}
+                  className="w-full"
+                />
+                <Slider
+                  label="段间距"
+                  value={paragraphSpacing}
+                  onChange={setParagraphSpacing}
+                  min={MIN_PARAGRAPH_SPACING}
+                  max={MAX_PARAGRAPH_SPACING}
+                  step={PARAGRAPH_SPACING_STEP}
+                  className="w-full"
+                />
+                <Slider
+                  label="字间距"
+                  value={letterSpacing}
+                  onChange={setLetterSpacing}
+                  min={-2}
+                  max={10}
+                  step={0.5}
+                  className="w-full"
+                />
               </div>
             </div>
-          </div>
-        </div>
-      </TabPanel>
 
-      {/* 代码设置面板 */}
-      <TabPanel isSelected={selectedTab === 2}>
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900">代码主题</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                选择适合的代码主题，让代码更易阅读
-              </p>
-              <select
-                value={codeTheme}
-                onChange={(e) => handleCodeThemeChange(e.target.value as keyof typeof CODE_THEMES)}
-                className="mt-3 w-full rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              >
-                {Object.entries(CODE_THEMES).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <h3 className="text-base font-medium text-gray-900 mb-4">代码显示</h3>
-              <div className="space-y-6">
+            <div className="mt-6">
+              <h3 className="text-base font-medium text-gray-900">代码设置</h3>
+              <div className="space-y-6 mt-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">代码主题</label>
+                  <select
+                    value={codeTheme}
+                    onChange={(e) => handleCodeThemeChange(e.target.value as keyof typeof CODE_THEMES)}
+                    className="mt-2 w-full rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    {Object.entries(CODE_THEMES).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <Slider
                   label="代码字体大小"
                   value={codeFontSize}
@@ -369,85 +352,73 @@ export const Popup = () => {
         </div>
       </TabPanel>
 
-      {/* 布局设置面板 */}
-      <TabPanel isSelected={selectedTab === 3}>
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900">页面布局</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                调整页面宽度和文本对齐方式
-              </p>
-              <div className="mt-4 space-y-6">
-                <Slider
-                  label="页面宽度"
-                  value={pageWidth}
-                  onChange={setPageWidth}
-                  min={500}
-                  max={1200}
-                  step={50}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">对齐方式</h3>
-                  <p className="text-xs text-gray-500 mt-1">选择文本的对齐方式</p>
-                </div>
-                <select
-                  value={textAlign}
-                  onChange={(e) => setTextAlign(e.target.value as 'left' | 'center' | 'right')}
-                  className="w-24 rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="left">左对齐</option>
-                  <option value="center">居中</option>
-                  <option value="right">右对齐</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">首行缩进</h3>
-                  <p className="text-xs text-gray-500 mt-1">段落首行是否缩进两个字符</p>
-                </div>
-                <Switch
-                  checked={firstLineIndent}
-                  onChange={setFirstLineIndent}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </TabPanel>
-
-      {/* 其他设置面板 */}
-      <TabPanel isSelected={selectedTab === 4}>
+      {/* 高级设置面板 */}
+      <TabPanel isSelected={selectedTab === 2}>
         <div className="space-y-6">
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">显示图片</h3>
-                  <p className="text-xs text-gray-500 mt-1">是否显示文章中的图片内容</p>
+              <div className="mb-6">
+                <h3 className="text-base font-medium text-gray-900">页面布局</h3>
+                <div className="space-y-6 mt-4">
+                  <Slider
+                    label="页面宽度"
+                    value={pageWidth}
+                    onChange={setPageWidth}
+                    min={500}
+                    max={1200}
+                    step={50}
+                    className="w-full"
+                  />
+                  <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">对齐方式</label>
+                      <p className="text-xs text-gray-500 mt-1">选择文本的对齐方式</p>
+                    </div>
+                    <select
+                      value={textAlign}
+                      onChange={(e) => setTextAlign(e.target.value as 'left' | 'center' | 'right')}
+                      className="w-24 rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="left">左对齐</option>
+                      <option value="center">居中</option>
+                      <option value="right">右对齐</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">首行缩进</label>
+                      <p className="text-xs text-gray-500 mt-1">段落首行是否缩进两个字符</p>
+                    </div>
+                    <Switch
+                      checked={firstLineIndent}
+                      onChange={setFirstLineIndent}
+                    />
+                  </div>
                 </div>
-                <Switch
-                  checked={showImages}
-                  onChange={setShowImages}
-                />
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">显示目录</h3>
-                  <p className="text-xs text-gray-500 mt-1">在文章旁显示导航目录</p>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">显示图片</label>
+                    <p className="text-xs text-gray-500 mt-1">是否显示文章中的图片内容</p>
+                  </div>
+                  <Switch
+                    checked={showImages}
+                    onChange={setShowImages}
+                  />
                 </div>
-                <Switch
-                  checked={showDirectory}
-                  onChange={setShowDirectory}
-                />
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">显示目录</label>
+                    <p className="text-xs text-gray-500 mt-1">在文章旁显示导航目录</p>
+                  </div>
+                  <Switch
+                    checked={showDirectory}
+                    onChange={setShowDirectory}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -475,4 +446,4 @@ function getBackgroundColorName(key: keyof typeof BACKGROUND_COLORS): string {
   return nameMap[key];
 }
 
-export default Popup; 
+export default Popup;
