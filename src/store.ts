@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { StorageKeys, getStorage, setStorage, CODE_THEMES } from './storage/storage';
-import { DEFAULT_LINE_HEIGHT } from './constants/options';
+import { DEFAULT_LINE_HEIGHT, DEFAULT_PARAGRAPH_SPACING } from './constants/options';
 
 interface AppState {
   theme: 'light' | 'dark';
@@ -15,6 +15,7 @@ interface AppState {
   firstLineIndent: boolean;
   showImages: boolean;
   showDirectory: boolean;
+  paragraphSpacing: number;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setFontSize: (fontSize: number) => Promise<void>;
   setCodeFontSize: (codeFontSize: number) => Promise<void>;
@@ -27,6 +28,7 @@ interface AppState {
   setFirstLineIndent: (firstLineIndent: boolean) => Promise<void>;
   setShowImages: (showImages: boolean) => Promise<void>;
   setShowDirectory: (showDirectory: boolean) => Promise<void>;
+  setParagraphSpacing: (paragraphSpacing: number) => Promise<void>;
 }
 
 const useAppStore = create<AppState>((set) => ({
@@ -42,6 +44,7 @@ const useAppStore = create<AppState>((set) => ({
   firstLineIndent: true,
   showImages: true,
   showDirectory: true,
+  paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
 
   setTheme: async (theme) => {
     await setStorage(StorageKeys.THEME, theme);
@@ -101,6 +104,11 @@ const useAppStore = create<AppState>((set) => ({
     await setStorage(StorageKeys.SHOW_DIRECTORY, showDirectory);
     set({ showDirectory });
   },
+
+  setParagraphSpacing: async (paragraphSpacing) => {
+    await setStorage(StorageKeys.PARAGRAPH_SPACING, paragraphSpacing);
+    set({ paragraphSpacing });
+  },
 }));
 
 // 初始化 store 的状态
@@ -116,6 +124,7 @@ export const initializeStore = async () => {
   const firstLineIndent = await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT);
   const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES);
   const showDirectory = await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY);
+  const paragraphSpacing = await getStorage<number>(StorageKeys.PARAGRAPH_SPACING);
 
   useAppStore.setState({
     theme: theme ?? 'light',
@@ -130,6 +139,7 @@ export const initializeStore = async () => {
     firstLineIndent: firstLineIndent ?? true,
     showImages: showImages ?? true,
     showDirectory: showDirectory ?? true,
+    paragraphSpacing: paragraphSpacing ?? DEFAULT_PARAGRAPH_SPACING,
   });
 };
 

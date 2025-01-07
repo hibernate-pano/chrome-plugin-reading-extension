@@ -4,6 +4,14 @@ import Button from '../ui/components/Button';
 import { Slider } from '../ui/components/Slider';
 import Switch from '../ui/components/Switch';
 import { StorageKeys, setStorage, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES, StorageKeysType } from '../storage/storage';
+import {
+  MIN_LINE_HEIGHT,
+  MAX_LINE_HEIGHT,
+  LINE_HEIGHT_STEP,
+  MIN_PARAGRAPH_SPACING,
+  MAX_PARAGRAPH_SPACING,
+  PARAGRAPH_SPACING_STEP
+} from '../constants/options';
 
 // 字体标签映射
 function getFontFamilyLabel(key: keyof typeof FONT_FAMILIES): string {
@@ -77,6 +85,7 @@ export const Popup = () => {
     firstLineIndent,
     showImages,
     showDirectory,
+    paragraphSpacing,
     setTheme,
     setFontSize,
     setCodeFontSize,
@@ -88,6 +97,7 @@ export const Popup = () => {
     setFirstLineIndent,
     setShowImages,
     setShowDirectory,
+    setParagraphSpacing,
   } = useAppStore();
 
   const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
@@ -289,9 +299,18 @@ export const Popup = () => {
                     label="行间距"
                     value={lineHeight}
                     onChange={setLineHeight}
-                    min={1}
-                    max={3}
-                    step={0.1}
+                    min={MIN_LINE_HEIGHT}
+                    max={MAX_LINE_HEIGHT}
+                    step={LINE_HEIGHT_STEP}
+                    className="w-full"
+                  />
+                  <Slider
+                    label="段间距"
+                    value={paragraphSpacing}
+                    onChange={setParagraphSpacing}
+                    min={MIN_PARAGRAPH_SPACING}
+                    max={MAX_PARAGRAPH_SPACING}
+                    step={PARAGRAPH_SPACING_STEP}
                     className="w-full"
                   />
                   <Slider

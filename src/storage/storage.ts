@@ -13,7 +13,8 @@ export enum StorageKeys {
   FONT_FAMILY = 'fontFamily',
   BACKGROUND_COLOR = 'backgroundColor',
   CODE_FONT_SIZE = 'codeFontSize',
-  CODE_THEME = 'codeTheme'
+  CODE_THEME = 'codeTheme',
+  PARAGRAPH_SPACING = 'paragraphSpacing'
 }
 
 export type StorageKeysType = `${StorageKeys}`;
@@ -96,6 +97,7 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.SHOW_DIRECTORY, true);
   await setStorage(StorageKeys.FONT_FAMILY, 'default');
   await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
+  await setStorage(StorageKeys.PARAGRAPH_SPACING, 1.0);
 }
 
 export interface StorageData {

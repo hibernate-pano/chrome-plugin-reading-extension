@@ -36,6 +36,7 @@ interface ReadingModeSettings {
   fontFamily: keyof typeof FONT_FAMILIES;
   backgroundColor: keyof typeof BACKGROUND_COLORS;
   showDirectory: boolean;
+  paragraphSpacing: number;
 }
 
 let originalContent: string | null = null;
@@ -56,6 +57,7 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
     fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? 'default',
     backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? 'white',
     showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? true,
+    paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? 1.0,
   };
 }
 
@@ -771,6 +773,16 @@ function applyStyles(settings: ReadingModeSettings) {
       padding: 0 1em;
       text-align: center;
       font-family: ${FONT_FAMILIES[settings.fontFamily]};
+    }
+
+    /* 段落间距样式 */
+    #reading-mode-container p {
+      margin-bottom: ${settings.paragraphSpacing}em;
+    }
+
+    /* 首行缩进样式 */
+    #reading-mode-container p {
+      text-indent: ${settings.firstLineIndent ? '2em' : '0'};
     }
   `;
 
