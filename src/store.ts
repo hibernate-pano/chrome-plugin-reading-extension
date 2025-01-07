@@ -17,6 +17,8 @@ interface AppState {
   showImages: boolean;
   showDirectory: boolean;
   paragraphSpacing: number;
+  aiMode: boolean;
+  aiProcessing: boolean;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setFontSize: (fontSize: number) => Promise<void>;
   setCodeFontSize: (codeFontSize: number) => Promise<void>;
@@ -31,6 +33,8 @@ interface AppState {
   setShowImages: (showImages: boolean) => Promise<void>;
   setShowDirectory: (showDirectory: boolean) => Promise<void>;
   setParagraphSpacing: (paragraphSpacing: number) => Promise<void>;
+  setAIMode: (aiMode: boolean) => Promise<void>;
+  setAIProcessing: (aiProcessing: boolean) => Promise<void>;
 }
 
 const useAppStore = create<AppState>((set) => ({
@@ -48,6 +52,8 @@ const useAppStore = create<AppState>((set) => ({
   showImages: true,
   showDirectory: true,
   paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
+  aiMode: false,
+  aiProcessing: false,
 
   setTheme: async (theme) => {
     await setStorage(StorageKeys.THEME, theme);
@@ -117,6 +123,16 @@ const useAppStore = create<AppState>((set) => ({
     await setStorage(StorageKeys.PARAGRAPH_SPACING, paragraphSpacing);
     set({ paragraphSpacing });
   },
+
+  setAIMode: async (aiMode) => {
+    await setStorage(StorageKeys.AI_MODE, aiMode);
+    set({ aiMode });
+  },
+
+  setAIProcessing: async (aiProcessing) => {
+    await setStorage(StorageKeys.AI_PROCESSING, aiProcessing);
+    set({ aiProcessing });
+  },
 }));
 
 // 初始化 store 的状态
@@ -133,6 +149,8 @@ export const initializeStore = async () => {
   const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES);
   const showDirectory = await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY);
   const paragraphSpacing = await getStorage<number>(StorageKeys.PARAGRAPH_SPACING);
+  const aiMode = await getStorage<boolean>(StorageKeys.AI_MODE);
+  const aiProcessing = await getStorage<boolean>(StorageKeys.AI_PROCESSING);
 
   useAppStore.setState({
     theme: theme ?? 'light',
@@ -148,6 +166,8 @@ export const initializeStore = async () => {
     showImages: showImages ?? true,
     showDirectory: showDirectory ?? true,
     paragraphSpacing: paragraphSpacing ?? DEFAULT_PARAGRAPH_SPACING,
+    aiMode: aiMode ?? false,
+    aiProcessing: aiProcessing ?? false,
   });
 };
 

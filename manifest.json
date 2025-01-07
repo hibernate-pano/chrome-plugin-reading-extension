@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Reading Extension",
+  "version": "1.0.0",
+  "description": "A Chrome extension for better reading experience",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content.js"]
+    }
+  ]
+} 

@@ -14,7 +14,11 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "https://api.siliconflow.com/*"
   ],
   "content_scripts": [
     {

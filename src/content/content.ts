@@ -1,6 +1,7 @@
 import { Readability } from '@mozilla/readability';
 import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 import Prism from 'prismjs';
+import { marked } from 'marked';
 // 先导入主题样式
 import 'prismjs/themes/prism.css';
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
@@ -42,6 +43,7 @@ interface ReadingModeSettings {
 
 let originalContent: string | null = null;
 let isReadingMode = false;
+let isAIMode = false;
 
 async function fetchSettings(): Promise<ReadingModeSettings> {
   return {
@@ -1078,6 +1080,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       if (isReadingMode) {
         disableReadingMode();
       } else {
+        if (isAIMode) {
+          disableAIMode(); // 如果 AI 模式开启，先关闭它
+        }
         enableReadingMode();
       }
       sendResponse({
@@ -1094,6 +1099,31 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     sendResponse({
       isReadingMode,
       buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+    });
+  } else if (request.action === 'TOGGLE_AI_MODE') {
+    try {
+      if (isAIMode) {
+        disableAIMode();
+      } else {
+        if (isReadingMode) {
+          disableReadingMode(); // 如果阅读模式开启，先关闭它
+        }
+        enableAIMode();
+      }
+      sendResponse({
+        success: true,
+        isAIMode,
+        buttonText: isAIMode ? '退出 AI 模式' : '进入 AI 模式'
+      });
+    } catch (error) {
+      console.error('处理消息时发生错误:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      sendResponse({ success: false, error: errorMessage });
+    }
+  } else if (request.action === 'GET_AI_MODE_STATE') {
+    sendResponse({
+      isAIMode,
+      buttonText: isAIMode ? '退出 AI 模式' : '进入 AI 模式'
     });
   }
   return true; // 保持消息通道开启
@@ -1303,3 +1333,423 @@ const initializeSpacing = async () => {
 
 // 在适当的时机调用初始化函数
 initializeSpacing(); 
+
+async function enableAIMode() {
+  if (!document.body) return;
+
+  try {
+    // 保存原始内容
+    if (!originalContent) {
+      originalContent = document.documentElement.innerHTML;
+    }
+
+    // 创建 AI 模式容器
+    const container = document.createElement('div');
+    container.id = 'ai-mode-container';
+    container.style.cssText = `
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100vh;
+      background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 9999;
+      padding: 20px;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    `;
+
+    // 创建 AI 工具栏
+    const toolbar = document.createElement('div');
+    toolbar.id = 'ai-mode-toolbar';
+    toolbar.innerHTML = `
+      <h3 style="margin: 0 0 15px 0;">AI 助手</h3>
+      <div id="ai-actions">
+        <button id="ai-summarize" style="margin: 5px 0; width: 100%; padding: 8px;">生成摘要</button>
+        <button id="ai-translate" style="margin: 5px 0; width: 100%; padding: 8px;">翻译内容</button>
+        <button id="ai-explain" style="margin: 5px 0; width: 100%; padding: 8px;">解释内容</button>
+        <button id="ai-reformat" style="margin: 5px 0; width: 100%; padding: 8px;">AI 重排版</button>
+      </div>
+      <div id="ai-result" style="margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px; display: none;">
+        <div id="ai-result-content"></div>
+      </div>
+    `;
+
+    container.appendChild(toolbar);
+    document.body.appendChild(container);
+
+    // 添加事件监听器
+    const aiSummarize = document.getElementById('ai-summarize');
+    const aiTranslate = document.getElementById('ai-translate');
+    const aiExplain = document.getElementById('ai-explain');
+    const aiReformat = document.getElementById('ai-reformat');
+    const aiResult = document.getElementById('ai-result');
+    const aiResultContent = document.getElementById('ai-result-content');
+
+    if (aiSummarize && aiTranslate && aiExplain && aiReformat && aiResult && aiResultContent) {
+      aiSummarize.addEventListener('click', async () => {
+        try {
+          aiResult.style.display = 'block';
+          aiResultContent.innerHTML = '正在生成摘要...';
+          const content = document.body.innerText;
+          const summary = await generateSummary(content);
+          aiResultContent.innerHTML = summary;
+        } catch (error) {
+          aiResultContent.innerHTML = '生成摘要失败: ' + (error instanceof Error ? error.message : String(error));
+        }
+      });
+
+      aiTranslate.addEventListener('click', async () => {
+        try {
+          aiResult.style.display = 'block';
+          aiResultContent.innerHTML = '正在翻译...';
+          const content = document.body.innerText;
+          const translation = await translateContent(content);
+          aiResultContent.innerHTML = translation;
+        } catch (error) {
+          aiResultContent.innerHTML = '翻译失败: ' + (error instanceof Error ? error.message : String(error));
+        }
+      });
+
+      aiExplain.addEventListener('click', async () => {
+        try {
+          aiResult.style.display = 'block';
+          aiResultContent.innerHTML = '正在解释...';
+          const content = document.body.innerText;
+          const explanation = await explainContent(content);
+          aiResultContent.innerHTML = explanation;
+        } catch (error) {
+          aiResultContent.innerHTML = '解释失败: ' + (error instanceof Error ? error.message : String(error));
+        }
+      });
+
+      aiReformat.addEventListener('click', async () => {
+        try {
+          aiResult.style.display = 'block';
+          aiResultContent.innerHTML = '正在重排版...';
+          const content = document.body.innerHTML;
+          const markdown = await reformatContent(content);
+          document.body.innerHTML = '';
+          const container = document.createElement('div');
+          container.id = 'ai-reformatted-content';
+          container.style.cssText = `
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+          `;
+          const htmlContent = await marked(markdown);
+          container.innerHTML = htmlContent;
+          document.body.appendChild(container);
+          aiResultContent.innerHTML = '重排版完成';
+        } catch (error) {
+          aiResultContent.innerHTML = '重排版失败: ' + (error instanceof Error ? error.message : String(error));
+        }
+      });
+    }
+
+    // 添加退出按钮
+    const exitButton = document.createElement('button');
+    exitButton.id = 'ai-mode-exit-button';
+    exitButton.textContent = '退出 AI 模式';
+    exitButton.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 320px;
+      z-index: 9999;
+      padding: 8px 16px;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
+      opacity: 0.8;
+    `;
+
+    exitButton.addEventListener('click', () => {
+      disableAIMode();
+    });
+
+    document.body.appendChild(exitButton);
+
+    // 设置状态
+    isAIMode = true;
+
+  } catch (error) {
+    console.error('启用 AI 模式时发生错误:', error);
+    throw error;
+  }
+}
+
+// AI 接口类型定义
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface ChatResponse {
+  id: string;
+  choices: {
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+const API_ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions';
+
+// 提示词模板
+const PROMPTS = {
+  SUMMARIZE: {
+    system: "你是一个专业的文章摘要生成器。请生成一个简洁的摘要，突出文章的主要观点和关键信息。摘要应该：1. 不超过500字 2. 保持文章的核心意思 3. 使用简洁明了的语言",
+    user: (content: string) => `请为以下文章生成摘要：\n\n${content}`
+  },
+  TRANSLATE: {
+    system: "你是一个专业的翻译器。请将内容翻译成流畅的中文，同时：1. 保持专业术语的准确性 2. 保持原文的语气和风格 3. 确保翻译的自然度",
+    user: (content: string) => `请将以下内容翻译成中文：\n\n${content}`
+  },
+  EXPLAIN: {
+    system: "你是一个专业的解释器。请用通俗易懂的语言解释内容，要求：1. 简化专业术语 2. 提供必要的背景信息 3. 使用生动的例子 4. 保持解释的准确性",
+    user: (content: string) => `请解释以下内容：\n\n${content}`
+  },
+  REFORMAT: {
+    system: "你是一个专业的文本重排版工具。请将HTML内容转换成优雅的Markdown格式，要求：1. 保持文档结构 2. 优化标题层级 3. 规范列表格式 4. 保持代码块格式 5. 优化图片引用",
+    user: (content: string) => `请将以下HTML内容转换成Markdown格式：\n\n${content}`
+  }
+};
+
+// API 配置
+const API_CONFIG = {
+  // model: "deepseek-ai/DeepSeek-V2.5",
+  model: "Qwen/Qwen2.5-7B-Instruct",
+  api_key: "sk-bpbqulqtsmbywglsemzqantxqhmilksogyeitgcpkbvwioix",
+  temperature: 0.7,
+  top_p: 0.7,
+  max_tokens: 2048,
+  stream: false
+};
+
+// AI 功能实现
+async function generateSummary(content: string): Promise<string> {
+  try {
+    console.log('开始生成摘要，内容长度:', content.length);
+    const messages: ChatMessage[] = [
+      { role: 'system', content: PROMPTS.SUMMARIZE.system },
+      { role: 'user', content: PROMPTS.SUMMARIZE.user(content) }
+    ];
+
+    console.log('API请求配置:', {
+      endpoint: API_ENDPOINT,
+      model: API_CONFIG.model,
+      messages: messages
+    });
+
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_CONFIG.api_key}`
+      },
+      body: JSON.stringify({
+        ...API_CONFIG,
+        messages
+      })
+    });
+
+    console.log('API响应状态:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API错误响应:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText
+      });
+      throw new Error(`摘要生成失败: ${response.status} ${response.statusText}\n${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('API响应数据:', data);
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('生成摘要时发生错误:', error);
+    throw error;
+  }
+}
+
+async function translateContent(content: string): Promise<string> {
+  try {
+    console.log('开始翻译，内容长度:', content.length);
+    const messages: ChatMessage[] = [
+      { role: 'system', content: PROMPTS.TRANSLATE.system },
+      { role: 'user', content: PROMPTS.TRANSLATE.user(content) }
+    ];
+
+    console.log('API请求配置:', {
+      endpoint: API_ENDPOINT,
+      model: API_CONFIG.model,
+      messages: messages
+    });
+
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_CONFIG.api_key}`
+      },
+      body: JSON.stringify({
+        ...API_CONFIG,
+        messages
+      })
+    });
+
+    console.log('API响应状态:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API错误响应:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText
+      });
+      throw new Error(`翻译失败: ${response.status} ${response.statusText}\n${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('API响应数据:', data);
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('翻译内容时发生错误:', error);
+    throw error;
+  }
+}
+
+async function explainContent(content: string): Promise<string> {
+  try {
+    console.log('开始解释，内容长度:', content.length);
+    const messages: ChatMessage[] = [
+      { role: 'system', content: PROMPTS.EXPLAIN.system },
+      { role: 'user', content: PROMPTS.EXPLAIN.user(content) }
+    ];
+
+    console.log('API请求配置:', {
+      endpoint: API_ENDPOINT,
+      model: API_CONFIG.model,
+      messages: messages
+    });
+
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_CONFIG.api_key}`
+      },
+      body: JSON.stringify({
+        ...API_CONFIG,
+        messages
+      })
+    });
+
+    console.log('API响应状态:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API错误响应:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText
+      });
+      throw new Error(`解释失败: ${response.status} ${response.statusText}\n${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('API响应数据:', data);
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('解释内容时发生错误:', error);
+    throw error;
+  }
+}
+
+async function reformatContent(content: string): Promise<string> {
+  try {
+    console.log('开始重排版，内容长度:', content.length);
+    const messages: ChatMessage[] = [
+      { role: 'system', content: PROMPTS.REFORMAT.system },
+      { role: 'user', content: PROMPTS.REFORMAT.user(content) }
+    ];
+
+    console.log('API请求配置:', {
+      endpoint: API_ENDPOINT,
+      model: API_CONFIG.model,
+      messages: messages
+    });
+
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_CONFIG.api_key}`
+      },
+      body: JSON.stringify({
+        ...API_CONFIG,
+        messages
+      })
+    });
+
+    console.log('API响应状态:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API错误响应:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText
+      });
+      throw new Error(`重排版失败: ${response.status} ${response.statusText}\n${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('API响应数据:', data);
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('重排版内容时发生错误:', error);
+    throw error;
+  }
+}
+
+function disableAIMode() {
+  try {
+    // 移除 AI 模式容器
+    const container = document.getElementById('ai-mode-container');
+    if (container) {
+      container.remove();
+    }
+
+    // 移除退出按钮
+    const exitButton = document.getElementById('ai-mode-exit-button');
+    if (exitButton) {
+      exitButton.remove();
+    }
+
+    // 重置状态
+    isAIMode = false;
+
+  } catch (error) {
+    console.error('禁用 AI 模式时发生错误:', error);
+    throw error;
+  }
+} 

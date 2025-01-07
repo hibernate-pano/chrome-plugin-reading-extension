@@ -81,6 +81,7 @@ export const Popup = () => {
     fontSize,
     codeFontSize,
     readingMode,
+    aiMode,
     lineHeight,
     lineSpacing,
     letterSpacing,
@@ -94,6 +95,7 @@ export const Popup = () => {
     setFontSize,
     setCodeFontSize,
     setReadingMode,
+    setAIMode,
     setLineHeight,
     setLineSpacing,
     setLetterSpacing,
@@ -191,6 +193,31 @@ export const Popup = () => {
     await setStorage(StorageKeys.CODE_THEME, value);
   };
 
+  const toggleAIMode = async () => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab.id) {
+        chrome.tabs.sendMessage(
+          tab.id,
+          { action: 'TOGGLE_AI_MODE' },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('发送消息时发生错误:', chrome.runtime.lastError);
+              return;
+            }
+            if (response?.success) {
+              setAIMode(response.isAIMode);
+            } else {
+              console.error('切换 AI 模式失败:', response?.error);
+            }
+          }
+        );
+      }
+    } catch (error) {
+      console.error('切换 AI 模式时发生错误:', error);
+    }
+  };
+
   const tabs = [
     { name: '基础', icon: '📝' },
     { name: '样式', icon: '🎨' },
@@ -202,14 +229,24 @@ export const Popup = () => {
       {/* 标题栏 */}
       <div className="relative mb-8 flex items-center justify-between p-5 bg-white/50 backdrop-blur-sm rounded-lg border border-gray-200/30 shadow-sm">
         <h1 className="text-xl font-semibold text-gray-900 tracking-tight">阅读模式设置</h1>
-        <Button
-          variant={readingMode ? 'primary' : 'outline'}
-          size="small"
-          onClick={toggleReadingMode}
-          className="shadow-sm"
-        >
-          阅读模式
-        </Button>
+        <div className="flex flex-col space-y-4">
+          <div className="flex justify-between items-center">
+            <Button
+              onClick={toggleAIMode}
+              className={`flex-1 mr-2 ${aiMode ? 'bg-blue-600' : 'bg-gray-500'}`}
+              disabled={readingMode}
+            >
+              {aiMode ? '退出 AI 模式' : '进入 AI 模式'}
+            </Button>
+            <Button
+              onClick={toggleReadingMode}
+              className={`flex-1 ml-2 ${readingMode ? 'bg-blue-600' : 'bg-gray-500'}`}
+              disabled={aiMode}
+            >
+              {readingMode ? '退出阅读模式' : '进入阅读模式'}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* 标签页导航 */}

@@ -26,5 +26,8 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src')
     }
+  },
+  define: {
+    'process.env.VITE_SILICONFLOW_API_KEY': JSON.stringify(process.env.VITE_SILICONFLOW_API_KEY)
   }
 }); 

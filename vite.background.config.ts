@@ -20,12 +20,11 @@ export default defineConfig({
       output: {
         globals: {
           chrome: 'chrome'
-        },
-        dir: 'dist',
-        entryFileNames: 'src/[name]/[name].js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: 'assets/[name].[ext]'
+        }
       }
     }
+  },
+  define: {
+    'process.env.VITE_SILICONFLOW_API_KEY': JSON.stringify(process.env.VITE_SILICONFLOW_API_KEY)
   }
 }); 
