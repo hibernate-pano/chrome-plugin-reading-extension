@@ -164,34 +164,82 @@ body.dark-theme #reading-mode-container ol > li::before {
   @apply text-blue-400;
 }
 
-/* 代码块优化 */
+/* 代码块容器优化 */
 #reading-mode-container pre {
-  @apply my-6 mx-[-1em] rounded-lg overflow-x-auto relative;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  @apply my-8 rounded-xl overflow-hidden relative;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  margin-bottom: 2rem;
 }
 
+/* 代码块顶部工具栏 */
 #reading-mode-container pre::before {
   content: "";
-  @apply absolute top-0 left-0 right-0 h-1;
-  background: linear-gradient(90deg, #4285f4, #34a853, #fbbc05, #ea4335);
-  opacity: 0.7;
+  @apply absolute top-0 left-0 right-0 h-10;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-#reading-mode-container code {
-  @apply px-2 py-0.5 rounded text-sm font-mono;
-  background: rgba(66, 133, 244, 0.08);
+/* 代码语言标签 */
+#reading-mode-container pre::after {
+  @apply absolute top-2.5 left-4 px-2 py-1 text-xs font-medium rounded-md z-20;
+  content: attr(data-language);
+  background: rgba(66, 133, 244, 0.1);
   color: #1a73e8;
-  border: 1px solid rgba(66, 133, 244, 0.16);
+  border: 1px solid rgba(66, 133, 244, 0.2);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;
 }
 
+/* 代码块复制按钮 */
+#reading-mode-container pre .copy-button {
+  @apply absolute top-2 right-4 px-3 py-1 rounded-md z-20 flex items-center gap-1.5 text-sm;
+  background: #1a73e8;
+  color: white;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;
+  opacity: 0;
+  transform: translateY(0);
+  transition: all 0.2s ease;
+}
+
+#reading-mode-container pre:hover .copy-button {
+  opacity: 1;
+}
+
+#reading-mode-container pre .copy-button:hover {
+  background: #1557b0;
+}
+
+#reading-mode-container pre .copy-button.copied {
+  background: #34a853;
+}
+
+/* 代码内容样式优化 */
 #reading-mode-container pre code {
-  @apply block p-6 text-[14px] leading-6;
+  @apply block pt-12 px-6 pb-4 text-[14px] leading-6;
   background: transparent;
-  color: #3c4043;
+  color: #24292e;
   border: none;
-  font-family: 'Roboto Mono', Consolas, Monaco, 'Andale Mono', monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  tab-size: 2;
+}
+
+/* 代码块行号样式 */
+#reading-mode-container pre code.line-numbers {
+  counter-reset: line;
+  padding-left: 4em;
+}
+
+#reading-mode-container pre code.line-numbers > span {
+  @apply block relative;
+  counter-increment: line;
+}
+
+#reading-mode-container pre code.line-numbers > span::before {
+  content: counter(line);
+  @apply absolute left-[-3em] w-[2.5em] text-right pr-4 text-gray-400 select-none;
+  font-size: 0.85em;
 }
 
 /* 分割线优化 */
@@ -244,21 +292,52 @@ body.dark-theme #reading-mode-container ul li::before {
 body.dark-theme #reading-mode-container pre {
   background: #202124;
   border-color: #3c4043;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-body.dark-theme #reading-mode-container code {
-  background: rgba(66, 133, 244, 0.12);
+body.dark-theme #reading-mode-container pre::before {
+  background: #2d2d2d;
+  border-color: #3c4043;
+}
+
+body.dark-theme #reading-mode-container pre::after {
+  background: rgba(138, 180, 248, 0.12);
   color: #8ab4f8;
-  border-color: rgba(66, 133, 244, 0.24);
+  border-color: rgba(138, 180, 248, 0.24);
 }
 
 body.dark-theme #reading-mode-container pre code {
   color: #e8eaed;
 }
 
-body.dark-theme #reading-mode-container hr {
-  @apply bg-gradient-to-r from-transparent via-blue-400 to-transparent;
+body.dark-theme #reading-mode-container pre code.line-numbers > span::before {
+  color: #5f6368;
+}
+
+/* 代码块滚动条美化 */
+#reading-mode-container pre::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+#reading-mode-container pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#reading-mode-container pre::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+
+#reading-mode-container pre::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+body.dark-theme #reading-mode-container pre::-webkit-scrollbar-thumb {
+  background: #3c4043;
+}
+
+body.dark-theme #reading-mode-container pre::-webkit-scrollbar-thumb:hover {
+  background: #4d5156;
 }
 
 /* 响应式优化 */
