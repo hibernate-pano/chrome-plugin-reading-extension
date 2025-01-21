@@ -391,7 +391,7 @@ export const Popup = () => {
                     <select
                       value={textAlign}
                       onChange={(e) => setTextAlign(e.target.value as 'left' | 'center' | 'right' | 'justify')}
-                      className="w-24 rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-32 rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="left">左对齐</option>
                       <option value="center">居中</option>
