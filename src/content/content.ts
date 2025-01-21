@@ -31,7 +31,7 @@ interface ReadingModeSettings {
   letterSpacing: number;
   lineSpacing: number;
   pageWidth: number;
-  textAlign: 'left' | 'center' | 'right';
+  textAlign: 'left' | 'center' | 'right' | 'justify';
   firstLineIndent: boolean;
   showImages: boolean;
   fontFamily: keyof typeof FONT_FAMILIES;
@@ -53,7 +53,7 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
     letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? 0,
     lineSpacing: await getStorage<number>(StorageKeys.LINE_SPACING) ?? 0.5,
     pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? 800,
-    textAlign: await getStorage<'left' | 'center' | 'right'>(StorageKeys.TEXT_ALIGN) ?? 'left',
+    textAlign: await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN) ?? 'left',
     firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? true,
     showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? true,
     fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? 'default',
@@ -1302,4 +1302,4 @@ const initializeSpacing = async () => {
 };
 
 // 在适当的时机调用初始化函数
-initializeSpacing(); 
+initializeSpacing();

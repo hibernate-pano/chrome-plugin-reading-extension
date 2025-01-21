@@ -20,7 +20,6 @@
     {
       "matches": ["<all_urls>"],
       "js": ["src/content/content.js"],
-      "css": ["assets/popup.css"],
       "run_at": "document_end"
     }
   ],
@@ -33,4 +32,4 @@
     "48": "icon48.png",
     "128": "icon128.png"
   }
-} 
+}

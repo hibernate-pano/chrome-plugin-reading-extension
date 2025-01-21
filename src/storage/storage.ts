@@ -93,7 +93,7 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.LINE_SPACING, 1.7);
   await setStorage(StorageKeys.LETTER_SPACING, 0);
   await setStorage(StorageKeys.PAGE_WIDTH, 1200);
-  await setStorage(StorageKeys.TEXT_ALIGN, 'left');
+  await setStorage(StorageKeys.TEXT_ALIGN, 'justify');
   await setStorage(StorageKeys.FIRST_LINE_INDENT, false);
   await setStorage(StorageKeys.SHOW_IMAGES, true);
   await setStorage(StorageKeys.SHOW_DIRECTORY, true);

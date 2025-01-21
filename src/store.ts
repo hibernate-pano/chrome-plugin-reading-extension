@@ -12,7 +12,7 @@ interface AppState {
   lineSpacing: number;
   letterSpacing: number;
   pageWidth: number;
-  textAlign: 'left' | 'center' | 'right';
+  textAlign: 'left' | 'center' | 'right' | 'justify';
   firstLineIndent: boolean;
   showImages: boolean;
   showDirectory: boolean;
@@ -26,7 +26,7 @@ interface AppState {
   setLineSpacing: (lineSpacing: number) => Promise<void>;
   setLetterSpacing: (letterSpacing: number) => Promise<void>;
   setPageWidth: (pageWidth: number) => Promise<void>;
-  setTextAlign: (textAlign: 'left' | 'center' | 'right') => Promise<void>;
+  setTextAlign: (textAlign: 'left' | 'center' | 'right' | 'justify') => Promise<void>;
   setFirstLineIndent: (firstLineIndent: boolean) => Promise<void>;
   setShowImages: (showImages: boolean) => Promise<void>;
   setShowDirectory: (showDirectory: boolean) => Promise<void>;
@@ -151,4 +151,4 @@ export const initializeStore = async () => {
   });
 };
 
-export default useAppStore; 
+export default useAppStore;
