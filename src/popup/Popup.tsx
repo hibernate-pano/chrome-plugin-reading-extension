@@ -511,7 +511,7 @@ export const Popup = () => {
               <Card variant="hover">
                 <CardHeader 
                   title="关于" 
-                  subtitle="AI 阅读助手 v1.1.4"
+                  subtitle="AI 阅读助手 v1.1.5"
                 />
                 <CardContent>
                   <p className="text-sm text-gray-600 dark:text-gray-400">

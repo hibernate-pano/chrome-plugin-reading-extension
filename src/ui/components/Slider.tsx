@@ -114,6 +114,7 @@ export const Slider: React.FC<SliderProps> = ({
       <div 
         className="relative py-3 group cursor-pointer" 
         onMouseDown={() => setIsDragging(true)}
+        onTouchStart={() => setIsDragging(true)}
         onMouseUp={() => setIsDragging(false)}
         onMouseLeave={() => setIsDragging(false)}
       >
