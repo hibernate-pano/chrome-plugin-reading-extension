@@ -459,13 +459,18 @@ function applyStyles(settings: ReadingModeSettings) {
     /* 段落样式 */
     #reading-mode-container p {
       margin: 0;
-      ${settings.firstLineIndent ? 'text-indent: 2em;' : ''}
-      line-height: ${settings.lineSpacing}; /* 直接使用行间距值控制行高 */
-      margin-bottom: ${settings.paragraphSpacing}em; /* 段间距 */
-      padding-bottom: ${settings.paragraphSpacing > 1 ? '0.5em' : '0'}; /* 当段间距较大时添加下边框 */
-      border-bottom: ${settings.paragraphSpacing > 1 ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}` : 'none'}; /* 视觉分隔 */
+      margin-bottom: ${settings.paragraphSpacing}em;
+      line-height: ${settings.lineSpacing};
       letter-spacing: ${settings.letterSpacing}px;
       opacity: 0.95;
+      text-indent: ${settings.firstLineIndent ? '2em' : '0'};
+    }
+
+    /* 覆盖特殊段落的缩进 */
+    #reading-mode-container blockquote p,
+    #reading-mode-container li p,
+    #reading-mode-container .no-indent {
+      text-indent: 0;
     }
 
     /* 列表样式优化 */
