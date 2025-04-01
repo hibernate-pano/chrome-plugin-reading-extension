@@ -3,6 +3,8 @@ import useAppStore, { initializeStore } from '../store';
 import Button from '../ui/components/Button';
 import { Slider } from '../ui/components/Slider';
 import Switch from '../ui/components/Switch';
+import { Tabs, TabItem, TabPanels, TabPanel } from '../ui/components/Tabs';
+import { Card, CardHeader, CardContent, CardFooter } from '../ui/components/Card';
 import { StorageKeys, setStorage, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES, StorageKeysType } from '../storage/storage';
 import {
   MIN_LINE_HEIGHT,
@@ -43,37 +45,19 @@ function getBackgroundColorLabel(key: keyof typeof BACKGROUND_COLORS): string {
   return labels[key];
 }
 
-interface TabProps {
-  label: string;
-  icon: string;
-  isSelected: boolean;
-  onClick: () => void;
+// 获取背景颜色的样式类
+function getBackgroundColorClasses(key: keyof typeof BACKGROUND_COLORS): string {
+  switch (key) {
+    case 'white': return 'bg-white';
+    case 'warm': return 'bg-paper-warm';
+    case 'cool': return 'bg-paper-cool';
+    case 'sepia': return 'bg-paper-sepia';
+    case 'cream': return 'bg-paper-cream';
+    case 'mint': return 'bg-paper-mint';
+    case 'gray': return 'bg-gray-100';
+    default: return 'bg-white';
+  }
 }
-
-const TabButton: React.FC<TabProps> = ({ label, icon, isSelected, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center justify-center w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-all
-      ${isSelected
-        ? 'bg-white shadow-sm text-blue-600 ring-1 ring-black/5'
-        : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-      }`}
-  >
-    <span className="mr-2 text-base">{icon}</span>
-    {label}
-  </button>
-);
-
-interface TabPanelProps {
-  children: React.ReactNode;
-  isSelected: boolean;
-}
-
-const TabPanel: React.FC<TabPanelProps> = ({ children, isSelected }) => (
-  <div className={`${isSelected ? 'block' : 'hidden'} animate-fadeIn`}>
-    {children}
-  </div>
-);
 
 export const Popup = () => {
   const {
@@ -108,17 +92,28 @@ export const Popup = () => {
   const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
   const [backgroundColor, setBackgroundColor] = useState<keyof typeof BACKGROUND_COLORS>('white');
   const [codeTheme, setCodeTheme] = useState<keyof typeof CODE_THEMES>('github');
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedTab, setSelectedTab] = useState('basic');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     initializeStore();
 
     const initializeSettings = async () => {
-      const savedFontFamily = await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY);
-      if (savedFontFamily) setFontFamily(savedFontFamily);
+      setIsLoading(true);
+      try {
+        const savedFontFamily = await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY);
+        if (savedFontFamily) setFontFamily(savedFontFamily);
 
-      const savedBackgroundColor = await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR);
-      if (savedBackgroundColor) setBackgroundColor(savedBackgroundColor);
+        const savedBackgroundColor = await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR);
+        if (savedBackgroundColor) setBackgroundColor(savedBackgroundColor);
+
+        const savedCodeTheme = await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME);
+        if (savedCodeTheme) setCodeTheme(savedCodeTheme);
+      } catch (error) {
+        console.error('初始化设置时发生错误:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     initializeSettings();
@@ -191,274 +186,354 @@ export const Popup = () => {
     await setStorage(StorageKeys.CODE_THEME, value);
   };
 
-  const tabs = [
-    { name: '基础', icon: '📝' },
-    { name: '样式', icon: '🎨' },
-    { name: '高级', icon: '⚙️' },
+  const tabs: TabItem[] = [
+    { id: 'basic', label: '基础', icon: '📝' },
+    { id: 'style', label: '样式', icon: '🎨' },
+    { id: 'advanced', label: '高级', icon: '⚙️' },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="w-[440px] h-[580px] flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-xl overflow-hidden">
+        <div className="flex flex-col items-center">
+          <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-[420px] h-[580px] p-6 bg-gradient-to-br from-gray-100 to-gray-50 rounded-xl shadow-2xl border border-gray-200/50 overflow-y-auto scrollbar-hide relative [&::-webkit-scrollbar]:hidden">
-      {/* 标题栏 */}
-      <div className="relative mb-8 flex items-center justify-between p-5 bg-white/50 backdrop-blur-sm rounded-lg border border-gray-200/30 shadow-sm">
-        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">阅读模式设置</h1>
-        <Button
-          variant={readingMode ? 'primary' : 'outline'}
-          size="small"
-          onClick={toggleReadingMode}
-          className="shadow-sm"
-        >
-          阅读模式
-        </Button>
-      </div>
-
-      {/* 标签页导航 */}
-      <div className="flex space-x-2 rounded-xl bg-white/80 backdrop-blur-sm p-2 mb-8 border border-gray-200/30 shadow-sm">
-        {tabs.map((tab, index) => (
-          <TabButton
-            key={tab.name}
-            label={tab.name}
-            icon={tab.icon}
-            isSelected={selectedTab === index}
-            onClick={() => setSelectedTab(index)}
+    <div className="w-[440px] h-[580px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-xl overflow-hidden">
+      {/* 顶部导航栏 */}
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-700/30 px-6 py-4 flex justify-between items-center">
+        <h1 className="text-lg font-semibold text-brand-700 dark:text-brand-400">
+          AI 阅读助手
+        </h1>
+        
+        <div className="flex gap-2">
+          <Switch 
+            checked={theme === 'dark'} 
+            onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+            size="small"
           />
-        ))}
+          <Button
+            variant={readingMode ? 'primary' : 'outline'}
+            size="sm"
+            onClick={toggleReadingMode}
+            iconLeft={readingMode ? '📖' : '📃'}
+            rounded="full"
+            className="ml-2"
+          >
+            {readingMode ? '已启用' : '阅读模式'}
+          </Button>
+        </div>
       </div>
 
-      {/* 基础设置面板 */}
-      <TabPanel isSelected={selectedTab === 0}>
-        <div className="space-y-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/30 hover:shadow-md transition-all hover:scale-[1.005] space-y-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base font-medium text-gray-900">主题设置</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  选择适合你的主题和背景颜色，让阅读更舒适
-                </p>
-              </div>
-              <Switch
-                label={theme === 'light' ? '浅色' : '深色'}
-                checked={theme === 'dark'}
-                onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-              />
-            </div>
+      <div className="px-6 py-4 overflow-y-auto h-[calc(100%-66px)] pb-16 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        {/* 标签页导航 */}
+        <Tabs
+          tabs={tabs}
+          activeTab={selectedTab}
+          onChange={setSelectedTab}
+          fullWidth
+          className="mb-5"
+        />
 
-            <div className="mt-6">
-              <label className="text-sm font-medium text-gray-700">背景颜色</label>
-              <div className="grid grid-cols-7 gap-4 mt-4 p-3 bg-gray-50/50 rounded-lg border border-gray-200/20">
-                {Object.entries(BACKGROUND_COLORS).map(([key, color]) => (
-                  <button
-                    key={key}
-                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${backgroundColor === key
-                      ? 'border-blue-600 ring-2 ring-blue-200 scale-110 shadow-md'
-                      : 'border-gray-200/50 hover:border-gray-300 shadow-sm'
-                      }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => handleBackgroundColorChange(key as keyof typeof BACKGROUND_COLORS)}
-                    title={getBackgroundColorLabel(key as keyof typeof BACKGROUND_COLORS)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </TabPanel>
-
-      {/* 样式设置面板 */}
-      <TabPanel isSelected={selectedTab === 1}>
-        <div className="space-y-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/30 space-y-8">
-            <div className="mb-6">
-              <h3 className="text-base font-medium text-gray-900">字体设置</h3>
-              <div className="space-y-6 divide-y divide-gray-100/50">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">字体选择</label>
-                  <select
-                    value={fontFamily}
-                    onChange={(e) => handleFontFamilyChange(e.target.value as keyof typeof FONT_FAMILIES)}
-                    className="mt-2 w-full rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  >
-                    {Object.entries(FONT_FAMILIES).map(([key]) => (
-                      <option key={key} value={key}>
-                        {getFontFamilyLabel(key as keyof typeof FONT_FAMILIES)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <Slider
-                  label="字体大小"
-                  value={fontSize}
-                  onChange={setFontSize}
-                  min={12}
-                  max={24}
-                  step={1}
-                  className="w-full"
-                />
-                <Slider
-                  label="行高"
-                  value={lineHeight}
-                  onChange={setLineHeight}
-                  min={MIN_LINE_HEIGHT}
-                  max={MAX_LINE_HEIGHT}
-                  step={LINE_HEIGHT_STEP}
-                  className="w-full"
-                />
-                <Slider
-                  label="行间距"
-                  value={lineSpacing}
-                  onChange={setLineSpacing}
-                  min={MIN_LINE_SPACING}
-                  max={MAX_LINE_SPACING}
-                  step={LINE_SPACING_STEP}
-                  className="w-full"
-                />
-                <Slider
-                  label="段间距"
-                  value={paragraphSpacing}
-                  onChange={setParagraphSpacing}
-                  min={MIN_PARAGRAPH_SPACING}
-                  max={MAX_PARAGRAPH_SPACING}
-                  step={PARAGRAPH_SPACING_STEP}
-                  className="w-full"
-                />
-                <Slider
-                  label="字间距"
-                  value={letterSpacing}
-                  onChange={setLetterSpacing}
-                  min={-2}
-                  max={10}
-                  step={0.5}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <h3 className="text-base font-medium text-gray-900">代码设置</h3>
-              <div className="space-y-6 mt-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">代码主题</label>
-                  <select
-                    value={codeTheme}
-                    onChange={(e) => handleCodeThemeChange(e.target.value as keyof typeof CODE_THEMES)}
-                    className="mt-2 w-full rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  >
-                    {Object.entries(CODE_THEMES).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Slider
-                  label="代码字体大小"
-                  value={codeFontSize}
-                  onChange={setCodeFontSize}
-                  min={12}
-                  max={20}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </TabPanel>
-
-      {/* 高级设置面板 */}
-      <TabPanel isSelected={selectedTab === 2}>
-        <div className="space-y-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-200/30 space-y-8">
-            <div className="space-y-6">
-              <div className="mb-6">
-                <h3 className="text-base font-medium text-gray-900">页面布局</h3>
-                <div className="space-y-6 mt-4">
-                  <Slider
-                    label="页面宽度"
-                    value={pageWidth}
-                    onChange={setPageWidth}
-                    min={500}
-                    max={1400}
-                    step={50}
-                    className="w-full"
-                  />
-                  <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">对齐方式</label>
-                      <p className="text-xs text-gray-500 mt-1">选择文本的对齐方式</p>
-                    </div>
-                    <select
-                      value={textAlign}
-                      onChange={(e) => setTextAlign(e.target.value as 'left' | 'center' | 'right' | 'justify')}
-                      className="w-32 rounded-lg border border-gray-300 py-2 px-3 text-sm bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        <TabPanels activeTab={selectedTab} transition="fade">
+          {/* 基础设置面板 */}
+          <TabPanel id="basic">
+            <div className="space-y-5">
+              <Card variant="paper" className="animate-float">
+                <CardHeader 
+                  title="阅读模式" 
+                  subtitle="一键优化网页内容，提供舒适的阅读体验"
+                  action={
+                    <Button
+                      variant={readingMode ? 'primary' : 'ghost'}
+                      size="sm"
+                      onClick={toggleReadingMode}
+                      rounded="lg"
                     >
-                      <option value="left">左对齐</option>
-                      <option value="center">居中</option>
-                      <option value="right">右对齐</option>
-                      <option value="justify">两端对齐</option>
-                    </select>
+                      {readingMode ? '已启用' : '启用'}
+                    </Button>
+                  }
+                />
+                <CardContent>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    阅读模式将移除页面干扰元素，优化排版和间距，让您专注于内容本身。
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader title="字体大小" />
+                <CardContent>
+                  <Slider
+                    min={12}
+                    max={24}
+                    step={1}
+                    value={fontSize}
+                    onChange={setFontSize}
+                    valueFormat={(value) => `${value}px`}
+                    variant="gradient"
+                    size="md"
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader title="背景颜色" />
+                <CardContent>
+                  <div className="grid grid-cols-4 gap-3">
+                    {Object.entries(BACKGROUND_COLORS).map(([key, color]) => (
+                      <button
+                        key={key}
+                        className={`
+                          w-full aspect-square rounded-lg transition-all duration-200
+                          ${getBackgroundColorClasses(key as keyof typeof BACKGROUND_COLORS)}
+                          ${backgroundColor === key ? 'ring-2 ring-brand-500 ring-offset-2 scale-105' : 'ring-1 ring-gray-200 hover:scale-105'}
+                        `}
+                        onClick={() => handleBackgroundColorChange(key as keyof typeof BACKGROUND_COLORS)}
+                        aria-label={getBackgroundColorLabel(key as keyof typeof BACKGROUND_COLORS)}
+                      />
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">首行缩进</label>
-                      <p className="text-xs text-gray-500 mt-1">段落首行是否缩进两个字符</p>
+                  <div className="flex justify-center mt-3">
+                    <span className="text-xs text-gray-500">
+                      当前: {getBackgroundColorLabel(backgroundColor)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader title="字体选择" />
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(FONT_FAMILIES).map((key) => (
+                      <button
+                        key={key}
+                        className={`
+                          py-2 px-3 rounded-lg text-sm transition-all duration-200
+                          ${fontFamily === key 
+                            ? 'bg-brand-600 text-white font-medium' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                          }
+                        `}
+                        onClick={() => handleFontFamilyChange(key as keyof typeof FONT_FAMILIES)}
+                      >
+                        {getFontFamilyLabel(key as keyof typeof FONT_FAMILIES)}
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader title="内容显示" />
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">显示图片</span>
+                    <Switch
+                      checked={showImages}
+                      onChange={setShowImages}
+                      size="small"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">显示目录</span>
+                    <Switch
+                      checked={showDirectory}
+                      onChange={setShowDirectory}
+                      size="small"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabPanel>
+
+          {/* 样式设置面板 */}
+          <TabPanel id="style">
+            <div className="space-y-5">
+              <Card>
+                <CardHeader title="字体间距" />
+                <CardContent className="space-y-6">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">行高</p>
+                    <Slider
+                      min={MIN_LINE_HEIGHT}
+                      max={MAX_LINE_HEIGHT}
+                      step={LINE_HEIGHT_STEP}
+                      value={lineHeight}
+                      onChange={setLineHeight}
+                      variant="default"
+                      size="md"
+                    />
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">行间距</p>
+                    <Slider
+                      min={MIN_LINE_SPACING}
+                      max={MAX_LINE_SPACING}
+                      step={LINE_SPACING_STEP}
+                      value={lineSpacing}
+                      onChange={setLineSpacing}
+                      variant="accent"
+                      size="md"
+                    />
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">段落间距</p>
+                    <Slider
+                      min={MIN_PARAGRAPH_SPACING}
+                      max={MAX_PARAGRAPH_SPACING}
+                      step={PARAGRAPH_SPACING_STEP}
+                      value={paragraphSpacing}
+                      onChange={setParagraphSpacing}
+                      variant="default"
+                      size="md"
+                    />
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">字间距</p>
+                    <Slider
+                      min={0}
+                      max={10}
+                      step={0.5}
+                      value={letterSpacing}
+                      onChange={setLetterSpacing}
+                      variant="gradient"
+                      size="md"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader title="页面布局" />
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">内容宽度</p>
+                    <Slider
+                      min={600}
+                      max={1200}
+                      step={50}
+                      value={pageWidth}
+                      onChange={setPageWidth}
+                      valueFormat={(value) => `${value}px`}
+                      variant="accent"
+                      size="md"
+                    />
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">文本对齐</p>
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {['left', 'center', 'justify'].map((align) => (
+                        <button
+                          key={align}
+                          className={`
+                            py-2 px-3 rounded-lg text-sm transition-all duration-200
+                            ${textAlign === align 
+                              ? 'bg-brand-600 text-white font-medium' 
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                            }
+                          `}
+                          onClick={() => setTextAlign(align as 'left' | 'center' | 'justify')}
+                        >
+                          {align === 'left' ? '左对齐' : align === 'center' ? '居中' : '两端对齐'}
+                        </button>
+                      ))}
                     </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center pt-3">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">首行缩进</span>
                     <Switch
                       checked={firstLineIndent}
                       onChange={setFirstLineIndent}
+                      size="small"
                     />
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">显示图片</label>
-                    <p className="text-xs text-gray-500 mt-1">是否显示文章中的图片内容</p>
-                  </div>
-                  <Switch
-                    checked={showImages}
-                    onChange={setShowImages}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">显示目录</label>
-                    <p className="text-xs text-gray-500 mt-1">在文章旁显示导航目录</p>
-                  </div>
-                  <Switch
-                    checked={showDirectory}
-                    onChange={setShowDirectory}
-                  />
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
-        </div>
-      </TabPanel>
+          </TabPanel>
 
-      {/* 版本信息 */}
-      <div className="mt-8 text-center p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-gray-200/30 shadow-sm">
-        <span className="text-xs text-gray-500 tracking-tight">版本 1.1.2</span>
+          {/* 高级设置面板 */}
+          <TabPanel id="advanced">
+            <div className="space-y-5">
+              <Card>
+                <CardHeader title="代码显示" />
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">代码字体大小</p>
+                    <Slider
+                      min={10}
+                      max={20}
+                      step={1}
+                      value={codeFontSize}
+                      onChange={setCodeFontSize}
+                      valueFormat={(value) => `${value}px`}
+                      variant="gradient"
+                      size="md"
+                    />
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">代码主题</p>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {Object.keys(CODE_THEMES).map((theme) => (
+                        <button
+                          key={theme}
+                          className={`
+                            py-2 px-3 rounded-lg text-sm transition-all duration-200
+                            ${codeTheme === theme 
+                              ? 'bg-brand-600 text-white font-medium' 
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                            }
+                          `}
+                          onClick={() => handleCodeThemeChange(theme as keyof typeof CODE_THEMES)}
+                        >
+                          {theme}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card variant="hover">
+                <CardHeader 
+                  title="关于" 
+                  subtitle="AI 阅读助手 v1.1.4"
+                />
+                <CardContent>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    一个基于 AI 的 Chrome 阅读扩展，旨在提供更好的网页阅读体验。
+                  </p>
+                </CardContent>
+                <CardFooter className="flex justify-end">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => window.open('https://github.com/your-repo', '_blank')}
+                  >
+                    反馈问题
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </TabPanel>
+        </TabPanels>
       </div>
     </div>
   );
 };
-
-function getBackgroundColorName(key: keyof typeof BACKGROUND_COLORS): string {
-  const nameMap: Record<keyof typeof BACKGROUND_COLORS, string> = {
-    white: '纯白',
-    warm: '暖色',
-    cool: '冷色',
-    sepia: '复古',
-    cream: '奶油',
-    mint: '薄荷',
-    gray: '灰色',
-  };
-  return nameMap[key];
-}
 
 export default Popup;
