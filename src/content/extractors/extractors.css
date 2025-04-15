@@ -198,229 +198,11 @@
   background-color: rgba(0, 0, 0, 0.9);
 }
 
-/* 代码块样式 */
-.enhanced-code-container {
-  margin: 2em 0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
+/* 代码块样式 - 使用内联样式替代 */
+/* 这部分样式已经移动到内联样式中 */
 
-.code-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75em 1em;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.code-language {
-  font-size: 0.85em;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.7);
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 0.25em 0.5em;
-  border-radius: 4px;
-}
-
-.code-caption {
-  font-size: 0.9em;
-  color: rgba(0, 0, 0, 0.7);
-  margin-left: 1em;
-  flex-grow: 1;
-}
-
-.code-copy-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: rgba(0, 0, 0, 0.5);
-  padding: 0.25em;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.code-copy-button:hover {
-  color: rgba(0, 0, 0, 0.8);
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.code-copy-button.copied {
-  color: #4caf50;
-}
-
-.enhanced-code-container pre {
-  margin: 0;
-  padding: 1em;
-  overflow-x: auto;
-  font-family: 'Fira Code', Consolas, Monaco, monospace;
-  font-size: 0.9em;
-  line-height: 1.5;
-}
-
-.enhanced-code-container code {
-  font-family: inherit;
-  padding: 0;
-  background: none;
-}
-
-.enhanced-inline-code {
-  font-family: 'Fira Code', Consolas, Monaco, monospace;
-  font-size: 0.9em;
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-/* 暗色主题代码块样式 */
-.dark-theme .enhanced-code-container {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.dark-theme .code-header {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.dark-theme .code-language {
-  color: rgba(255, 255, 255, 0.7);
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark-theme .code-caption {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.dark-theme .code-copy-button {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.dark-theme .code-copy-button:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark-theme .enhanced-inline-code {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* 列表样式 */
-.enhanced-list {
-  margin: 1.2em 0;
-  padding-left: 2.5em;
-  list-style-position: outside;
-}
-
-.enhanced-list-item {
-  margin: 0.6em 0;
-  padding-left: 0.3em;
-  position: relative;
-}
-
-.enhanced-unordered-list {
-  list-style: none;
-}
-
-.enhanced-unordered-list > .enhanced-list-item {
-  padding-left: 1.5em;
-}
-
-.enhanced-unordered-list > .enhanced-list-item::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.6em;
-  width: 6px;
-  height: 6px;
-  background-color: #3b82f6;
-  border-radius: 50%;
-  transform: scale(0.75);
-}
-
-.enhanced-ordered-list {
-  list-style: none;
-  counter-reset: item;
-}
-
-.enhanced-ordered-list > .enhanced-list-item {
-  counter-increment: item;
-}
-
-.enhanced-ordered-list > .enhanced-list-item::before {
-  content: counter(item) ".";
-  position: absolute;
-  left: -1.5em;
-  color: #3b82f6;
-  font-weight: 600;
-}
-
-.enhanced-list .nested-list {
-  margin: 0.5em 0 0.5em 1em;
-}
-
-.enhanced-list.level-1 > .enhanced-list-item::before {
-  background-color: #60a5fa;
-}
-
-.enhanced-list.level-2 > .enhanced-list-item::before {
-  background-color: #93c5fd;
-}
-
-.enhanced-ordered-list.level-1 > .enhanced-list-item::before {
-  color: #60a5fa;
-}
-
-.enhanced-ordered-list.level-2 > .enhanced-list-item::before {
-  color: #93c5fd;
-}
-
-.list-item-text {
-  display: inline;
-}
-
-.list-collapse-indicator {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  margin-right: 0.5em;
-  cursor: pointer;
-  vertical-align: middle;
-}
-
-.enhanced-list-item.collapsed > ul,
-.enhanced-list-item.collapsed > ol {
-  display: none;
-}
-
-.list-item-paragraph {
-  margin: 0.5em 0;
-}
-
-/* 暗色主题列表样式 */
-.dark-theme .enhanced-unordered-list > .enhanced-list-item::before {
-  background-color: #60a5fa;
-}
-
-.dark-theme .enhanced-ordered-list > .enhanced-list-item::before {
-  color: #60a5fa;
-}
-
-.dark-theme .enhanced-list.level-1 > .enhanced-list-item::before {
-  background-color: #93c5fd;
-}
-
-.dark-theme .enhanced-list.level-2 > .enhanced-list-item::before {
-  background-color: #bfdbfe;
-}
-
-.dark-theme .enhanced-ordered-list.level-1 > .enhanced-list-item::before {
-  color: #93c5fd;
-}
-
-.dark-theme .enhanced-ordered-list.level-2 > .enhanced-list-item::before {
-  color: #bfdbfe;
-}
+/* 列表样式 - 使用内联样式替代 */
+/* 这部分样式已经移动到内联样式中 */
 
 /* 视频样式 */
 .enhanced-video-container {
@@ -447,7 +229,8 @@
 
 .enhanced-video-embed {
   position: relative;
-  padding-bottom: 56.25%; /* 16:9 比例 */
+  padding-bottom: 56.25%;
+  /* 16:9 比例 */
   height: 0;
   overflow: hidden;
   max-width: 100%;
@@ -530,30 +313,31 @@
 
 /* 响应式调整 */
 @media (max-width: 768px) {
+
   .enhanced-table th,
   .enhanced-table td {
     padding: 0.5em 0.75em;
     font-size: 0.9em;
   }
-  
+
   .table-controls {
     flex-direction: column;
     gap: 0.5em;
   }
-  
+
   .table-search-input,
   .table-sort-select {
     width: 100%;
   }
-  
+
   .enhanced-code-container pre {
     font-size: 0.85em;
   }
-  
+
   .code-header {
     flex-wrap: wrap;
   }
-  
+
   .code-caption {
     width: 100%;
     margin-left: 0;

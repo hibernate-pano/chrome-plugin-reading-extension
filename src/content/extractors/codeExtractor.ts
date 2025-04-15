@@ -281,22 +281,31 @@ export class CodeExtractor {
    * 增强页面中的所有代码块
    */
   public enhanceAllCodeBlocks(container: HTMLElement): void {
-    const preElements = container.querySelectorAll('pre');
-    preElements.forEach(pre => {
-      if (!(pre instanceof HTMLPreElement)) return;
+    try {
+      const preElements = container.querySelectorAll('pre');
+      preElements.forEach(pre => {
+        try {
+          if (!(pre instanceof HTMLPreElement)) return;
 
-      // 跳过已经处理过的代码块
-      if (pre.closest('.enhanced-code-container')) return;
+          // 跳过已经处理过的代码块
+          if (pre.closest('.enhanced-code-container')) return;
 
-      // 提取代码块信息
-      const codeInfo = this.extractCodeBlockInfo(pre);
+          // 提取代码块信息
+          const codeInfo = this.extractCodeBlockInfo(pre);
 
-      // 创建增强的代码块
-      const enhancedCodeBlock = this.createEnhancedCodeBlock(codeInfo);
+          // 创建增强的代码块
+          const enhancedCodeBlock = this.createEnhancedCodeBlock(codeInfo);
 
-      // 替换原始代码块
-      pre.replaceWith(enhancedCodeBlock);
-    });
+          // 替换原始代码块
+          pre.replaceWith(enhancedCodeBlock);
+        } catch (error) {
+          console.warn('处理代码块时发生错误:', error);
+          // 继续处理下一个代码块
+        }
+      });
+    } catch (error) {
+      console.error('增强代码块时发生错误:', error);
+    }
   }
 
   /**

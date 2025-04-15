@@ -41,41 +41,67 @@ export class WorkerManager {
     this.initPromise = new Promise<void>((resolve, reject) => {
       try {
         performanceMonitor.start('workerInitialization');
-        
+
         // 创建工作线程
         this.worker = new Worker(this.workerUrl);
-        
+
         // 设置消息处理器
         this.worker.onmessage = this.handleWorkerMessage.bind(this);
-        
+
         // 设置错误处理器
         this.worker.onerror = (error) => {
           console.error('工作线程错误:', error);
+          this.isInitialized = false;
+          this.worker = null;
+          performanceMonitor.end('workerInitialization');
           reject(new Error('工作线程初始化失败'));
         };
-        
+
         // 等待工作线程初始化完成
         const initTimeout = setTimeout(() => {
+          this.isInitialized = false;
+          if (this.worker) {
+            this.worker.terminate();
+            this.worker = null;
+          }
+          performanceMonitor.end('workerInitialization');
           reject(new Error('工作线程初始化超时'));
-        }, 5000);
-        
+        }, 3000); // 缩短超时时间
+
         const initHandler = (event: MessageEvent<WorkerResponse>) => {
-          if (event.data.id === 'init' && event.data.success) {
+          if (event.data && event.data.id === 'init') {
             clearTimeout(initTimeout);
             this.worker?.removeEventListener('message', initHandler);
-            
-            this.isInitialized = true;
-            performanceMonitor.end('workerInitialization');
-            
-            console.log('工作线程初始化完成');
-            resolve();
+
+            if (event.data.success) {
+              this.isInitialized = true;
+              performanceMonitor.end('workerInitialization');
+              console.log('工作线程初始化完成');
+              resolve();
+            } else {
+              this.isInitialized = false;
+              if (this.worker) {
+                this.worker.terminate();
+                this.worker = null;
+              }
+              performanceMonitor.end('workerInitialization');
+              reject(new Error(event.data.error || '工作线程初始化失败'));
+            }
           }
         };
-        
+
         this.worker.addEventListener('message', initHandler);
       } catch (error) {
+        this.isInitialized = false;
+        this.worker = null;
+        performanceMonitor.end('workerInitialization');
         reject(error);
       }
+    }).catch(error => {
+      // 重置初始化状态，允许下次重试
+      this.initPromise = null;
+      console.warn('工作线程初始化失败，将回退到主线程处理:', error);
+      throw error;
     });
 
     return this.initPromise;
@@ -87,21 +113,21 @@ export class WorkerManager {
   private handleWorkerMessage(event: MessageEvent<WorkerResponse>): void {
     const response = event.data;
     const request = this.pendingRequests.get(response.id);
-    
+
     if (!request) {
       console.warn(`未找到请求 ID: ${response.id}`);
       return;
     }
-    
+
     // 计算请求耗时
     const endTime = performance.now();
     const duration = endTime - request.startTime;
-    
+
     console.debug(`工作线程请求完成: ${response.id}, 耗时: ${duration.toFixed(2)}ms`);
-    
+
     // 从待处理请求中移除
     this.pendingRequests.delete(response.id);
-    
+
     // 处理响应
     if (response.success) {
       request.resolve(response.data);
@@ -114,17 +140,23 @@ export class WorkerManager {
    * 发送请求到工作线程
    */
   public async sendRequest<T>(action: string, payload: any): Promise<T> {
-    // 确保工作线程已初始化
-    await this.initialize();
-    
-    if (!this.worker) {
-      throw new Error('工作线程未初始化');
+    try {
+      // 确保工作线程已初始化
+      await this.initialize();
+
+      if (!this.worker || !this.isInitialized) {
+        throw new Error('工作线程未初始化或初始化失败');
+      }
+    } catch (error) {
+      // 如果初始化失败，抛出错误以触发回退到主线程
+      console.warn('工作线程初始化失败，无法发送请求:', error);
+      throw error;
     }
-    
+
     return new Promise<T>((resolve, reject) => {
       // 生成唯一请求 ID
       const id = `${action}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // 创建请求对象
       const request: WorkerRequest = {
         id,
@@ -132,20 +164,20 @@ export class WorkerManager {
         reject,
         startTime: performance.now()
       };
-      
+
       // 添加到待处理请求
       this.pendingRequests.set(id, request);
-      
+
       // 创建消息
       const message: WorkerMessage = {
         id,
         action,
         payload
       };
-      
+
       // 发送消息到工作线程
       this.worker.postMessage(message);
-      
+
       console.debug(`发送请求到工作线程: ${action}`);
     });
   }
@@ -195,14 +227,14 @@ export class WorkerManager {
       this.worker = null;
       this.isInitialized = false;
       this.initPromise = null;
-      
+
       // 拒绝所有待处理请求
       this.pendingRequests.forEach(request => {
         request.reject(new Error('工作线程已终止'));
       });
-      
+
       this.pendingRequests.clear();
-      
+
       console.log('工作线程已终止');
     }
   }
@@ -222,10 +254,10 @@ export function getWorkerManager(): WorkerManager {
       { type: 'application/javascript' }
     );
     const workerUrl = URL.createObjectURL(workerBlob);
-    
+
     workerManager = new WorkerManager(workerUrl);
   }
-  
+
   return workerManager;
 }
 

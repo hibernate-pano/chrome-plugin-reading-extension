@@ -164,14 +164,21 @@ export class ContentExtractor {
             // 使用工作线程提取内容
             console.debug('使用工作线程提取内容');
             const workerManager = getWorkerManager();
-            const result = await workerManager.extractContent(html, url);
 
-            // 缓存结果
-            if (result.success) {
-              extractionCache.set(cacheKey, result);
+            try {
+              const result = await workerManager.extractContent(html, url);
+
+              // 缓存结果
+              if (result.success) {
+                extractionCache.set(cacheKey, result);
+              }
+
+              return result;
+            } catch (workerError) {
+              console.warn('工作线程提取失败，回退到主线程:', workerError);
+              // 如果工作线程失败，回退到主线程处理
+              // 继续执行下面的主线程提取代码
             }
-
-            return result;
           } catch (workerError) {
             console.warn('工作线程提取失败，回退到主线程:', workerError);
             // 如果工作线程失败，回退到主线程处理

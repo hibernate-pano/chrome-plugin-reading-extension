@@ -24,10 +24,10 @@ import { Readability } from '@mozilla/readability';
 // 处理消息
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const { id, action, payload } = event.data;
-  
+
   try {
     let result;
-    
+
     // 根据不同的操作类型执行不同的处理
     switch (action) {
       case 'extractContent':
@@ -45,14 +45,14 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       default:
         throw new Error(`未知操作: ${action}`);
     }
-    
+
     // 发送成功响应
     const response: WorkerResponse = {
       id,
       success: true,
       data: result
     };
-    
+
     self.postMessage(response);
   } catch (error) {
     // 发送错误响应
@@ -61,7 +61,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       success: false,
       error: error instanceof Error ? error.message : '未知错误'
     };
-    
+
     self.postMessage(response);
   }
 };
@@ -70,29 +70,29 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
  * 提取内容
  */
 async function extractContent(html: string, url?: string): Promise<any> {
-  // 创建文档
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  
+  // 在 Web Worker 中不能使用 document
+  // 返回原始 HTML，让主线程处理
+  throw new Error('Web Worker 中不能使用 document，请在主线程中处理');
+
   // 预处理文档
   preProcessDocument(doc);
-  
+
   // 使用 Readability 提取内容
   const reader = new Readability(doc);
   const article = reader.parse();
-  
+
   if (!article) {
     throw new Error('无法提取内容');
   }
-  
+
   // 后处理内容
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = article.content;
-  postProcessContent(tempDiv);
-  
+  const contentContainer = document.createElement('div');
+  contentContainer.innerHTML = article.content;
+  postProcessContent(contentContainer);
+
   return {
     title: article.title,
-    content: tempDiv.innerHTML,
+    content: contentContainer.innerHTML,
     textContent: article.textContent,
     length: article.length,
     excerpt: article.excerpt,
@@ -111,11 +111,11 @@ function preProcessDocument(doc: Document): void {
   // 移除脚本标签
   const scripts = doc.querySelectorAll('script');
   scripts.forEach(script => script.remove());
-  
+
   // 移除样式标签
   const styles = doc.querySelectorAll('style');
   styles.forEach(style => style.remove());
-  
+
   // 移除隐藏元素
   const hiddenElements = doc.querySelectorAll('[hidden], [style*="display: none"], [style*="display:none"], [style*="visibility: hidden"], [style*="visibility:hidden"]');
   hiddenElements.forEach(el => {
@@ -125,10 +125,10 @@ function preProcessDocument(doc: Document): void {
       el.remove();
     }
   });
-  
+
   // 修复嵌套错误的列表
   fixNestedLists(doc);
-  
+
   // 修复表格结构
   fixTableStructure(doc);
 }
@@ -149,7 +149,7 @@ function fixNestedLists(doc: Document): void {
         li.appendChild(child);
       }
     });
-    
+
     // 修复嵌套列表的位置
     const nestedLists = list.querySelectorAll('ul, ol');
     nestedLists.forEach(nestedList => {
@@ -189,7 +189,7 @@ function fixTableStructure(doc: Document): void {
         table.appendChild(tbody);
       }
     }
-    
+
     // 确保表格有标题行
     const firstRow = table.querySelector('tr');
     if (firstRow && !table.querySelector('thead')) {
@@ -201,7 +201,7 @@ function fixTableStructure(doc: Document): void {
           th.innerHTML = cell.innerHTML;
           cell.parentNode?.replaceChild(th, cell);
         });
-        
+
         // 创建 thead 并移动第一行
         const thead = doc.createElement('thead');
         thead.appendChild(firstRow);
@@ -219,19 +219,19 @@ function postProcessContent(container: HTMLElement): void {
   const tables = container.querySelectorAll('table');
   tables.forEach(table => {
     table.classList.add('enhanced-table');
-    
+
     // 为表格行添加斑马条纹
     const rows = table.querySelectorAll('tbody tr');
     rows.forEach((row, index) => {
       row.classList.add(index % 2 === 0 ? 'even-row' : 'odd-row');
     });
   });
-  
+
   // 处理代码块
   const preElements = container.querySelectorAll('pre');
   preElements.forEach(pre => {
     pre.classList.add('line-numbers');
-    
+
     let code = pre.querySelector('code');
     if (!code) {
       code = document.createElement('code');
@@ -239,7 +239,7 @@ function postProcessContent(container: HTMLElement): void {
       pre.textContent = '';
       pre.appendChild(code);
     }
-    
+
     // 确保代码块有语言类名
     const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
     if (!hasLanguageClass) {
@@ -247,16 +247,16 @@ function postProcessContent(container: HTMLElement): void {
         pre.getAttribute('data-language') ||
         pre.className.match(/language-(\\w+)/)?.[1] ||
         detectCodeLanguage(code.textContent || '');
-      
+
       code.classList.add(`language-${preLanguage || 'plaintext'}`);
     }
   });
-  
+
   // 处理列表
   const lists = container.querySelectorAll('ul, ol');
   lists.forEach(list => {
     list.classList.add('enhanced-list');
-    
+
     // 处理列表项
     const items = list.querySelectorAll('li');
     items.forEach(item => {
@@ -264,20 +264,20 @@ function postProcessContent(container: HTMLElement): void {
       item.removeAttribute('style');
     });
   });
-  
+
   // 处理图片
   const images = container.querySelectorAll('img');
   images.forEach(img => {
     // 添加懒加载支持
     img.setAttribute('loading', 'lazy');
-    
+
     // 如果图片不在 figure 中，添加 figure 容器
     if (img.parentElement?.tagName !== 'FIGURE') {
       const figure = document.createElement('figure');
       figure.className = 'image-container';
       img.parentNode?.insertBefore(figure, img);
       figure.appendChild(img);
-      
+
       // 如果图片有 alt 文本，添加为图片说明
       if (img.alt && img.alt.trim() !== '') {
         const figcaption = document.createElement('figcaption');
@@ -314,7 +314,7 @@ function detectCodeLanguage(code: string): string {
   if (code.includes('#include') && (code.includes('<iostream>') || code.includes('<stdio.h>'))) {
     return 'cpp';
   }
-  
+
   return 'plaintext';
 }
 
@@ -324,19 +324,19 @@ function detectCodeLanguage(code: string): string {
 function processTable(tableHtml: string): any {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = tableHtml;
-  
+
   const table = tempDiv.querySelector('table');
   if (!table) {
     throw new Error('无效的表格 HTML');
   }
-  
+
   // 修复表格结构
   fixTableStructure(tempDiv);
-  
+
   // 提取表格数据
   const headers: string[] = [];
   const rows: string[][] = [];
-  
+
   // 提取表头
   const thead = table.querySelector('thead');
   if (thead) {
@@ -347,7 +347,7 @@ function processTable(tableHtml: string): any {
       ));
     }
   }
-  
+
   // 提取数据行
   const tbody = table.querySelector('tbody');
   if (tbody) {
@@ -357,7 +357,7 @@ function processTable(tableHtml: string): any {
       rows.push(Array.from(cells).map(cell => cell.textContent?.trim() || ''));
     });
   }
-  
+
   return {
     headers,
     rows,
@@ -372,12 +372,12 @@ function processTable(tableHtml: string): any {
 function processCodeBlock(codeHtml: string, language?: string): any {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = codeHtml;
-  
+
   const pre = tempDiv.querySelector('pre');
   if (!pre) {
     throw new Error('无效的代码块 HTML');
   }
-  
+
   let code = pre.querySelector('code');
   if (!code) {
     code = document.createElement('code');
@@ -385,7 +385,7 @@ function processCodeBlock(codeHtml: string, language?: string): any {
     pre.textContent = '';
     pre.appendChild(code);
   }
-  
+
   // 确保代码块有语言类名
   if (language) {
     code.className = `language-${language}`;
@@ -396,7 +396,7 @@ function processCodeBlock(codeHtml: string, language?: string): any {
       code.classList.add(`language-${detectedLanguage}`);
     }
   }
-  
+
   return {
     code: code.textContent || '',
     language: language || code.className.replace('language-', '') || 'plaintext',
@@ -410,24 +410,24 @@ function processCodeBlock(codeHtml: string, language?: string): any {
 function processList(listHtml: string): any {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = listHtml;
-  
+
   const list = tempDiv.querySelector('ul, ol');
   if (!list) {
     throw new Error('无效的列表 HTML');
   }
-  
+
   // 修复列表结构
   fixNestedLists(tempDiv);
-  
+
   // 提取列表类型
   const type = list.tagName.toLowerCase() === 'ol' ? 'ordered' : 'unordered';
-  
+
   // 提取列表项
   const items: any[] = [];
   const listItems = list.querySelectorAll(':scope > li');
   listItems.forEach(item => {
     const nestedLists: any[] = [];
-    
+
     // 查找嵌套列表
     const nestedListElements = item.querySelectorAll(':scope > ul, :scope > ol');
     nestedListElements.forEach(nestedList => {
@@ -439,20 +439,20 @@ function processList(listHtml: string): any {
         });
       }
     });
-    
+
     // 提取列表项文本（排除嵌套列表的文本）
     let text = item.textContent || '';
     nestedListElements.forEach(nestedList => {
       text = text.replace(nestedList.textContent || '', '');
     });
-    
+
     items.push({
       text: text.trim(),
       hasNestedList: nestedLists.length > 0,
       nestedLists
     });
   });
-  
+
   return {
     type,
     items,
