@@ -125,14 +125,15 @@
 }
 
 .image-caption {
-  padding: 0.75em 1em;
-  font-size: 0.9em;
-  color: rgba(0, 0, 0, 0.7);
+  padding: 0.5em 0;
+  font-size: 0.85em;
+  color: rgba(0, 0, 0, 0.6);
   text-align: center;
-  background-color: rgba(0, 0, 0, 0.03);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: transparent;
+  border-top: none;
   /* 确保在关闭图片显示时，标题也被隐藏 */
   display: block;
+  font-style: italic;
 }
 
 /* 图片控件已移除 */
@@ -153,9 +154,9 @@
 }
 
 .dark-theme .image-caption {
-  color: rgba(255, 255, 255, 0.7);
-  background-color: rgba(255, 255, 255, 0.03);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  background-color: transparent;
+  border-top: none;
 }
 
 /* 暗色主题下的图片控件已移除 */

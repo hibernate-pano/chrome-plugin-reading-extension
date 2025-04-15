@@ -127,9 +127,14 @@ export class MediaExtractor {
       }
     }
 
-    // 如果没有找到标题，使用 alt 文本作为标题
+    // 如果没有找到标题，使用 alt 文本作为标题，但跳过“图片”等通用词
     if (img.alt && img.alt.trim() !== '') {
-      return img.alt;
+      const alt = img.alt.trim();
+      // 跳过“图片”、“image”等通用词
+      if (alt === '图片' || alt === 'image' || alt === 'picture' || alt === 'photo') {
+        return undefined;
+      }
+      return alt;
     }
 
     return undefined;
@@ -169,12 +174,16 @@ export class MediaExtractor {
 
     figure.appendChild(img);
 
-    // 添加图片标题
+    // 添加图片标题，跳过“图片”等通用词
     if (imageInfo.caption) {
-      const figcaption = document.createElement('figcaption');
-      figcaption.textContent = imageInfo.caption;
-      figcaption.className = 'image-caption';
-      figure.appendChild(figcaption);
+      const caption = imageInfo.caption.trim();
+      // 跳过“图片”、“image”等通用词
+      if (caption !== '图片' && caption !== 'image' && caption !== 'picture' && caption !== 'photo') {
+        const figcaption = document.createElement('figcaption');
+        figcaption.textContent = caption;
+        figcaption.className = 'image-caption';
+        figure.appendChild(figcaption);
+      }
     }
 
     // 添加图片控件
@@ -236,13 +245,10 @@ export class MediaExtractor {
       placeholder.style.paddingBottom = '56.25%'; // 16:9 的默认比例
     }
 
-    // 添加加载动画
+    // 添加加载动画，使用更小的加载动画
     const spinner = document.createElement('div');
     spinner.className = 'image-loading-spinner';
     placeholder.appendChild(spinner);
-
-    // 不再添加“图片”文字
-    // placeholder.textContent = '图片';
 
     // 将占位图添加到图片前面
     img.parentElement?.insertBefore(placeholder, img);
@@ -310,11 +316,11 @@ export class MediaExtractor {
         overflow: hidden;
         margin: 1em 0;
         border-radius: 4px;
-        background-color: #f5f5f5;
+        background-color: transparent;
       }
 
       .dark .enhanced-image-container {
-        background-color: #333;
+        background-color: transparent;
       }
 
       .enhanced-image {
@@ -334,20 +340,20 @@ export class MediaExtractor {
         top: 0;
         left: 0;
         width: 100%;
-        background-color: #f0f0f0;
+        background-color: rgba(240, 240, 240, 0.5);
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
       .dark .image-placeholder {
-        background-color: #444;
+        background-color: rgba(68, 68, 68, 0.5);
       }
 
       .image-loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid rgba(0, 0, 0, 0.1);
+        width: 24px;
+        height: 24px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
         border-radius: 50%;
         border-top-color: #3498db;
         animation: spin 1s ease-in-out infinite;
@@ -395,6 +401,12 @@ export class MediaExtractor {
         const realSrc = this.getRealImageSrc(element);
 
         // 创建图片信息
+        let caption = this.getImageCaption(element);
+        // 跳过“图片”等通用词
+        if (caption && ['\u56fe\u7247', 'image', 'picture', 'photo'].includes(caption.trim())) {
+          caption = undefined;
+        }
+
         const imageInfo: MediaInfo = {
           src: realSrc,
           type: 'image',
@@ -402,7 +414,7 @@ export class MediaExtractor {
           title: element.title || undefined,
           width: element.naturalWidth || undefined,
           height: element.naturalHeight || undefined,
-          caption: this.getImageCaption(element),
+          caption: caption,
           lazyLoaded: true
         };
 
