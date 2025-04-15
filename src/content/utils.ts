@@ -4,8 +4,14 @@ import { FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
 /**
  * 更新阅读模式样式 - 使用 CSS 变量
  * 这个函数提供了一种使用 CSS 变量设置阅读模式样式的方法
+ * @param settings 阅读模式设置
+ * @param isReadingMode 是否处于阅读模式
  */
-export function updateReadingModeStyles(settings: ReadingModeSettings): void {
+export function updateReadingModeStyles(settings: ReadingModeSettings, isReadingMode: boolean = false): void {
+  // 如果不在阅读模式下，不应用样式
+  if (!isReadingMode) {
+    return;
+  }
   const root = document.documentElement;
 
   // 设置 CSS 变量

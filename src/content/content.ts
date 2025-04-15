@@ -846,7 +846,7 @@ function applyStyles(settings: ReadingModeSettings) {
   // 使用工具模块中的函数更新 CSS 变量
   // 从 utils.ts 导入的 updateReadingModeStyles 函数
   import('./utils').then(({ updateReadingModeStyles }) => {
-    updateReadingModeStyles(settings);
+    updateReadingModeStyles(settings, isReadingMode);
   }).catch(error => {
     console.error('加载样式工具时发生错误:', error);
   });
@@ -1811,6 +1811,9 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
 
 // 监听存储变化
 chrome.storage.onChanged.addListener(async (changes) => {
+  // 如果不在阅读模式下，不应用样式
+  if (!isReadingMode) return;
+
   const container = document.getElementById('reading-mode-container');
   if (!container) return;
 
@@ -1840,6 +1843,9 @@ chrome.storage.onChanged.addListener(async (changes) => {
 
 // 初始化时应用行间距和段间距
 const initializeSpacing = async () => {
+  // 如果不在阅读模式下，不应用样式
+  if (!isReadingMode) return;
+
   const { lineSpacing, paragraphSpacing } = await chrome.storage.local.get(['lineSpacing', 'paragraphSpacing']);
   const settings = await fetchSettings();
   const container = document.getElementById('reading-mode-container');
@@ -1867,6 +1873,7 @@ const initializeSpacing = async () => {
 };
 
 // 在适当的时机调用初始化函数
+// 只在启用阅读模式后调用
 initializeSpacing();
 
 // 更新阅读模式样式 - 此函数已被移动到 utils.ts
