@@ -95,19 +95,75 @@ function handleMediaElements(container: HTMLElement | null, showImages: boolean)
     for (const element of elements) {
       const htmlElement = element as HTMLElement;
       htmlElement.style.display = showImages ? 'block' : 'none';
+
       if (showImages && element instanceof HTMLImageElement) {
-        if (!element.src && element.dataset.src) element.src = element.dataset.src;
-        if (!element.src && element.getAttribute('data-original')) element.src = element.getAttribute('data-original')!;
+        // 处理懒加载图片
+        const lazyAttributes = [
+          'data-src', 'data-srcset', 'data-original', 'data-lazy-src',
+          'data-lazy', 'data-src-lazy', 'data-original-src', 'data-load-src',
+          'data-img-src', 'data-origin', 'data-lazyload', 'data-srcset-lazy',
+          'data-lazy-srcset', 'data-lazy-original'
+        ];
+
+        // 如果图片没有 src，尝试从懒加载属性中获取
+        if (!element.src || element.src.trim() === '' || element.src.includes('data:image/gif;base64')) {
+          for (const attr of lazyAttributes) {
+            const value = element.getAttribute(attr);
+            if (value) {
+              element.src = value;
+              break;
+            }
+          }
+        }
+
+        // 确保图片可见
         element.removeAttribute('loading');
+        element.removeAttribute('decoding');
+        element.removeAttribute('importance');
+        element.removeAttribute('loading-strategy');
+        element.removeAttribute('fetchpriority');
         htmlElement.style.visibility = 'visible';
         htmlElement.style.opacity = '1';
+
+        // 如果图片在增强容器中，确保容器可见
+        const container = element.closest('.enhanced-image-container');
+        if (container) {
+          (container as HTMLElement).style.display = 'block';
+        }
+
+        // 如果图片有 srcset，确保它被正确加载
+        if (element.srcset === '' && element.getAttribute('data-srcset')) {
+          element.srcset = element.getAttribute('data-srcset')!;
+        }
+
+        // 触发图片加载
+        if (element.complete) {
+          const event = new Event('load');
+          element.dispatchEvent(event);
+        }
       }
     }
   });
+
+  // 处理背景图片
   const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
   elementsWithBgImage.forEach(element => {
     if (!showImages) {
       (element as HTMLElement).style.backgroundImage = 'none';
+    } else {
+      // 检查是否有懒加载的背景图片
+      const lazyAttributes = [
+        'data-background', 'data-bg', 'data-background-image',
+        'data-lazy-background', 'data-background-src'
+      ];
+
+      for (const attr of lazyAttributes) {
+        const value = element.getAttribute(attr);
+        if (value && element instanceof HTMLElement) {
+          element.style.backgroundImage = `url(${value})`;
+          break;
+        }
+      }
     }
   });
 }
@@ -413,8 +469,8 @@ function applyStyles(settings: ReadingModeSettings) {
     body {
       margin: 0;
       padding: 0;
-      background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+      background-color: var(--reading-bg-color) !important;
+      color: var(--reading-text-color);
       min-height: 100vh;
       display: flex;
       justify-content: center;
@@ -423,17 +479,19 @@ function applyStyles(settings: ReadingModeSettings) {
     /* 阅读容器样式 */
     #reading-mode-container {
       box-sizing: border-box;
-      width: ${settings.pageWidth}px;
+      width: var(--reading-page-width);
       padding: 2rem;
       margin-left: 250px;
-      font-size: ${settings.fontSize}px;
-      line-height: ${settings.lineHeight};
-      letter-spacing: ${settings.letterSpacing}px;
+      font-size: var(--reading-font-size);
+      line-height: var(--reading-line-height);
+      letter-spacing: var(--reading-letter-spacing);
       text-align: ${settings.textAlign};
-      font-family: ${FONT_FAMILIES[settings.fontFamily]};
-      background-color: ${settings.theme === 'dark' ? '#1a1a1a' : BACKGROUND_COLORS[settings.backgroundColor]} !important;
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#2c3e50'};
+      font-family: var(--reading-font-family);
+      background-color: var(--reading-content-bg-color) !important;
+      color: var(--reading-text-color);
       transition: all 0.3s ease;
+      box-shadow: var(--reading-content-shadow);
+      border-radius: 8px;
     }
 
     /* 响应式布局 */
@@ -468,7 +526,7 @@ function applyStyles(settings: ReadingModeSettings) {
       font-weight: 700;
       margin: 0 0 1em;
       line-height: 1.2;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#1a1a1a'};
+      color: var(--reading-heading-color);
       letter-spacing: -0.02em;
     }
 
@@ -478,8 +536,10 @@ function applyStyles(settings: ReadingModeSettings) {
       font-weight: 600;
       margin: 2em 0 0.8em;
       line-height: 1.3;
-      color: ${settings.theme === 'dark' ? '#f0f0f0' : '#2c3e50'};
+      color: var(--reading-heading-color);
       letter-spacing: -0.01em;
+      border-bottom: 1px solid var(--reading-border-color);
+      padding-bottom: 0.3em;
     }
 
     #reading-mode-container h3 {
@@ -487,7 +547,7 @@ function applyStyles(settings: ReadingModeSettings) {
       font-weight: 600;
       margin: 1.8em 0 0.7em;
       line-height: 1.3;
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#34495e'};
+      color: var(--reading-heading-color);
     }
 
     /* 段落样式 */
@@ -592,9 +652,9 @@ function applyStyles(settings: ReadingModeSettings) {
     #reading-mode-container blockquote {
       margin: 2em 0;
       padding: 1em 2em;
-      border-left: 4px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
-      background-color: ${settings.theme === 'dark' ? '#2d2d2d' : '#f8f9fa'};
-      color: ${settings.theme === 'dark' ? '#b0b0b0' : '#4a5568'};
+      border-left: 4px solid var(--reading-blockquote-border);
+      background-color: var(--reading-code-bg-color);
+      color: var(--reading-blockquote-color);
       font-style: italic;
       border-radius: 0.25em;
       transition: all 0.3s ease;
@@ -607,7 +667,7 @@ function applyStyles(settings: ReadingModeSettings) {
 
     /* 链接样式优化 */
     #reading-mode-container a {
-      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
+      color: var(--reading-link-color);
       text-decoration: none;
       transition: all 0.2s ease;
       border-bottom: 1px solid transparent;

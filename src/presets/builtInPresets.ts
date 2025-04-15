@@ -5,6 +5,29 @@ import { ReadingPreset } from '../storage/storage';
  */
 export const builtInPresets: ReadingPreset[] = [
   {
+    id: 'dark-comfort',
+    name: '暗色舒适',
+    description: '深色背景配合舒适字体，减少眼睡',
+    isBuiltIn: true,
+    settings: {
+      theme: 'dark',
+      fontSize: 19,
+      codeFontSize: 15,
+      codeTheme: 'dracula',
+      lineHeight: 1.8,
+      lineSpacing: 2.0,
+      letterSpacing: 0.4,
+      pageWidth: 700,
+      textAlign: 'left',
+      firstLineIndent: true,
+      showImages: true,
+      showDirectory: true,
+      fontFamily: 'songti',
+      backgroundColor: 'cool',
+      paragraphSpacing: 1.5,
+    }
+  },
+  {
     id: 'default',
     name: '默认',
     description: '默认阅读设置',
@@ -14,9 +37,9 @@ export const builtInPresets: ReadingPreset[] = [
       fontSize: 18,
       codeFontSize: 14,
       codeTheme: 'github',
-      lineHeight: 1.5,
-      lineSpacing: 1.7,
-      letterSpacing: 0,
+      lineHeight: 1.6,
+      lineSpacing: 1.8,
+      letterSpacing: 0.1,
       pageWidth: 800,
       textAlign: 'left',
       firstLineIndent: true,
@@ -24,7 +47,7 @@ export const builtInPresets: ReadingPreset[] = [
       showDirectory: true,
       fontFamily: 'default',
       backgroundColor: 'white',
-      paragraphSpacing: 1.0,
+      paragraphSpacing: 1.2,
     }
   },
   {
@@ -75,15 +98,17 @@ export const builtInPresets: ReadingPreset[] = [
       fontSize: 18,
       codeFontSize: 14,
       codeTheme: 'one-dark',
-      lineHeight: 1.6,
-      lineSpacing: 1.8,
-      letterSpacing: 0.2,
-      pageWidth: 750,
+      lineHeight: 1.7,
+      lineSpacing: 1.9,
+      letterSpacing: 0.3,
+      pageWidth: 720,
       textAlign: 'left',
       firstLineIndent: true,
       fontFamily: 'default',
-      backgroundColor: 'white', // 在暗色主题中背景色由主题控制
-      paragraphSpacing: 1.2,
+      backgroundColor: 'cool', // 在暗色主题中背景色由主题控制
+      paragraphSpacing: 1.4,
+      showImages: true,
+      showDirectory: true,
     }
   },
   {
@@ -94,6 +119,8 @@ export const builtInPresets: ReadingPreset[] = [
     settings: {
       theme: 'light',
       fontSize: 19,
+      codeFontSize: 15,
+      codeTheme: 'github',
       lineHeight: 1.7,
       lineSpacing: 1.9,
       letterSpacing: 0.3,
