@@ -6,6 +6,7 @@ import Switch from '../ui/components/Switch';
 import { Tabs, TabItem, TabPanels, TabPanel } from '../ui/components/Tabs';
 import { Card, CardHeader, CardContent, CardFooter } from '../ui/components/Card';
 import { StorageKeys, setStorage, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES, StorageKeysType } from '../storage/storage';
+import PresetSelector from './components/PresetSelector';
 import {
   MIN_LINE_HEIGHT,
   MAX_LINE_HEIGHT,
@@ -187,6 +188,7 @@ export const Popup = () => {
   };
 
   const tabs: TabItem[] = [
+    { id: 'presets', label: '预设', icon: '📖' },
     { id: 'basic', label: '基础', icon: '📝' },
     { id: 'style', label: '样式', icon: '🎨' },
     { id: 'advanced', label: '高级', icon: '⚙️' },
@@ -210,10 +212,10 @@ export const Popup = () => {
         <h1 className="text-lg font-semibold text-brand-700 dark:text-brand-400">
           AI 阅读助手
         </h1>
-        
+
         <div className="flex gap-2">
-          <Switch 
-            checked={theme === 'dark'} 
+          <Switch
+            checked={theme === 'dark'}
             onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
             size="small"
           />
@@ -241,12 +243,17 @@ export const Popup = () => {
         />
 
         <TabPanels activeTab={selectedTab} transition="fade">
+          {/* 预设面板 */}
+          <TabPanel id="presets">
+            <PresetSelector />
+          </TabPanel>
+
           {/* 基础设置面板 */}
           <TabPanel id="basic">
             <div className="space-y-5">
               <Card variant="paper" className="animate-float">
-                <CardHeader 
-                  title="阅读模式" 
+                <CardHeader
+                  title="阅读模式"
                   subtitle="一键优化网页内容，提供舒适的阅读体验"
                   action={
                     <Button
@@ -316,8 +323,8 @@ export const Popup = () => {
                         key={key}
                         className={`
                           py-2 px-3 rounded-lg text-sm transition-all duration-200
-                          ${fontFamily === key 
-                            ? 'bg-brand-600 text-white font-medium' 
+                          ${fontFamily === key
+                            ? 'bg-brand-600 text-white font-medium'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                           }
                         `}
@@ -372,7 +379,7 @@ export const Popup = () => {
                       size="md"
                     />
                   </div>
-                  
+
                   <div>
                     <p className="text-xs text-gray-500 mb-2">行间距</p>
                     <Slider
@@ -385,7 +392,7 @@ export const Popup = () => {
                       size="md"
                     />
                   </div>
-                  
+
                   <div>
                     <p className="text-xs text-gray-500 mb-2">段落间距</p>
                     <Slider
@@ -398,7 +405,7 @@ export const Popup = () => {
                       size="md"
                     />
                   </div>
-                  
+
                   <div>
                     <p className="text-xs text-gray-500 mb-2">字间距</p>
                     <Slider
@@ -430,7 +437,7 @@ export const Popup = () => {
                       size="md"
                     />
                   </div>
-                  
+
                   <div>
                     <p className="text-xs text-gray-500 mb-2">文本对齐</p>
                     <div className="grid grid-cols-3 gap-2 mt-3">
@@ -439,8 +446,8 @@ export const Popup = () => {
                           key={align}
                           className={`
                             py-2 px-3 rounded-lg text-sm transition-all duration-200
-                            ${textAlign === align 
-                              ? 'bg-brand-600 text-white font-medium' 
+                            ${textAlign === align
+                              ? 'bg-brand-600 text-white font-medium'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                             }
                           `}
@@ -451,7 +458,7 @@ export const Popup = () => {
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-between items-center pt-3">
                     <span className="text-sm text-gray-700 dark:text-gray-300">首行缩进</span>
                     <Switch
@@ -484,7 +491,7 @@ export const Popup = () => {
                       size="md"
                     />
                   </div>
-                  
+
                   <div>
                     <p className="text-xs text-gray-500 mb-2">代码主题</p>
                     <div className="grid grid-cols-2 gap-2 mt-2">
@@ -493,8 +500,8 @@ export const Popup = () => {
                           key={theme}
                           className={`
                             py-2 px-3 rounded-lg text-sm transition-all duration-200
-                            ${codeTheme === theme 
-                              ? 'bg-brand-600 text-white font-medium' 
+                            ${codeTheme === theme
+                              ? 'bg-brand-600 text-white font-medium'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                             }
                           `}
@@ -509,8 +516,8 @@ export const Popup = () => {
               </Card>
 
               <Card variant="hover">
-                <CardHeader 
-                  title="关于" 
+                <CardHeader
+                  title="关于"
                   subtitle="AI 阅读助手 v1.1.5"
                 />
                 <CardContent>
@@ -519,8 +526,8 @@ export const Popup = () => {
                   </p>
                 </CardContent>
                 <CardFooter className="flex justify-end">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => window.open('https://github.com/your-repo', '_blank')}
                   >
@@ -535,5 +542,37 @@ export const Popup = () => {
     </div>
   );
 };
+
+// 添加一些样式
+const styles = `
+  /* 自定义滚动条 */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  /* 平滑过渡效果 */
+  * {
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+  }
+`;
+
+// 添加样式到文档
+const styleElement = document.createElement('style');
+styleElement.textContent = styles;
+document.head.appendChild(styleElement);
 
 export default Popup;

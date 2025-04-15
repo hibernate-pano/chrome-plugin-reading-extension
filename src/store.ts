@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { StorageKeys, getStorage, setStorage, CODE_THEMES } from './storage/storage';
+import { StorageKeys, getStorage, setStorage, CODE_THEMES, ReadingPreset } from './storage/storage';
 import { DEFAULT_LINE_HEIGHT, DEFAULT_PARAGRAPH_SPACING, DEFAULT_LINE_SPACING } from './constants/options';
+import { PresetManager } from './presets/presetManager';
 
 interface AppState {
   theme: 'light' | 'dark';
@@ -17,6 +18,9 @@ interface AppState {
   showImages: boolean;
   showDirectory: boolean;
   paragraphSpacing: number;
+  activePreset: string | null;
+  presets: ReadingPreset[];
+  customPresets: ReadingPreset[];
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setFontSize: (fontSize: number) => Promise<void>;
   setCodeFontSize: (codeFontSize: number) => Promise<void>;
@@ -31,7 +35,15 @@ interface AppState {
   setShowImages: (showImages: boolean) => Promise<void>;
   setShowDirectory: (showDirectory: boolean) => Promise<void>;
   setParagraphSpacing: (paragraphSpacing: number) => Promise<void>;
+  applyPreset: (presetId: string) => Promise<void>;
+  createPreset: (name: string, description?: string) => Promise<ReadingPreset>;
+  updatePreset: (id: string, updates: Partial<Omit<ReadingPreset, 'id' | 'isBuiltIn'>>) => Promise<ReadingPreset | null>;
+  deletePreset: (id: string) => Promise<boolean>;
+  resetToDefaultSettings: () => Promise<void>;
 }
+
+// 初始化预设管理器
+const presetManager = PresetManager.getInstance();
 
 const useAppStore = create<AppState>((set) => ({
   theme: 'light',
@@ -48,6 +60,9 @@ const useAppStore = create<AppState>((set) => ({
   showImages: true,
   showDirectory: true,
   paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
+  activePreset: null,
+  presets: [],
+  customPresets: [],
 
   setTheme: async (theme) => {
     await setStorage(StorageKeys.THEME, theme);
@@ -117,10 +132,76 @@ const useAppStore = create<AppState>((set) => ({
     await setStorage(StorageKeys.PARAGRAPH_SPACING, paragraphSpacing);
     set({ paragraphSpacing });
   },
+
+  applyPreset: async (presetId) => {
+    await presetManager.setActivePreset(presetId);
+    const preset = presetManager.getPresetById(presetId);
+    set({ activePreset: presetId });
+
+    // 更新状态以反映预设设置
+    if (preset) {
+      const { settings } = preset;
+      set({
+        ...(settings.theme && { theme: settings.theme }),
+        ...(settings.fontSize && { fontSize: settings.fontSize }),
+        ...(settings.codeFontSize && { codeFontSize: settings.codeFontSize }),
+        ...(settings.codeTheme && { codeTheme: settings.codeTheme }),
+        ...(settings.lineHeight && { lineHeight: settings.lineHeight }),
+        ...(settings.lineSpacing && { lineSpacing: settings.lineSpacing }),
+        ...(settings.letterSpacing && { letterSpacing: settings.letterSpacing }),
+        ...(settings.pageWidth && { pageWidth: settings.pageWidth }),
+        ...(settings.textAlign && { textAlign: settings.textAlign }),
+        ...(settings.firstLineIndent !== undefined && { firstLineIndent: settings.firstLineIndent }),
+        ...(settings.showImages !== undefined && { showImages: settings.showImages }),
+        ...(settings.showDirectory !== undefined && { showDirectory: settings.showDirectory }),
+        ...(settings.fontFamily && { fontFamily: settings.fontFamily }),
+        ...(settings.backgroundColor && { backgroundColor: settings.backgroundColor }),
+        ...(settings.paragraphSpacing && { paragraphSpacing: settings.paragraphSpacing }),
+      });
+    }
+  },
+
+  createPreset: async (name, description) => {
+    const preset = await presetManager.createPresetFromCurrentSettings(name, description);
+    const customPresets = presetManager.getCustomPresets();
+    set({ customPresets });
+    return preset;
+  },
+
+  updatePreset: async (id, updates) => {
+    const updatedPreset = await presetManager.updateCustomPreset(id, updates);
+    if (updatedPreset) {
+      const customPresets = presetManager.getCustomPresets();
+      set({ customPresets });
+    }
+    return updatedPreset;
+  },
+
+  deletePreset: async (id) => {
+    const result = await presetManager.deleteCustomPreset(id);
+    if (result) {
+      const customPresets = presetManager.getCustomPresets();
+      const activePreset = presetManager.getActivePreset()?.id || null;
+      set({ customPresets, activePreset });
+    }
+    return result;
+  },
+
+  resetToDefaultSettings: async () => {
+    await presetManager.resetToDefault();
+    set({ activePreset: null });
+  },
 }));
 
 // 初始化 store 的状态
 export const initializeStore = async () => {
+  // 初始化预设管理器
+  await presetManager.initialize();
+
+  // 获取所有预设
+  const allPresets = presetManager.getAllPresets();
+  const customPresets = presetManager.getCustomPresets();
+  const activePreset = presetManager.getActivePreset()?.id || null;
   const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
   const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
   const codeFontSize = await getStorage<number>(StorageKeys.CODE_FONT_SIZE);
@@ -135,6 +216,9 @@ export const initializeStore = async () => {
   const paragraphSpacing = await getStorage<number>(StorageKeys.PARAGRAPH_SPACING);
 
   useAppStore.setState({
+    presets: allPresets,
+    customPresets,
+    activePreset,
     theme: theme ?? 'light',
     fontSize: fontSize ?? 16,
     codeFontSize: codeFontSize ?? 14,

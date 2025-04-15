@@ -25,6 +25,7 @@ import pangu from 'pangu';
 import { performanceMonitor } from '../utils/performance';
 import { resourceLoader, LoadPriority } from '../utils/resourceLoader';
 import { getWorkerManager, releaseWorkerManager } from '../workers/workerManager';
+import { TextSelectionToolbar, defaultToolbarOptions } from './components/TextSelectionToolbar';
 
 // 导入增强提取器
 import {
@@ -59,6 +60,7 @@ interface ReadingModeSettings {
 
 let originalContent: string | null = null;
 let isReadingMode = false;
+let textSelectionToolbar: TextSelectionToolbar | null = null;
 
 async function fetchSettings(): Promise<ReadingModeSettings> {
   return {
@@ -1000,6 +1002,16 @@ async function enableReadingMode() {
     codeExtractor.addCodeBlockInteractions(container);
     listExtractor.addListInteractions(container);
 
+    // 初始化文本选择工具栏
+    if (!textSelectionToolbar) {
+      textSelectionToolbar = new TextSelectionToolbar({
+        options: defaultToolbarOptions,
+        position: 'top',
+        theme: settings.theme,
+        delay: 300
+      });
+    }
+
     isReadingMode = true;
 
     // 结束性能监控
@@ -1050,6 +1062,12 @@ function disableReadingMode() {
     const style = document.getElementById('reading-mode-style');
     if (style) {
       style.remove();
+    }
+
+    // 销毁文本选择工具栏
+    if (textSelectionToolbar) {
+      textSelectionToolbar.destroy();
+      textSelectionToolbar = null;
     }
 
     isReadingMode = false;

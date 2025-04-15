@@ -16,7 +16,9 @@ export enum StorageKeys {
   CODE_FONT_SIZE = 'codeFontSize',
   CODE_THEME = 'codeTheme',
   PARAGRAPH_SPACING = 'paragraphSpacing',
-  DEBUG = 'debug'
+  DEBUG = 'debug',
+  ACTIVE_PRESET = 'activePreset',
+  CUSTOM_PRESETS = 'customPresets'
 }
 
 export type StorageKeysType = `${StorageKeys}`;
@@ -104,9 +106,35 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.DEBUG, false);
 }
 
+export interface ReadingPreset {
+  id: string;
+  name: string;
+  description?: string;
+  isBuiltIn?: boolean;
+  settings: {
+    theme?: 'light' | 'dark';
+    fontSize?: number;
+    codeFontSize?: number;
+    codeTheme?: keyof typeof CODE_THEMES;
+    lineHeight?: number;
+    lineSpacing?: number;
+    letterSpacing?: number;
+    pageWidth?: number;
+    textAlign?: 'left' | 'center' | 'right' | 'justify';
+    firstLineIndent?: boolean;
+    showImages?: boolean;
+    showDirectory?: boolean;
+    fontFamily?: keyof typeof FONT_FAMILIES;
+    backgroundColor?: keyof typeof BACKGROUND_COLORS;
+    paragraphSpacing?: number;
+  };
+}
+
 export interface StorageData {
   lineHeight: number;
   lineSpacing: number;
+  activePreset?: string;
+  customPresets?: ReadingPreset[];
   // ... existing fields ...
 }
 
