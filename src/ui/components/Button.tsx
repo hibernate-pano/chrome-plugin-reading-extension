@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Ripple from './Ripple';
+import Spinner from './Spinner';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'accent';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
   loading?: boolean;
+  loadingText?: string;
+  showRipple?: boolean;
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
 }
 
@@ -17,12 +21,17 @@ const Button: React.FC<ButtonProps> = ({
   iconLeft,
   iconRight,
   loading = false,
+  loadingText,
   rounded = 'md',
   disabled,
+  showRipple = true,
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed';
-  
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed relative overflow-hidden';
+
   const variantClasses = {
     primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 focus:ring-brand-500 shadow-sm',
     secondary: 'bg-gray-600 text-white hover:bg-gray-700 active:bg-gray-800 focus:ring-gray-500 shadow-sm',
@@ -37,7 +46,7 @@ const Button: React.FC<ButtonProps> = ({
     md: 'px-4 py-2 text-sm',
     lg: 'px-6 py-3 text-base',
   };
-  
+
   const roundedClasses = {
     none: 'rounded-none',
     sm: 'rounded',
@@ -47,18 +56,28 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const classes = `
-    ${baseClasses} 
-    ${variantClasses[variant]} 
-    ${sizeClasses[size]} 
+    ${baseClasses}
+    ${variantClasses[variant]}
+    ${sizeClasses[size]}
     ${roundedClasses[rounded]}
     ${loading ? 'relative !text-transparent' : ''}
     ${className}
   `;
 
+  // 处理鼠标事件
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => setIsHovered(false);
+  const handleFocus = () => setIsFocused(true);
+  const handleBlur = () => setIsFocused(false);
+
   return (
-    <button 
-      className={classes} 
-      disabled={loading || disabled} 
+    <button
+      className={classes}
+      disabled={loading || disabled}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       {...props}
     >
       {/* 左侧图标 */}
@@ -67,28 +86,43 @@ const Button: React.FC<ButtonProps> = ({
           {iconLeft}
         </span>
       )}
-      
+
       {/* 按钮文本 */}
       {children}
-      
+
       {/* 右侧图标 */}
       {iconRight && !loading && (
         <span className={`ml-2 ${size === 'xs' || size === 'sm' ? 'text-sm' : 'text-base'}`}>
           {iconRight}
         </span>
       )}
-      
+
       {/* 加载指示器 */}
       {loading && (
         <span className="absolute inset-0 flex items-center justify-center">
-          <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+          <Spinner
+            size={size === 'lg' ? 'md' : size === 'md' ? 'sm' : 'xs'}
+            color="light"
+            className="mr-2"
+          />
+          {loadingText && <span className="text-current">{loadingText}</span>}
         </span>
       )}
+
+      {/* 水波纹效果 */}
+      {showRipple && !disabled && !loading && (
+        <Ripple
+          color={variant === 'primary' || variant === 'secondary' || variant === 'accent' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)'}
+          duration={600}
+        />
+      )}
+
+      {/* 悬停和焦点指示器 */}
+      <span
+        className={`absolute inset-0 transition-opacity duration-200 ${(isHovered || isFocused) && !disabled ? 'opacity-10' : 'opacity-0'} ${variant === 'primary' || variant === 'secondary' || variant === 'accent' ? 'bg-white' : 'bg-black'}`}
+      />
     </button>
   );
 };
 
-export default Button; 
+export default Button;

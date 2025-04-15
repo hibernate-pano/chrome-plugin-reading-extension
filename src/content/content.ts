@@ -26,6 +26,7 @@ import { performanceMonitor } from '../utils/performance';
 import { resourceLoader, LoadPriority } from '../utils/resourceLoader';
 import { getWorkerManager, releaseWorkerManager } from '../workers/workerManager';
 import { TextSelectionToolbar, defaultToolbarOptions } from './components/TextSelectionToolbar';
+import { Toast } from '../ui/components/Toast';
 
 // 导入增强提取器
 import {
@@ -907,6 +908,12 @@ async function enableReadingMode() {
   if (!document.body) return;
 
   try {
+    // 显示加载提示
+    const loadingToast = Toast.info('正在准备阅读模式...', {
+      duration: 0,
+      showProgress: true
+    });
+
     // 开始性能监控
     performanceMonitor.start('enableReadingMode');
 
@@ -1018,7 +1025,19 @@ async function enableReadingMode() {
     const perfRecord = performanceMonitor.end('enableReadingMode');
     console.info(`阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
 
+    // 关闭加载提示并显示成功提示
+    loadingToast.close();
+    Toast.success('阅读模式已启用', {
+      position: 'top',
+      duration: 2000
+    });
+
   } catch (error) {
+    // 显示错误提示
+    Toast.error(`启用阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+      position: 'top',
+      duration: 3000
+    });
     console.error('启用阅读模式时发生错误:', error);
     throw error;
   } finally {
@@ -1044,6 +1063,12 @@ function disableReadingMode() {
     performanceMonitor.end('disableReadingMode');
     return;
   }
+
+  // 显示加载提示
+  const loadingToast = Toast.info('正在返回原始页面...', {
+    duration: 0,
+    showProgress: true
+  });
 
   try {
     // 移除浮动退出按钮
@@ -1075,6 +1100,13 @@ function disableReadingMode() {
 
     const perfRecord = performanceMonitor.end('disableReadingMode');
     console.info(`阅读模式禁用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
+
+    // 关闭加载提示并显示成功提示
+    loadingToast.close();
+    Toast.success('已返回原始页面', {
+      position: 'top',
+      duration: 2000
+    });
   } catch (error) {
     console.error('禁用阅读模式时发生错误:', error);
     throw error;
