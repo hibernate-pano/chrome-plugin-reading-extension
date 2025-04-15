@@ -196,19 +196,18 @@ customCodeStyles.id = 'reading-mode-custom-code-styles';
 customCodeStyles.textContent = `
   pre.line-numbers {
     position: relative;
-    padding-left: 4.2em;
+    padding-left: 3.5em;
     counter-reset: linenumber;
     white-space: pre-wrap;
-    border-radius: 0 0 8px 8px;
     margin: 0;
-    padding-top: 1.2em;
-    padding-bottom: 1.2em;
-    background-color: #f8f9fa;
+    padding-top: 1em;
+    padding-bottom: 1em;
+    background-color: #fafafa;
     border-top: none;
   }
 
   .dark pre.line-numbers {
-    background-color: #1a1d21;
+    background-color: #282c34;
   }
 
   pre.line-numbers > code {
@@ -220,38 +219,36 @@ customCodeStyles.textContent = `
   .line-numbers-rows {
     position: absolute;
     pointer-events: none;
-    top: 1.2em;
+    top: 1em;
     left: 0;
-    width: 3.8em;
+    width: 3.2em;
     letter-spacing: -1px;
-    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
     user-select: none;
-    background-color: rgba(0, 0, 0, 0.02);
-    height: calc(100% - 2.4em);
+    height: calc(100% - 2em);
   }
 
   .line-numbers-rows > span {
     display: block;
     counter-increment: linenumber;
     pointer-events: none;
-    padding: 0 0.8em;
+    padding: 0 0.5em;
     height: 1.5em;
     line-height: 1.5em;
   }
 
   .line-numbers-rows > span:before {
     content: counter(linenumber);
-    color: #aaa;
+    color: #bbb;
     display: block;
-    padding-right: 0.8em;
+    padding-right: 0.5em;
     text-align: right;
-    font-size: 0.85em;
+    font-size: 0.8em;
     font-family: 'Fira Code', Consolas, Monaco, monospace;
   }
 
   .dark .line-numbers-rows {
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    background-color: rgba(255, 255, 255, 0.02);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .dark .line-numbers-rows > span:before {
@@ -260,59 +257,42 @@ customCodeStyles.textContent = `
 
   .enhanced-code-container {
     position: relative;
-    margin: 2em 0;
-    border-radius: 8px;
+    margin: 1.5em 0;
+    border-radius: 4px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
-    background-color: #f8f9fa;
-  }
-
-  .enhanced-code-container:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: #fafafa;
   }
 
   .dark .enhanced-code-container {
-    background-color: #1a1d21;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .dark .enhanced-code-container:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    background-color: #282c34;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .code-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75em 1.25em;
-    background: #f0f1f3;
+    padding: 0.5em 1em;
+    background: #f5f5f5;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     font-family: system-ui, -apple-system, sans-serif;
-    font-size: 0.85em;
+    font-size: 0.8em;
   }
 
   .dark .code-header {
-    background: #22262c;
+    background: #21252b;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .code-language {
-    font-weight: 600;
-    color: #444;
-    background: rgba(0, 0, 0, 0.05);
-    padding: 0.25em 0.6em;
-    border-radius: 4px;
+    font-weight: 500;
+    color: #666;
     font-size: 0.9em;
-    letter-spacing: 0.5px;
   }
 
   .dark .code-language {
-    color: #e0e0e0;
-    background: rgba(255, 255, 255, 0.1);
+    color: #aaa;
   }
 
   .code-caption {
@@ -322,48 +302,41 @@ customCodeStyles.textContent = `
   }
 
   .dark .code-caption {
-    color: #bbb;
+    color: #aaa;
   }
 
   .code-copy-button {
     background: transparent;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-    padding: 0.25em 0.6em;
+    border: none;
+    padding: 0.25em 0.5em;
     font-size: 0.9em;
-    color: #666;
+    color: #888;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.4em;
-    transition: all 0.2s ease;
+    gap: 0.3em;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
   }
 
   .code-copy-button:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: #333;
+    opacity: 1;
   }
 
   .code-copy-button.copied {
-    background: #4caf50;
-    color: white;
-    border-color: #4caf50;
+    color: #4caf50;
   }
 
   .dark .code-copy-button {
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #bbb;
+    color: #888;
   }
 
   .dark .code-copy-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #eee;
+    color: #ccc;
   }
 
   .dark .code-copy-button.copied {
-    background: #4caf50;
-    color: white;
-    border-color: #4caf50;
+    color: #4caf50;
   }
 
   /* 纯文本代码样式 */
@@ -374,29 +347,19 @@ customCodeStyles.textContent = `
     background: #fafafa;
     color: #333;
     tab-size: 4;
-    border-radius: 0 0 8px 8px;
   }
 
   .dark .plaintext {
-    background: #1e2329;
+    background: #282c34;
     color: #abb2bf;
   }
 
   /* 代码块内容区域 */
   .hljs {
-    padding: 0 1.2em !important;
+    padding: 0 1em !important;
     background: transparent !important;
     line-height: 1.5;
     font-size: 0.95em;
-  }
-
-  /* 代码块悬停效果 */
-  pre.line-numbers:hover .line-numbers-rows {
-    background-color: rgba(0, 0, 0, 0.04);
-  }
-
-  .dark pre.line-numbers:hover .line-numbers-rows {
-    background-color: rgba(255, 255, 255, 0.04);
   }
 `;
 document.head.appendChild(customCodeStyles);
