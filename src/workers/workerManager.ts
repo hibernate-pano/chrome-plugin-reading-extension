@@ -176,9 +176,19 @@ export class WorkerManager {
       };
 
       // 发送消息到工作线程
-      this.worker.postMessage(message);
-
-      console.debug(`发送请求到工作线程: ${action}`);
+      try {
+        if (this.worker) {
+          this.worker.postMessage(message);
+          console.debug(`发送请求到工作线程: ${action}`);
+        } else {
+          throw new Error('工作线程不存在');
+        }
+      } catch (error) {
+        // 移除请求
+        this.pendingRequests.delete(id);
+        console.error('发送消息到工作线程失败:', error);
+        reject(error);
+      }
     });
   }
 

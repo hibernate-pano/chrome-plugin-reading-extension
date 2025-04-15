@@ -28,41 +28,41 @@ export class Toast {
 
     // 创建 Toast 元素
     const toast = this.createToastElement(options);
-    
+
     // 添加到队列
     this.queue.push(toast);
-    
+
     // 添加到容器
     if (this.container) {
       this.container.appendChild(toast);
     }
-    
+
     // 限制可见数量
     this.limitVisibleToasts();
-    
+
     // 设置自动关闭
     const duration = options.duration || 3000;
     let timeoutId: number | null = null;
-    
+
     if (duration > 0) {
       timeoutId = window.setTimeout(() => {
         this.close(toast);
       }, duration);
     }
-    
+
     // 如果显示进度条
     if (options.showProgress) {
       const progress = document.createElement('div');
       progress.className = 'toast-progress';
       toast.appendChild(progress);
-      
+
       // 动画进度条
       progress.style.transition = `width ${duration}ms linear`;
       setTimeout(() => {
         progress.style.width = '0%';
       }, 10);
     }
-    
+
     // 返回关闭函数
     return {
       close: () => {
@@ -127,7 +127,7 @@ export class Toast {
    */
   public static closeAll(): void {
     if (!this.container) return;
-    
+
     // 复制队列，避免在迭代过程中修改
     const toasts = [...this.queue];
     toasts.forEach(toast => this.close(toast));
@@ -138,7 +138,7 @@ export class Toast {
    */
   private static ensureContainer(): void {
     if (this.container) return;
-    
+
     // 创建容器
     this.container = document.createElement('div');
     this.container.className = 'toast-container';
@@ -153,10 +153,10 @@ export class Toast {
       pointer-events: none;
       transition: all 0.3s ease;
     `;
-    
+
     // 添加到文档
     document.body.appendChild(this.container);
-    
+
     // 添加样式
     const style = document.createElement('style');
     style.textContent = `
@@ -172,7 +172,7 @@ export class Toast {
         --toast-padding: 12px 16px;
         --toast-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
-      
+
       .toast {
         display: flex;
         align-items: center;
@@ -191,17 +191,17 @@ export class Toast {
         pointer-events: auto;
         cursor: default;
       }
-      
+
       .toast.visible {
         opacity: 1;
         transform: translateY(0);
       }
-      
+
       .toast.closing {
         opacity: 0;
         transform: translateY(-10px);
       }
-      
+
       .toast-icon {
         margin-right: 8px;
         flex-shrink: 0;
@@ -211,12 +211,12 @@ export class Toast {
         align-items: center;
         justify-content: center;
       }
-      
+
       .toast-message {
         flex-grow: 1;
         word-break: break-word;
       }
-      
+
       .toast-close {
         margin-left: 8px;
         flex-shrink: 0;
@@ -229,11 +229,11 @@ export class Toast {
         opacity: 0.7;
         transition: opacity 0.2s;
       }
-      
+
       .toast-close:hover {
         opacity: 1;
       }
-      
+
       .toast-progress {
         position: absolute;
         bottom: 0;
@@ -242,23 +242,23 @@ export class Toast {
         height: 3px;
         background-color: rgba(255, 255, 255, 0.3);
       }
-      
+
       .toast-success {
         border-left: 3px solid var(--toast-success-color);
       }
-      
+
       .toast-error {
         border-left: 3px solid var(--toast-error-color);
       }
-      
+
       .toast-info {
         border-left: 3px solid var(--toast-info-color);
       }
-      
+
       .toast-warning {
         border-left: 3px solid var(--toast-warning-color);
       }
-      
+
       /* 深色主题 */
       @media (prefers-color-scheme: dark) {
         .toast-container {
@@ -275,12 +275,12 @@ export class Toast {
   private static createToastElement(options: ToastOptions): HTMLElement {
     const toast = document.createElement('div');
     toast.className = `toast ${options.type ? `toast-${options.type}` : ''}`;
-    
+
     // 添加图标
     if (options.showIcon) {
       const icon = document.createElement('div');
       icon.className = 'toast-icon';
-      
+
       // 根据类型设置图标
       switch (options.type) {
         case 'success':
@@ -296,16 +296,16 @@ export class Toast {
           icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
           break;
       }
-      
+
       toast.appendChild(icon);
     }
-    
+
     // 添加消息
     const message = document.createElement('div');
     message.className = 'toast-message';
     message.textContent = options.message;
     toast.appendChild(message);
-    
+
     // 添加关闭按钮
     const close = document.createElement('div');
     close.className = 'toast-close';
@@ -318,13 +318,13 @@ export class Toast {
       }
     });
     toast.appendChild(close);
-    
+
     // 添加点击事件
     if (options.onClick) {
       toast.style.cursor = 'pointer';
       toast.addEventListener('click', options.onClick);
     }
-    
+
     // 设置位置
     if (options.position) {
       if (this.container) {
@@ -375,12 +375,12 @@ export class Toast {
         this.container.style.transform = 'none';
       }
     }
-    
+
     // 显示动画
     setTimeout(() => {
       toast.classList.add('visible');
     }, 10);
-    
+
     return toast;
   }
 
@@ -390,19 +390,23 @@ export class Toast {
   private static close(toast: HTMLElement): void {
     // 添加关闭动画
     toast.classList.add('closing');
-    
+
     // 动画结束后移除
     setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
+      if (toast.parentNode && toast.parentNode.contains(toast)) {
+        try {
+          toast.parentNode.removeChild(toast);
+        } catch (error) {
+          console.warn('移除 Toast 元素时发生错误:', error);
+        }
       }
-      
+
       // 从队列中移除
       const index = this.queue.indexOf(toast);
       if (index !== -1) {
         this.queue.splice(index, 1);
       }
-      
+
       // 显示下一个 Toast
       this.showNextToast();
     }, 300);
@@ -429,13 +433,13 @@ export class Toast {
     for (const toast of this.queue) {
       if (toast.style.display === 'none') {
         toast.style.display = 'flex';
-        
+
         // 重新触发显示动画
         toast.classList.remove('visible');
         setTimeout(() => {
           toast.classList.add('visible');
         }, 10);
-        
+
         break;
       }
     }

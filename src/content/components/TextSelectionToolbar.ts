@@ -126,19 +126,19 @@ export class TextSelectionToolbar {
     // 监听选择事件
     document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
-    
+
     // 监听点击事件，隐藏工具栏
     document.addEventListener('mousedown', (e) => {
       if (this.toolbar && !this.toolbar.contains(e.target as Node)) {
         this.hideToolbar();
       }
     });
-    
+
     // 监听滚动事件，隐藏工具栏
     document.addEventListener('scroll', () => {
       this.hideToolbar();
     });
-    
+
     // 监听窗口大小变化事件，隐藏工具栏
     window.addEventListener('resize', () => {
       this.hideToolbar();
@@ -150,20 +150,20 @@ export class TextSelectionToolbar {
    */
   private handleMouseUp(e: MouseEvent): void {
     const selection = window.getSelection();
-    
+
     if (selection && !selection.isCollapsed) {
       this.selectedText = selection.toString().trim();
-      
+
       if (this.selectedText) {
         // 延迟显示工具栏，避免与其他点击事件冲突
         if (this.timeout) {
           clearTimeout(this.timeout);
         }
-        
+
         this.timeout = window.setTimeout(() => {
           const range = selection.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-          
+
           this.showToolbar(rect, e.clientX);
         }, this.delay);
       }
@@ -175,7 +175,7 @@ export class TextSelectionToolbar {
    */
   private handleSelectionChange(): void {
     const selection = window.getSelection();
-    
+
     if (selection && selection.isCollapsed && this.isVisible) {
       this.hideToolbar();
     }
@@ -186,16 +186,16 @@ export class TextSelectionToolbar {
    */
   private showToolbar(selectionRect: DOMRect, mouseX: number): void {
     if (!this.toolbar) return;
-    
+
     // 计算工具栏位置
     const toolbarWidth = 200; // 估计宽度
     const toolbarHeight = 40; // 估计高度
-    
+
     // 水平位置：居中于选择区域，但不超出视口
     let left = mouseX - toolbarWidth / 2;
     left = Math.max(10, left); // 不超出左边界
     left = Math.min(window.innerWidth - toolbarWidth - 10, left); // 不超出右边界
-    
+
     // 垂直位置：根据配置显示在选择区域的上方或下方
     let top;
     if (this.position === 'top') {
@@ -211,12 +211,12 @@ export class TextSelectionToolbar {
         top = selectionRect.top - toolbarHeight - 10 + window.scrollY;
       }
     }
-    
+
     // 设置工具栏位置
     this.toolbar.style.left = `${left}px`;
     this.toolbar.style.top = `${top}px`;
     this.toolbar.style.display = 'block';
-    
+
     // 添加动画效果
     setTimeout(() => {
       if (this.toolbar) {
@@ -224,7 +224,7 @@ export class TextSelectionToolbar {
         this.toolbar.style.transform = 'translateY(0)';
       }
     }, 10);
-    
+
     this.isVisible = true;
   }
 
@@ -233,16 +233,16 @@ export class TextSelectionToolbar {
    */
   private hideToolbar(): void {
     if (!this.toolbar || !this.isVisible) return;
-    
+
     this.toolbar.style.opacity = '0';
     this.toolbar.style.transform = `translateY(${this.position === 'top' ? '-10px' : '10px'})`;
-    
+
     setTimeout(() => {
       if (this.toolbar) {
         this.toolbar.style.display = 'none';
       }
     }, 200);
-    
+
     this.isVisible = false;
   }
 
@@ -251,13 +251,13 @@ export class TextSelectionToolbar {
    */
   public setTheme(theme: 'light' | 'dark'): void {
     this.theme = theme;
-    
+
     if (this.toolbar) {
       this.toolbar.className = `text-selection-toolbar ${this.theme} ${this.position}`;
       this.toolbar.style.backgroundColor = this.theme === 'light' ? '#ffffff' : '#333333';
       this.toolbar.style.color = this.theme === 'light' ? '#333333' : '#ffffff';
       this.toolbar.style.borderColor = this.theme === 'light' ? '#e0e0e0' : '#555555';
-      
+
       // 更新按钮样式
       const buttons = this.toolbar.querySelectorAll('.toolbar-option');
       buttons.forEach(button => {
@@ -271,7 +271,7 @@ export class TextSelectionToolbar {
    */
   public setPosition(position: 'top' | 'bottom'): void {
     this.position = position;
-    
+
     if (this.toolbar) {
       this.toolbar.className = `text-selection-toolbar ${this.theme} ${this.position}`;
     }
@@ -281,11 +281,11 @@ export class TextSelectionToolbar {
    * 销毁工具栏
    */
   public destroy(): void {
-    if (this.toolbar) {
+    if (this.toolbar && document.body.contains(this.toolbar)) {
       document.body.removeChild(this.toolbar);
       this.toolbar = null;
     }
-    
+
     document.removeEventListener('mouseup', this.handleMouseUp.bind(this));
     document.removeEventListener('selectionchange', this.handleSelectionChange.bind(this));
   }
@@ -316,7 +316,7 @@ export const defaultToolbarOptions: ToolbarOption[] = [
             z-index: 10000;
           `;
           document.body.appendChild(toast);
-          
+
           // 2秒后移除提示
           setTimeout(() => {
             document.body.removeChild(toast);

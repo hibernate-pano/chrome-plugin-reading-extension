@@ -149,26 +149,37 @@ export const Popup = () => {
 
   const toggleReadingMode = async () => {
     try {
+      // 禁用按钮，防止重复点击
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab.id) {
+        // 先切换本地状态，提供即时反馈
+        setReadingMode(!readingMode);
+
         chrome.tabs.sendMessage(
           tab.id,
           { action: 'TOGGLE_READING_MODE' },
           (response) => {
             if (chrome.runtime.lastError) {
               console.error('发送消息时发生错误:', chrome.runtime.lastError);
+              // 如果出错，恢复状态
+              setReadingMode(readingMode);
               return;
             }
             if (response?.success) {
+              // 确保状态与响应一致
               setReadingMode(response.isReadingMode);
             } else {
               console.error('切换阅读模式失败:', response?.error);
+              // 如果失败，恢复状态
+              setReadingMode(readingMode);
             }
           }
         );
       }
     } catch (error) {
       console.error('切换阅读模式时发生错误:', error);
+      // 如果出错，恢复状态
+      setReadingMode(readingMode);
     }
   };
 

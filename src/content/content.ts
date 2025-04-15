@@ -1640,15 +1640,21 @@ function disableReadingMode() {
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === 'TOGGLE_READING_MODE') {
     try {
-      if (isReadingMode) {
+      // 先保存当前状态
+      const currentState = isReadingMode;
+
+      // 切换阅读模式
+      if (currentState) {
         disableReadingMode();
       } else {
         enableReadingMode();
       }
+
+      // 发送切换后的状态，注意这里使用的是切换后的状态
       sendResponse({
         success: true,
-        isReadingMode,
-        buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+        isReadingMode: !currentState, // 使用切换后的状态
+        buttonText: !currentState ? '退出阅读模式' : '进入阅读模式'
       });
     } catch (error) {
       console.error('处理消息时发生错误:', error);
