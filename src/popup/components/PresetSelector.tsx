@@ -240,15 +240,27 @@ const PresetSelector: React.FC = () => {
       </Card>
 
       {/* 重置按钮 */}
-      <div className="flex justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={resetToDefaultSettings}
-        >
-          重置为默认设置
-        </Button>
-      </div>
+      <Card variant="hover" className="border-dashed border-gray-300 dark:border-gray-700">
+        <CardContent className="p-4">
+          <div className="flex flex-col items-center justify-center text-center space-y-3">
+            <div className="text-gray-500 dark:text-gray-400 text-sm">
+              重置所有设置将恢复到默认状态，包括字体、颜色、布局等所有设置。
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                if (confirm('确定要重置所有设置吗？这将无法撤销。'))
+                  resetToDefaultSettings();
+              }}
+              iconLeft="🗑️"
+              className="mt-2"
+            >
+              重置所有设置
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

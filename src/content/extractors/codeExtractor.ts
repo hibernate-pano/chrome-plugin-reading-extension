@@ -210,21 +210,47 @@ export class CodeExtractor {
     // 创建代码块
     const pre = document.createElement('pre');
     pre.className = 'line-numbers';
+    pre.setAttribute('data-language', this.getDisplayLanguageName(codeInfo.language));
 
     const code = document.createElement('code');
     code.className = `language-${codeInfo.language}`;
 
-    // 处理代码行
-    const lines = codeInfo.code.split('\n');
-    lines.forEach((line, index) => {
-      const lineElement = document.createElement('span');
-      lineElement.className = 'line';
-      lineElement.textContent = line + (index < lines.length - 1 ? '\n' : '');
-      code.appendChild(lineElement);
-    });
+    // 直接设置代码内容，而不是通过创建行元素
+    code.textContent = codeInfo.code;
 
     pre.appendChild(code);
     container.appendChild(pre);
+
+    // 使用简单的语法高亮而不使用 Prism
+    try {
+      // 使用简单的文本处理
+      const codeText = code.textContent || '';
+      code.innerHTML = codeText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+      // 添加简单的语法高亮 CSS 类
+      code.classList.add('highlighted-code');
+
+      // 添加行号
+      const lines = codeText.split('\n');
+      if (lines.length > 1) {
+        const lineNumbersWrapper = document.createElement('span');
+        lineNumbersWrapper.className = 'line-numbers-rows';
+
+        for (let i = 0; i < lines.length; i++) {
+          const lineSpan = document.createElement('span');
+          lineNumbersWrapper.appendChild(lineSpan);
+        }
+
+        pre.appendChild(lineNumbersWrapper);
+      }
+    } catch (error) {
+      console.warn('代码高亮失败:', error);
+    }
 
     return container;
   }

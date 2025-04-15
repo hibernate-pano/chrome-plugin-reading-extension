@@ -1,5 +1,7 @@
 import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
+// 先导入 Prism 核心库
 import Prism from 'prismjs';
+
 // 先导入自定义样式
 // 注意：直接在代码中定义样式，避免导入文件的问题
 const codeblockStyles = document.createElement('style');
@@ -9,9 +11,162 @@ document.head.appendChild(codeblockStyles);
 const listStyles = document.createElement('style');
 listStyles.id = 'reading-mode-list-styles';
 document.head.appendChild(listStyles);
-// 再导入插件样式
+
+// 添加自定义代码高亮样式
+const customCodeStyles = document.createElement('style');
+customCodeStyles.id = 'reading-mode-custom-code-styles';
+customCodeStyles.textContent = `
+  .highlighted-code {
+    display: block;
+    overflow-x: auto;
+    padding: 1em;
+    background: #f8f8f8;
+    color: #333;
+    tab-size: 4;
+  }
+
+  .dark .highlighted-code {
+    background: #282c34;
+    color: #abb2bf;
+  }
+
+  pre.line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: linenumber;
+    white-space: pre-wrap;
+    border-radius: 6px;
+    margin: 1em 0;
+  }
+
+  pre.line-numbers > code {
+    position: relative;
+    white-space: inherit;
+  }
+
+  .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 0;
+    left: -3.8em;
+    width: 3em;
+    letter-spacing: -1px;
+    border-right: 1px solid #999;
+    user-select: none;
+  }
+
+  .line-numbers-rows > span {
+    display: block;
+    counter-increment: linenumber;
+    pointer-events: none;
+  }
+
+  .line-numbers-rows > span:before {
+    content: counter(linenumber);
+    color: #999;
+    display: block;
+    padding-right: 0.8em;
+    text-align: right;
+  }
+
+  .dark .line-numbers-rows {
+    border-right: 1px solid #606060;
+  }
+
+  .dark .line-numbers-rows > span:before {
+    color: #606060;
+  }
+
+  .enhanced-code-container {
+    position: relative;
+    margin: 1.5em 0;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .enhanced-code-container {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5em 1em;
+    background: #e8e8e8;
+    border-bottom: 1px solid #ddd;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.85em;
+  }
+
+  .dark .code-header {
+    background: #343a45;
+    border-bottom: 1px solid #444;
+  }
+
+  .code-language {
+    font-weight: bold;
+    color: #555;
+  }
+
+  .dark .code-language {
+    color: #bbb;
+  }
+
+  .code-caption {
+    color: #666;
+    margin-left: 1em;
+  }
+
+  .dark .code-caption {
+    color: #aaa;
+  }
+`;
+document.head.appendChild(customCodeStyles);
+
+// 将 Prism 添加到全局窗口对象中
+window.Prism = Prism;
+
+// 禁用 Prism 的自动高亮功能
+if (window.Prism) {
+  // 禁用自动高亮
+  window.Prism.manual = true;
+
+  // 禁用自动加载插件
+  window.Prism.disableWorkerMessageHandler = true;
+
+  // 安全地创建插件对象
+  try {
+    // 使用更安全的方式创建插件对象
+    if (!window.Prism.plugins) {
+      Object.defineProperty(window.Prism, 'plugins', {
+        value: {},
+        writable: true
+      });
+    }
+
+    // 添加空的 tokenizePlaceholders 函数
+    if (window.Prism.plugins && !window.Prism.plugins.NormalizeWhitespace) {
+      window.Prism.plugins.NormalizeWhitespace = {
+        tokenizePlaceholders: function () { }
+      };
+    }
+  } catch (error) {
+    console.warn('创建 Prism 插件对象失败:', error);
+  }
+}
+
+// 导入 Prism 样式
+import 'prismjs/themes/prism.css';
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 import 'prismjs/plugins/toolbar/prism-toolbar.css';
+
+// 导入插件
+import 'prismjs/plugins/line-numbers/prism-line-numbers';
+import 'prismjs/plugins/toolbar/prism-toolbar';
+import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
+
 // 导入语言支持
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
@@ -32,10 +187,6 @@ import 'prismjs/components/prism-rust';
 import 'prismjs/components/prism-php';
 import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-yaml';
-// 最后导入插件
-import 'prismjs/plugins/line-numbers/prism-line-numbers';
-import 'prismjs/plugins/toolbar/prism-toolbar';
-import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
 // 注释掉 pangu 导入，暂时不使用
 // import pangu from 'pangu';
 
@@ -214,6 +365,9 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
 
   const preElements = container.getElementsByTagName('pre');
   for (const pre of preElements) {
+    // 跳过已经处理过的代码块
+    if (pre.closest('.enhanced-code-container')) continue;
+
     // 添加行号类
     pre.classList.add('line-numbers');
 
@@ -243,12 +397,36 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
       code.classList.add(`language-${preLanguage || 'plaintext'}`);
     }
 
-    // 安全地重新高亮代码
+    // 添加数据属性以便于样式化
+    const language = code.className.replace('language-', '');
+    pre.setAttribute('data-language', language);
+
+    // 使用简单的语法高亮而不使用 Prism
     try {
-      if (Prism && typeof Prism.highlightElement === 'function') {
-        Prism.highlightElement(code);
-      } else {
-        console.warn('代码高亮库 Prism 不可用');
+      // 使用简单的文本处理
+      const codeText = code.textContent || '';
+      code.innerHTML = codeText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+      // 添加简单的语法高亮 CSS 类
+      code.classList.add('highlighted-code');
+
+      // 添加行号
+      const lines = codeText.split('\n');
+      if (lines.length > 1) {
+        const lineNumbersWrapper = document.createElement('span');
+        lineNumbersWrapper.className = 'line-numbers-rows';
+
+        for (let i = 0; i < lines.length; i++) {
+          const lineSpan = document.createElement('span');
+          lineNumbersWrapper.appendChild(lineSpan);
+        }
+
+        pre.appendChild(lineNumbersWrapper);
       }
     } catch (error) {
       console.warn('代码高亮失败:', error);

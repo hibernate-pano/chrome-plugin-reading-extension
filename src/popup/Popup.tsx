@@ -418,8 +418,8 @@ export const Popup = () => {
                     <p className="text-xs text-gray-500 mb-2">内容宽度</p>
                     <Slider
                       min={600}
-                      max={1200}
-                      step={50}
+                      max={1800}
+                      step={100}
                       value={pageWidth}
                       onChange={setPageWidth}
                       valueFormat={(value) => `${value}px`}
