@@ -246,29 +246,13 @@ export class MediaExtractor {
   }
 
   /**
-   * 添加图片控件（放大、下载等）
+   * 添加图片控件
+   * 注意：放大和下载功能已移除
    */
-  private addImageControls(figure: HTMLElement, imageInfo: MediaInfo): void {
-    const controls = document.createElement('div');
-    controls.className = 'image-controls';
-
-    // 添加放大按钮
-    const zoomButton = document.createElement('button');
-    zoomButton.className = 'image-control-button zoom-button';
-    zoomButton.title = '放大图片';
-    zoomButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
-    zoomButton.setAttribute('data-image-src', imageInfo.src);
-    controls.appendChild(zoomButton);
-
-    // 添加下载按钮
-    const downloadButton = document.createElement('button');
-    downloadButton.className = 'image-control-button download-button';
-    downloadButton.title = '下载图片';
-    downloadButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
-    downloadButton.setAttribute('data-image-src', imageInfo.src);
-    controls.appendChild(downloadButton);
-
-    figure.appendChild(controls);
+  private addImageControls(_figure: HTMLElement, _imageInfo: MediaInfo): void {
+    // 放大和下载功能已移除
+    // 不添加任何控件
+    return;
   }
 
   /**
@@ -590,6 +574,8 @@ export class MediaExtractor {
       src.includes('player.twitch.tv')
     );
   }
+
+  // 放大和下载功能已移除
 }
 
 // 导出默认实例

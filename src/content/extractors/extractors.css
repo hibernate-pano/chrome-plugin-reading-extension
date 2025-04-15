@@ -133,40 +133,7 @@
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.image-controls {
-  position: absolute;
-  top: 0.5em;
-  right: 0.5em;
-  display: flex;
-  gap: 0.5em;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.enhanced-image-container:hover .image-controls {
-  opacity: 1;
-}
-
-.image-control-button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #333;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
-}
-
-.image-control-button:hover {
-  background-color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
+/* 图片控件已移除 */
 
 .background-image-container {
   margin-top: 0.5em;
@@ -189,14 +156,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.dark-theme .image-control-button {
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-}
-
-.dark-theme .image-control-button:hover {
-  background-color: rgba(0, 0, 0, 0.9);
-}
+/* 暗色主题下的图片控件已移除 */
 
 /* 代码块样式 - 使用内联样式替代 */
 /* 这部分样式已经移动到内联样式中 */
