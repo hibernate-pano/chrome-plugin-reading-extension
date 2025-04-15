@@ -664,6 +664,7 @@ function applyStyles(settings: ReadingModeSettings) {
       min-height: 100vh;
       display: flex;
       justify-content: center;
+      font-size: var(--reading-font-size) !important;
     }
 
     /* 阅读容器样式 */
@@ -672,7 +673,7 @@ function applyStyles(settings: ReadingModeSettings) {
       width: var(--reading-page-width);
       padding: 2rem;
       margin-left: 250px;
-      font-size: var(--reading-font-size);
+      font-size: var(--reading-font-size) !important;
       line-height: var(--reading-line-height);
       letter-spacing: var(--reading-letter-spacing);
       text-align: ${settings.textAlign};
@@ -682,6 +683,11 @@ function applyStyles(settings: ReadingModeSettings) {
       transition: all 0.3s ease;
       box-shadow: var(--reading-content-shadow);
       border-radius: 8px;
+    }
+
+    /* 确保所有文本元素都使用正确的字体大小 */
+    #reading-mode-container * {
+      font-size: inherit;
     }
 
     /* 响应式布局 */
@@ -712,7 +718,7 @@ function applyStyles(settings: ReadingModeSettings) {
 
     /* 文章标题样式 */
     #reading-mode-container h1:first-child {
-      font-size: 2.5em;
+      font-size: calc(var(--reading-font-size) * 1.8) !important;
       font-weight: 700;
       margin: 0 0 1em;
       line-height: 1.2;
@@ -722,7 +728,7 @@ function applyStyles(settings: ReadingModeSettings) {
 
     /* 标题层级样式 */
     #reading-mode-container h2 {
-      font-size: 1.75em;
+      font-size: calc(var(--reading-font-size) * 1.5) !important;
       font-weight: 600;
       margin: 2em 0 0.8em;
       line-height: 1.3;
@@ -733,9 +739,25 @@ function applyStyles(settings: ReadingModeSettings) {
     }
 
     #reading-mode-container h3 {
-      font-size: 1.4em;
+      font-size: calc(var(--reading-font-size) * 1.3) !important;
       font-weight: 600;
       margin: 1.8em 0 0.7em;
+      line-height: 1.3;
+      color: var(--reading-heading-color);
+    }
+
+    #reading-mode-container h4 {
+      font-size: calc(var(--reading-font-size) * 1.1) !important;
+      font-weight: 600;
+      margin: 1.5em 0 0.7em;
+      line-height: 1.3;
+      color: var(--reading-heading-color);
+    }
+
+    #reading-mode-container h5, #reading-mode-container h6 {
+      font-size: calc(var(--reading-font-size) * 1.05) !important;
+      font-weight: 600;
+      margin: 1.2em 0 0.5em;
       line-height: 1.3;
       color: var(--reading-heading-color);
     }
@@ -748,6 +770,7 @@ function applyStyles(settings: ReadingModeSettings) {
       letter-spacing: ${settings.letterSpacing}px;
       opacity: 0.95;
       text-indent: ${settings.firstLineIndent ? '2em' : '0'};
+      font-size: var(--reading-font-size) !important;
     }
 
     /* 覆盖特殊段落的缩进 */
@@ -764,12 +787,14 @@ function applyStyles(settings: ReadingModeSettings) {
       padding-left: 2.5em;
       line-height: ${settings.lineSpacing}; /* 与段落保持一致的行间距 */
       list-style-position: outside;
+      font-size: var(--reading-font-size) !important;
     }
 
     #reading-mode-container li {
       margin: 0.6em 0;
       padding-left: 0.3em;
       position: relative;
+      font-size: var(--reading-font-size) !important;
     }
 
     #reading-mode-container ul {
@@ -848,6 +873,7 @@ function applyStyles(settings: ReadingModeSettings) {
       font-style: italic;
       border-radius: 0.25em;
       transition: all 0.3s ease;
+      font-size: var(--reading-font-size) !important;
     }
 
     #reading-mode-container blockquote p {
@@ -861,6 +887,7 @@ function applyStyles(settings: ReadingModeSettings) {
       text-decoration: none;
       transition: all 0.2s ease;
       border-bottom: 1px solid transparent;
+      font-size: inherit !important;
     }
 
     #reading-mode-container a:hover {

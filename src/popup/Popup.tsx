@@ -253,22 +253,12 @@ export const Popup = () => {
             <div className="space-y-5">
               <Card variant="paper" className="animate-float">
                 <CardHeader
-                  title="阅读模式"
-                  subtitle="一键优化网页内容，提供舒适的阅读体验"
-                  action={
-                    <Button
-                      variant={readingMode ? 'primary' : 'ghost'}
-                      size="sm"
-                      onClick={toggleReadingMode}
-                      rounded="lg"
-                    >
-                      {readingMode ? '已启用' : '启用'}
-                    </Button>
-                  }
+                  title="阅读模式设置"
+                  subtitle="自定义阅读体验"
                 />
                 <CardContent>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    阅读模式将移除页面干扰元素，优化排版和间距，让您专注于内容本身。
+                    请使用页面顶部的“阅读模式”按钮来切换阅读模式。在这里您可以调整阅读模式的各种设置。
                   </p>
                 </CardContent>
               </Card>
