@@ -21,6 +21,11 @@ import 'prismjs/plugins/toolbar/prism-toolbar';
 import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
 import pangu from 'pangu';
 
+// 导入性能监控器和工具
+import { performanceMonitor } from '../utils/performance';
+import { resourceLoader, LoadPriority } from '../utils/resourceLoader';
+import { getWorkerManager, releaseWorkerManager } from '../workers/workerManager';
+
 // 导入增强提取器
 import {
   contentExtractor,
@@ -49,6 +54,7 @@ interface ReadingModeSettings {
   backgroundColor: keyof typeof BACKGROUND_COLORS;
   showDirectory: boolean;
   paragraphSpacing: number;
+  debug?: boolean;
 }
 
 let originalContent: string | null = null;
@@ -71,6 +77,7 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
     backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? 'white',
     showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? true,
     paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? 1.0,
+    debug: await getStorage<boolean>(StorageKeys.DEBUG) ?? false,
   };
 }
 
@@ -898,6 +905,19 @@ async function enableReadingMode() {
   if (!document.body) return;
 
   try {
+    // 开始性能监控
+    performanceMonitor.start('enableReadingMode');
+
+    // 预加载工作线程
+    try {
+      getWorkerManager().initialize();
+    } catch (error) {
+      console.warn('初始化工作线程失败:', error);
+    }
+
+    // 使用资源加载器预加载样式
+    resourceLoader.register('extractors-css', 'style', chrome.runtime.getURL('src/content/extractors/extractors.css'), LoadPriority.HIGH);
+
     // 保存原始内容
     if (!originalContent) {
       originalContent = document.documentElement.innerHTML;
@@ -906,7 +926,9 @@ async function enableReadingMode() {
     const settings = await fetchSettings();
 
     // 使用增强的内容提取器
+    performanceMonitor.start('contentExtraction');
     const extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
+    performanceMonitor.end('contentExtraction');
 
     if (!extractedContent.success) {
       console.error('无法解析页面内容:', extractedContent.error);
@@ -980,9 +1002,16 @@ async function enableReadingMode() {
 
     isReadingMode = true;
 
+    // 结束性能监控
+    const perfRecord = performanceMonitor.end('enableReadingMode');
+    console.info(`阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
+
   } catch (error) {
     console.error('启用阅读模式时发生错误:', error);
     throw error;
+  } finally {
+    // 释放工作线程资源
+    releaseWorkerManager();
   }
 }
 
@@ -997,7 +1026,12 @@ function preserveListStyles(_doc: Document) { }
 function processLists(_container: HTMLElement) { }
 
 function disableReadingMode() {
-  if (!originalContent) return;
+  performanceMonitor.start('disableReadingMode');
+
+  if (!originalContent) {
+    performanceMonitor.end('disableReadingMode');
+    return;
+  }
 
   try {
     // 移除浮动退出按钮
@@ -1020,6 +1054,9 @@ function disableReadingMode() {
 
     isReadingMode = false;
     originalContent = null;
+
+    const perfRecord = performanceMonitor.end('disableReadingMode');
+    console.info(`阅读模式禁用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
   } catch (error) {
     console.error('禁用阅读模式时发生错误:', error);
     throw error;

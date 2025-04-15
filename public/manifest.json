@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Reading Extension",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "description": "An AI-powered reading extension for Chrome",
   "action": {
     "default_popup": "index.html",
@@ -16,10 +16,24 @@
     "activeTab",
     "scripting"
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "workers/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/content/content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content/content.js"
+      ],
       "run_at": "document_end"
     }
   ],

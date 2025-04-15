@@ -1,4 +1,7 @@
 import { Readability } from '@mozilla/readability';
+import { performanceMonitor } from '../../utils/performance';
+import { extractionCache } from '../../utils/cache';
+import { getWorkerManager } from '../../workers/workerManager';
 
 // 定义提取器配置选项
 export interface ExtractorOptions {
@@ -117,64 +120,160 @@ export class ContentExtractor {
    * 从当前页面提取内容
    */
   public extract(): Promise<ExtractedContent> {
-    return this.extractFromHTML(document.documentElement.outerHTML, document.location.href);
+    // 使用性能监控器测量提取性能
+    return performanceMonitor.measure('extract', async () => {
+      // 尝试从缓存获取
+      const cacheKey = `page_${document.location.href}`;
+      const cachedContent = extractionCache.get(cacheKey);
+
+      if (cachedContent) {
+        console.debug('从缓存获取内容');
+        return cachedContent;
+      }
+
+      // 从页面提取内容
+      const result = await this.extractFromHTML(document.documentElement.outerHTML, document.location.href);
+
+      // 缓存结果
+      if (result.success) {
+        extractionCache.set(cacheKey, result);
+      }
+
+      return result;
+    });
   }
 
   /**
    * 从 HTML 字符串提取内容
    */
   public async extractFromHTML(html: string, url?: string): Promise<ExtractedContent> {
-    try {
-      // 创建文档克隆
-      const doc = document.implementation.createHTMLDocument();
-      doc.documentElement.innerHTML = html;
+    return performanceMonitor.measure('extractFromHTML', async () => {
+      try {
+        // 尝试从缓存获取
+        const cacheKey = `html_${this.generateCacheKey(html)}`;
+        const cachedContent = extractionCache.get(cacheKey);
 
-      // 应用特殊站点处理
-      if (url && this.options.specialSites) {
-        const domain = this.extractDomain(url);
-        const specialHandler = this.options.specialSites[domain];
-        if (specialHandler) {
-          specialHandler(doc);
+        if (cachedContent) {
+          console.debug('从缓存获取内容');
+          return cachedContent;
         }
+
+        // 检查是否支持工作线程
+        if (typeof Worker !== 'undefined' && this.shouldUseWorker(html)) {
+          try {
+            // 使用工作线程提取内容
+            console.debug('使用工作线程提取内容');
+            const workerManager = getWorkerManager();
+            const result = await workerManager.extractContent(html, url);
+
+            // 缓存结果
+            if (result.success) {
+              extractionCache.set(cacheKey, result);
+            }
+
+            return result;
+          } catch (workerError) {
+            console.warn('工作线程提取失败，回退到主线程:', workerError);
+            // 如果工作线程失败，回退到主线程处理
+          }
+        }
+
+        // 主线程提取内容
+        console.debug('使用主线程提取内容');
+
+        // 创建文档克隆
+        const doc = document.implementation.createHTMLDocument();
+        doc.documentElement.innerHTML = html;
+
+        // 应用特殊站点处理
+        if (url && this.options.specialSites) {
+          const domain = this.extractDomain(url);
+          const specialHandler = this.options.specialSites[domain];
+          if (specialHandler) {
+            specialHandler(doc);
+          }
+        }
+
+        // 预处理文档
+        this.preProcessDocument(doc);
+
+        // 使用 Readability 提取内容
+        // @ts-ignore - Readability 的类型定义与实际使用有差异
+        const reader = new Readability(doc, this.options.readabilityOptions);
+        const article = reader.parse();
+
+        if (!article) {
+          return this.createErrorResult('无法提取内容');
+        }
+
+        // 创建临时元素进行后处理
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = article.content;
+
+        // 后处理内容
+        this.postProcessContent(tempDiv);
+
+        // 创建结果对象
+        const result: ExtractedContent = {
+          title: article.title,
+          content: tempDiv.innerHTML,
+          textContent: article.textContent,
+          length: article.length,
+          excerpt: article.excerpt,
+          byline: article.byline,
+          dir: article.dir,
+          siteName: article.siteName,
+          lang: article.lang,
+          publishedTime: (article as any).publishedTime || null,
+          success: true,
+        };
+
+        // 缓存结果
+        extractionCache.set(cacheKey, result);
+
+        return result;
+      } catch (error) {
+        return this.createErrorResult(error instanceof Error ? error.message : '未知错误');
       }
+    });
+  }
 
-      // 预处理文档
-      this.preProcessDocument(doc);
+  /**
+   * 生成缓存键
+   */
+  private generateCacheKey(html: string): string {
+    // 使用 HTML 的哈希值作为缓存键
+    // 为了性能，只使用 HTML 的前 1000 个字符和后 1000 个字符
+    const prefix = html.substring(0, 1000);
+    const suffix = html.length > 2000 ? html.substring(html.length - 1000) : '';
+    const sample = prefix + suffix;
 
-      // 使用 Readability 提取内容
-      const reader = new Readability(doc, this.options.readabilityOptions);
-      const article = reader.parse();
-
-      if (!article) {
-        return this.createErrorResult('无法提取内容');
-      }
-
-      // 创建临时元素进行后处理
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = article.content;
-
-      // 后处理内容
-      this.postProcessContent(tempDiv);
-
-      // 创建结果对象
-      const result: ExtractedContent = {
-        title: article.title,
-        content: tempDiv.innerHTML,
-        textContent: article.textContent,
-        length: article.length,
-        excerpt: article.excerpt,
-        byline: article.byline,
-        dir: article.dir,
-        siteName: article.siteName,
-        lang: article.lang,
-        publishedTime: article.publishedTime,
-        success: true,
-      };
-
-      return result;
-    } catch (error) {
-      return this.createErrorResult(error instanceof Error ? error.message : '未知错误');
+    // 简单的哈希函数
+    let hash = 0;
+    for (let i = 0; i < sample.length; i++) {
+      const char = sample.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 转换为 32 位整数
     }
+
+    return hash.toString(16);
+  }
+
+  /**
+   * 判断是否应该使用工作线程
+   */
+  private shouldUseWorker(html: string): boolean {
+    // 如果 HTML 太小，不值得使用工作线程
+    if (html.length < 50000) {
+      return false;
+    }
+
+    // 如果设备性能较低，不使用工作线程
+    if (navigator.hardwareConcurrency <= 2) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -372,28 +471,28 @@ export class ContentExtractor {
   private fixHeadingHierarchy(doc: Document): void {
     // 获取所有标题元素
     const headings = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-    
+
     // 如果没有标题，直接返回
     if (headings.length === 0) return;
-    
+
     // 找到最小的标题级别
     const minLevel = Math.min(...headings.map(h => parseInt(h.tagName.substring(1))));
-    
+
     // 如果最小级别不是 1，调整所有标题
     if (minLevel > 1) {
       headings.forEach(heading => {
         const currentLevel = parseInt(heading.tagName.substring(1));
         const newLevel = Math.max(1, currentLevel - minLevel + 1);
-        
+
         // 创建新标题元素
         const newHeading = doc.createElement(`h${newLevel}`);
         newHeading.innerHTML = heading.innerHTML;
-        
+
         // 复制属性
         Array.from(heading.attributes).forEach(attr => {
           newHeading.setAttribute(attr.name, attr.value);
         });
-        
+
         // 替换原标题
         heading.parentNode?.replaceChild(newHeading, heading);
       });
@@ -538,7 +637,7 @@ export class ContentExtractor {
           pre.getAttribute('data-language') ||
           pre.className.match(/language-(\w+)/)?.[1] ||
           this.detectCodeLanguage(code.textContent || '');
-        
+
         code.classList.add(`language-${preLanguage || 'plaintext'}`);
       }
     });
@@ -576,7 +675,7 @@ export class ContentExtractor {
     if (code.includes('#include') && (code.includes('<iostream>') || code.includes('<stdio.h>'))) {
       return 'cpp';
     }
-    
+
     return 'plaintext';
   }
 
@@ -589,13 +688,13 @@ export class ContentExtractor {
     lists.forEach(list => {
       // 添加增强类
       list.classList.add('enhanced-list');
-      
+
       // 处理列表项
       const items = list.querySelectorAll('li');
       items.forEach(item => {
         // 移除可能影响样式的属性
         item.removeAttribute('style');
-        
+
         // 处理嵌套列表
         const nestedLists = item.querySelectorAll('ul, ol');
         nestedLists.forEach(nestedList => {
@@ -603,7 +702,7 @@ export class ContentExtractor {
           if (nestedList.parentElement !== item) {
             item.appendChild(nestedList);
           }
-          
+
           // 添加嵌套列表类
           nestedList.classList.add('nested-list');
         });
@@ -657,10 +756,10 @@ export class ContentExtractor {
   private fixHeadings(container: HTMLElement): void {
     // 获取所有标题元素
     const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-    
+
     // 如果没有标题，直接返回
     if (headings.length === 0) return;
-    
+
     // 为每个标题添加 ID，用于目录导航
     headings.forEach((heading, index) => {
       // 如果标题没有 ID，生成一个
@@ -669,18 +768,18 @@ export class ContentExtractor {
         const headingId = this.generateHeadingId(headingText, index);
         heading.id = headingId;
       }
-      
+
       // 添加锚点链接
       const anchor = document.createElement('a');
       anchor.className = 'heading-anchor';
       anchor.href = `#${heading.id}`;
       anchor.innerHTML = '<span class="anchor-icon">#</span>';
       anchor.title = '点击复制链接';
-      
+
       // 添加点击事件（将在实际使用时通过 DOM 事件处理）
       anchor.setAttribute('data-clipboard-action', 'copy');
       anchor.setAttribute('data-clipboard-text', window.location.href.split('#')[0] + '#' + heading.id);
-      
+
       heading.appendChild(anchor);
     });
   }
@@ -696,7 +795,7 @@ export class ContentExtractor {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
-    
+
     // 如果 ID 为空，使用索引
     return id || `heading-${index}`;
   }
