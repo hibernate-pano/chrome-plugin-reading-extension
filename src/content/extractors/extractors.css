@@ -131,6 +131,8 @@
   text-align: center;
   background-color: rgba(0, 0, 0, 0.03);
   border-top: 1px solid rgba(0, 0, 0, 0.1);
+  /* 确保在关闭图片显示时，标题也被隐藏 */
+  display: block;
 }
 
 /* 图片控件已移除 */

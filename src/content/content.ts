@@ -105,6 +105,21 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
 
 function handleMediaElements(container: HTMLElement | null, showImages: boolean) {
   if (!container) return;
+
+  // 首先处理所有图片容器
+  const imageContainers = container.querySelectorAll('.enhanced-image-container, .background-image-container, figure');
+  imageContainers.forEach(container => {
+    const containerElement = container as HTMLElement;
+    containerElement.style.display = showImages ? 'block' : 'none';
+  });
+
+  // 处理所有图片标题
+  const imageCaptions = container.querySelectorAll('.image-caption, figcaption');
+  imageCaptions.forEach(caption => {
+    const captionElement = caption as HTMLElement;
+    captionElement.style.display = showImages ? 'block' : 'none';
+  });
+
   const mediaSelectors = [
     'img', 'svg', 'video', 'audio', 'iframe',
     'canvas', 'object', 'embed', 'picture', 'source'
@@ -184,6 +199,13 @@ function handleMediaElements(container: HTMLElement | null, showImages: boolean)
         }
       }
     }
+  });
+
+  // 处理图片占位符
+  const placeholders = container.querySelectorAll('.image-placeholder');
+  placeholders.forEach(placeholder => {
+    const placeholderElement = placeholder as HTMLElement;
+    placeholderElement.style.display = showImages ? 'flex' : 'none';
   });
 }
 

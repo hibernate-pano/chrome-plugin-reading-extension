@@ -241,6 +241,9 @@ export class MediaExtractor {
     spinner.className = 'image-loading-spinner';
     placeholder.appendChild(spinner);
 
+    // 不再添加“图片”文字
+    // placeholder.textContent = '图片';
+
     // 将占位图添加到图片前面
     img.parentElement?.insertBefore(placeholder, img);
   }
