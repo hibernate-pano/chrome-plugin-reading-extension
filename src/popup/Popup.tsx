@@ -238,7 +238,7 @@ export const Popup = () => {
             rounded="full"
             className="ml-2"
           >
-            {readingMode ? '已启用' : '阅读模式'}
+            {readingMode ? '退出阅读模式' : '进入阅读模式'}
           </Button>
         </div>
       </div>
