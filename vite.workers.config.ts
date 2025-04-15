@@ -6,6 +6,8 @@ export default defineConfig({
   build: {
     outDir: 'dist/workers',
     emptyOutDir: true,
+    // 禁用复制 public 目录中的文件
+    publicDir: false,
     rollupOptions: {
       input: {
         extractorWorker: resolve(__dirname, 'src/workers/extractorWorker.ts'),

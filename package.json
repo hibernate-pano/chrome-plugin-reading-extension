@@ -9,7 +9,8 @@
     "build:background": "vite build -c vite.background.config.ts",
     "build:popup": "vite build -c vite.popup.config.ts",
     "build:workers": "vite build -c vite.workers.config.ts",
-    "build": "pnpm run build:content && pnpm run build:background && pnpm run build:popup && pnpm run build:workers",
+    "cleanup": "node scripts/cleanup.js",
+    "build": "pnpm run build:content && pnpm run build:background && pnpm run build:popup && pnpm run build:workers && pnpm run cleanup",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "watch": "vite build --watch"
