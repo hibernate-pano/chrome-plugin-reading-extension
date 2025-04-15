@@ -6,11 +6,14 @@
 
 AI Reading Extension 是一个 Chrome 浏览器扩展，它能够优化网页的阅读体验，提供多种阅读辅助功能。主要功能包括：
 
-- 智能排版优化
-- 段落间距调整
+- 智能内容提取与排版优化
+- 表格、图片、代码块和列表的增强处理
+- 段落间距和排版智能调整
 - 中英文间自动添加空格
+- 多种主题和字体选择
 - 自定义阅读设置
-- 代码高亮显示
+- 代码高亮显示与复制功能
+- 自动生成目录导航
 
 ## 技术栈
 
@@ -31,7 +34,17 @@ AI Reading Extension 是一个 Chrome 浏览器扩展，它能够优化网页的
 src/
 ├── background/       # Chrome 扩展后台脚本
 ├── content/         # 注入页面的内容脚本
-│   ├── content.tsx
+│   ├── content.ts
+│   ├── types.ts       # 类型定义
+│   ├── utils.ts       # 工具函数
+│   ├── extractors/    # 内容提取器模块
+│   │   ├── contentExtractor.ts
+│   │   ├── tableExtractor.ts
+│   │   ├── mediaExtractor.ts
+│   │   ├── codeExtractor.ts
+│   │   ├── listExtractor.ts
+│   │   ├── index.ts
+│   │   └── extractors.css
 │   └── content.css
 ├── popup/          # 扩展弹出窗口
 │   ├── components/
@@ -45,6 +58,15 @@ public/            # 静态资源
 └── icons/         # 扩展图标
 
 docs/             # 项目文档
+├── changelog.md    # 变更日志
+├── project_overview.md # 项目概述
+├── technical_documentation.md # 技术文档
+├── roadmap.md      # 路线图
+└── user_guide.md   # 用户指南
+
+tests/            # 测试文件
+├── extractors.test.html # 提取器测试页面
+└── extractors.test.js  # 提取器测试脚本
 ```
 
 ## 模块功能说明
@@ -55,6 +77,14 @@ docs/             # 项目文档
 - 实现阅读模式转换
 - 处理段落间距和排版
 - 实现代码块高亮
+
+#### 内容提取器模块
+
+- **contentExtractor**: 增强的内容提取核心
+- **tableExtractor**: 专门处理表格的提取和增强
+- **mediaExtractor**: 专门处理图片和其他媒体元素
+- **codeExtractor**: 专门处理代码块的识别和高亮
+- **listExtractor**: 专门处理列表结构的优化
 
 ### 2. 弹出窗口 (Popup)
 
@@ -121,6 +151,14 @@ pnpm lint
 - 其他基于 Chromium 的浏览器 (版本要求同上)
 
 ## 版本历史
+
+### v1.2.0 (开发中)
+
+- 重构内容提取系统，提高提取准确率和处理速度
+- 添加专门的提取器模块，增强内容处理能力
+- 改进表格、图片、代码块和列表的处理
+- 优化代码结构，采用更模块化的设计
+- 添加更多文档和测试文件
 
 ### v1.1.5 (2025-01-08)
 

@@ -1,4 +1,3 @@
-import { Readability } from '@mozilla/readability';
 import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 import Prism from 'prismjs';
 // 先导入主题样式
@@ -21,6 +20,18 @@ import 'prismjs/plugins/line-numbers/prism-line-numbers';
 import 'prismjs/plugins/toolbar/prism-toolbar';
 import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
 import pangu from 'pangu';
+
+// 导入增强提取器
+import {
+  contentExtractor,
+  tableExtractor,
+  mediaExtractor,
+  codeExtractor,
+  listExtractor
+} from './extractors';
+
+// 导入提取器样式
+import './extractors/extractors.css';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -110,6 +121,11 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     // 设置代码字体
     pre.style.fontFamily = 'Fira Code, Consolas, Monaco, monospace';
     code.style.fontFamily = 'inherit';
+
+    // 设置代码字体大小
+    if (settings.codeFontSize) {
+      pre.style.fontSize = `${settings.codeFontSize}px`;
+    }
 
     // 确保代码块有语言类名
     const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
@@ -371,10 +387,18 @@ function applyStyles(settings: ReadingModeSettings) {
   // 处理代码块
   handleCodeBlocks(container, settings);
 
+  // 使用工具模块中的函数更新 CSS 变量
+  // 从 utils.ts 导入的 updateReadingModeStyles 函数
+  import('./utils').then(({ updateReadingModeStyles }) => {
+    updateReadingModeStyles(settings);
+  }).catch(error => {
+    console.error('加载样式工具时发生错误:', error);
+  });
+
   // 合并基础样式和代码主题样式
   style.textContent = `
     ${generateCodeThemeStyles(settings.codeTheme, settings)}
-    
+
     /* 基础样式 */
     body {
       margin: 0;
@@ -661,7 +685,7 @@ function applyStyles(settings: ReadingModeSettings) {
       transition: all 0.3s ease;
       border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
     }
-    
+
     #reading-mode-toc .toc-title {
       font-size: 16px;
       font-weight: bold;
@@ -670,34 +694,34 @@ function applyStyles(settings: ReadingModeSettings) {
       border-bottom: 1px solid ${settings.theme === 'dark' ? '#404040' : '#eee'};
       color: ${settings.theme === 'dark' ? '#fff' : '#333'};
     }
-    
+
     #reading-mode-toc .toc-empty {
       color: ${settings.theme === 'dark' ? '#888' : '#999'};
       font-style: italic;
       text-align: center;
       padding: 20px 0;
     }
-    
+
     #reading-mode-toc::-webkit-scrollbar {
       width: 4px;
     }
-    
+
     #reading-mode-toc::-webkit-scrollbar-thumb {
       background-color: rgba(0, 0, 0, 0.2);
       border-radius: 2px;
     }
-    
+
     #reading-mode-toc ul {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    
+
     #reading-mode-toc li {
       margin: 4px 0;
       line-height: 1.4;
     }
-    
+
     #reading-mode-toc a {
       color: ${settings.theme === 'dark' ? '#e0e0e0' : '#333'};
       text-decoration: none;
@@ -707,41 +731,41 @@ function applyStyles(settings: ReadingModeSettings) {
       transition: all 0.2s ease;
       border-left: 2px solid transparent;
     }
-    
+
     #reading-mode-toc a:hover {
       background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
       border-left-color: ${settings.theme === 'dark' ? '#666' : '#ddd'};
     }
-    
+
     #reading-mode-toc a.active {
       background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
       border-left-color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
       color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
     }
-    
+
     #reading-mode-toc .toc-level-1 { margin-left: 0; }
     #reading-mode-toc .toc-level-2 { margin-left: 12px; }
     #reading-mode-toc .toc-level-3 { margin-left: 24px; }
     #reading-mode-toc .toc-level-4 { margin-left: 36px; }
     #reading-mode-toc .toc-level-5 { margin-left: 48px; }
     #reading-mode-toc .toc-level-6 { margin-left: 60px; }
-    
+
     /* 调整阅读容器的边距，为目录留出空间 */
     #reading-mode-container {
       margin-left: 250px !important;
       width: calc(${settings.pageWidth}px - 250px) !important;
     }
-    
+
     @media screen and (max-width: ${settings.pageWidth + 250}px) {
       #reading-mode-toc {
         transform: translateX(-100%);
         transition: transform 0.3s ease;
       }
-      
+
       #reading-mode-toc:hover {
         transform: translateX(0);
       }
-      
+
       #reading-mode-container {
         margin-left: 0 !important;
         width: ${settings.pageWidth}px !important;
@@ -753,7 +777,7 @@ function applyStyles(settings: ReadingModeSettings) {
       padding: 20px;
       background-color: ${BACKGROUND_COLORS[settings.backgroundColor]};
     }
-    
+
     #reading-mode-title {
       font-size: 2em;
       font-weight: bold;
@@ -763,7 +787,7 @@ function applyStyles(settings: ReadingModeSettings) {
       text-align: center;
       font-family: ${FONT_FAMILIES[settings.fontFamily]};
     }
-    
+
     .toc-article-title {
       font-size: 1.5em;
       font-weight: bold;
@@ -775,7 +799,7 @@ function applyStyles(settings: ReadingModeSettings) {
       border-bottom: 1px solid ${settings.theme === 'dark' ? '#666666' : '#dddddd'};
       padding-bottom: 0.5em;
     }
-    
+
     .toc-title {
       font-size: 1.2em;
       font-weight: bold;
@@ -855,8 +879,19 @@ async function applyAutoSpacing() {
   const container = document.getElementById('reading-mode-container');
   if (!container) return;
 
-  // 直接使用 pangu.spacingElementByClassName 处理整个容器
-  await pangu.spacingElementByTagName('div');
+  try {
+    // 使用 pangu 处理整个容器
+    // 注意：pangu.spacingElementByTagName 返回类型为 void，但实际上是异步操作
+    // 使用 Promise 包装以确保异步完成
+    await new Promise<void>((resolve) => {
+      pangu.spacingElementByTagName('div');
+      setTimeout(resolve, 100); // 给予一些时间完成处理
+    });
+    return true;
+  } catch (error) {
+    console.error('应用自动间距时发生错误:', error);
+    return false;
+  }
 }
 
 async function enableReadingMode() {
@@ -868,46 +903,58 @@ async function enableReadingMode() {
       originalContent = document.documentElement.innerHTML;
     }
 
-    // 创建新的文档用于解析
-    const documentClone = document.implementation.createHTMLDocument();
-    documentClone.documentElement.innerHTML = originalContent;
+    const settings = await fetchSettings();
 
-    // 清理和规范化 HTML
-    cleanupHtml(documentClone);
+    // 使用增强的内容提取器
+    const extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
 
-    // 预处理列表样式
-    preserveListStyles(documentClone);
-
-    // 使用 Readability 解析内容
-    const reader = new Readability(documentClone);
-    const article = reader.parse();
-
-    if (!article) {
-      console.error('无法解析页面内容');
+    if (!extractedContent.success) {
+      console.error('无法解析页面内容:', extractedContent.error);
       return;
     }
-
-    const settings = await fetchSettings();
 
     // 创建阅读模式容器
     const container = document.createElement('div');
     container.id = 'reading-mode-container';
+    container.className = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
 
     // 添加文章标题
     const titleElement = document.createElement('h1');
     titleElement.id = 'reading-mode-title';
-    titleElement.textContent = article.title || document.title;
+    titleElement.textContent = extractedContent.title || document.title;
     container.appendChild(titleElement);
 
     // 添加文章内容
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = article.content;
-    
-    // 处理列表结构
-    processLists(tempDiv);
-    
+    const contentDiv = document.createElement('div');
+    contentDiv.innerHTML = extractedContent.content;
+    contentDiv.className = 'reading-mode-content';
+
+    // 应用增强处理
+    // 增强表格
+    tableExtractor.enhanceAllTables(contentDiv);
+    tableExtractor.fixTableStructure(contentDiv);
+
+    // 增强图片和媒体
+    if (settings.showImages) {
+      mediaExtractor.enhanceAllImages(contentDiv);
+      mediaExtractor.enhanceVideos(contentDiv);
+      mediaExtractor.enhanceIframes(contentDiv);
+      mediaExtractor.processBackgroundImages(contentDiv);
+    } else {
+      // 如果不显示图片，隐藏所有媒体元素
+      handleMediaElements(contentDiv, false);
+    }
+
+    // 增强代码块
+    codeExtractor.enhanceAllCodeBlocks(contentDiv);
+    codeExtractor.enhanceInlineCode(contentDiv);
+
+    // 增强列表
+    listExtractor.fixListStructure(contentDiv);
+    listExtractor.enhanceAllLists(contentDiv);
+
     // 将处理后的内容添加到容器
-    container.appendChild(tempDiv);
+    container.appendChild(contentDiv);
 
     // 清空并重建页面
     document.body.innerHTML = '';
@@ -918,7 +965,7 @@ async function enableReadingMode() {
 
     // 生成目录（如果启用）
     if (settings.showDirectory) {
-      generateTableOfContents(container, article.title || document.title);
+      generateTableOfContents(container, extractedContent.title || document.title);
     }
 
     // 创建退出按钮
@@ -926,6 +973,10 @@ async function enableReadingMode() {
 
     // 应用自动间距
     await applyAutoSpacing();
+
+    // 添加交互功能
+    codeExtractor.addCodeBlockInteractions(container);
+    listExtractor.addListInteractions(container);
 
     isReadingMode = true;
 
@@ -935,116 +986,15 @@ async function enableReadingMode() {
   }
 }
 
-// 清理和规范化 HTML
-function cleanupHtml(doc: Document) {
-  // 移除空的列表项
-  const emptyListItems = doc.querySelectorAll('li:empty');
-  emptyListItems.forEach(item => item.remove());
+// 这些函数已被提取器模块替代，但为了兼容性保留了函数签名
+// @ts-ignore - 已被 contentExtractor 替代
+function cleanupHtml(_doc: Document) { }
 
-  // 修复嵌套错误的列表
-  const lists = doc.querySelectorAll('ul, ol');
-  lists.forEach(list => {
-    // 确保列表项直接在列表元素下
-    const directChildren = Array.from(list.children);
-    directChildren.forEach(child => {
-      if (child.tagName !== 'LI') {
-        // 如果不是列表项，将其包装在列表项中
-        const li = doc.createElement('li');
-        child.parentNode?.insertBefore(li, child);
-        li.appendChild(child);
-      }
-    });
+// @ts-ignore - 已被 listExtractor 替代
+function preserveListStyles(_doc: Document) { }
 
-    // 修复嵌套列表的位置
-    const nestedLists = list.querySelectorAll('ul, ol');
-    nestedLists.forEach(nestedList => {
-      const parent = nestedList.parentElement;
-      if (parent && parent.tagName !== 'LI') {
-        // 如果嵌套列表不在列表项中，将其移动到前一个列表项中
-        const previousLi = nestedList.previousElementSibling;
-        if (previousLi && previousLi.tagName === 'LI') {
-          previousLi.appendChild(nestedList);
-        } else {
-          // 如果没有前一个列表项，创建一个新的
-          const li = doc.createElement('li');
-          nestedList.parentNode?.insertBefore(li, nestedList);
-          li.appendChild(nestedList);
-        }
-      }
-    });
-  });
-
-  // 修复列表项中的段落
-  const listItems = doc.querySelectorAll('li');
-  listItems.forEach(li => {
-    const paragraphs = li.getElementsByTagName('p');
-    if (paragraphs.length === 1) {
-      // 如果只有一个段落，去掉段落标签
-      const p = paragraphs[0];
-      li.innerHTML = p.innerHTML;
-    }
-  });
-}
-
-// 预处理列表样式
-function preserveListStyles(doc: Document) {
-  const lists = doc.querySelectorAll('ul, ol');
-  lists.forEach(list => {
-    // 添加自定义属性来标记列表类型
-    list.setAttribute('data-list-type', list.tagName.toLowerCase());
-    
-    // 保存列表样式类型
-    const style = window.getComputedStyle(list);
-    const listStyleType = style.getPropertyValue('list-style-type');
-    if (listStyleType && listStyleType !== 'none') {
-      list.setAttribute('data-list-style', listStyleType);
-    }
-  });
-}
-
-// 处理列表结构的函数
-function processLists(container: HTMLElement) {
-  // 处理所有列表
-  const lists = container.querySelectorAll('ul, ol');
-  lists.forEach(list => {
-    // 恢复列表类型
-    const listType = list.getAttribute('data-list-type');
-    if (listType) {
-      list.classList.add(`list-${listType}`);
-    }
-
-    // 恢复列表样式
-    const listStyle = list.getAttribute('data-list-style');
-    if (listStyle && list instanceof HTMLElement) {
-      list.style.listStyleType = listStyle;
-    }
-
-    // 处理列表项
-    const items = list.querySelectorAll('li');
-    items.forEach(item => {
-      if (!(item instanceof HTMLElement)) return;
-      
-      // 移除可能影响样式的属性
-      item.removeAttribute('style');
-      
-      // 处理嵌套列表
-      const nestedLists = item.querySelectorAll('ul, ol');
-      nestedLists.forEach(nestedList => {
-        // 确保嵌套列表在 li 的直接子级
-        if (nestedList.parentElement !== item) {
-          item.appendChild(nestedList);
-        }
-      });
-
-      // 处理列表项内容的格式
-      const textContent = item.textContent?.trim();
-      if (textContent) {
-        // 移除多余的空白字符
-        item.innerHTML = item.innerHTML.replace(/\s+/g, ' ').trim();
-      }
-    });
-  });
-}
+// @ts-ignore - 已被 listExtractor 替代
+function processLists(_container: HTMLElement) { }
 
 function disableReadingMode() {
   if (!originalContent) return;
@@ -1271,7 +1221,7 @@ chrome.storage.onChanged.addListener(async (changes) => {
     for (const p of paragraphs) {
       p.style.marginBottom = `${newSpacing}em`;
       p.style.paddingBottom = newSpacing > 1 ? '0.5em' : '0';
-      p.style.borderBottom = newSpacing > 1 
+      p.style.borderBottom = newSpacing > 1
         ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}`
         : 'none';
     }
@@ -1309,32 +1259,10 @@ const initializeSpacing = async () => {
 // 在适当的时机调用初始化函数
 initializeSpacing();
 
-// 更新阅读模式样式
-function updateReadingModeStyles(settings: any) {
-  const root = document.documentElement;
-  
-  // 设置CSS变量
-  root.style.setProperty('--reading-font-size', `${settings.fontSize}px`);
-  root.style.setProperty('--reading-line-height', settings.lineHeight.toString());
-  root.style.setProperty('--reading-letter-spacing', `${settings.letterSpacing}px`);
-  root.style.setProperty('--reading-page-width', `${settings.pageWidth}px`);
-  root.style.setProperty('--reading-line-spacing', `${settings.lineSpacing}rem`);
-  root.style.setProperty('--reading-paragraph-spacing', `${settings.paragraphSpacing}rem`);
-  
-  // 设置字体
-  root.style.setProperty('--reading-font-family', settings.fontFamily || 'Georgia, serif');
-  
-  // 设置背景颜色
-  root.style.setProperty('--reading-bg-color', settings.backgroundColor || '#f8f5f1');
-  root.style.setProperty('--reading-content-bg-color', '#ffffff');
-  root.style.setProperty('--reading-content-shadow', '0 1px 3px rgba(0, 0, 0, 0.1)');
-  
-  // 设置文本对齐方式
-  const container = document.getElementById('reading-mode-content');
-  if (container) {
-    container.style.textAlign = settings.textAlign || 'left';
-  }
-  
-  // 设置首行缩进
-  root.style.setProperty('--reading-first-line-indent', settings.firstLineIndent ? '2em' : '0');
+// 更新阅读模式样式 - 此函数已被移动到 utils.ts
+// 这里保留注释以供参考，实际使用时通过动态导入调用 utils.ts 中的实现
+// @ts-ignore - 此函数不再直接使用
+function _legacyUpdateReadingModeStyles() {
+  // 此函数已被替换，保留仅作为历史记录
+  console.warn('使用了已弃用的函数：updateReadingModeStyles');
 }
