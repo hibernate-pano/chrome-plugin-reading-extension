@@ -286,36 +286,8 @@ hljs.configure({
   ]
 });
 
-// 导入 Prism 样式
-import 'prismjs/themes/prism.css';
-import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
-import 'prismjs/plugins/toolbar/prism-toolbar.css';
-
-// 导入插件
-import 'prismjs/plugins/line-numbers/prism-line-numbers';
-import 'prismjs/plugins/toolbar/prism-toolbar';
-import 'prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard';
-
-// 导入语言支持
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-jsx';
-import 'prismjs/components/prism-tsx';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-markdown';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-java';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-csharp';
-import 'prismjs/components/prism-ruby';
-import 'prismjs/components/prism-rust';
-import 'prismjs/components/prism-php';
-import 'prismjs/components/prism-sql';
-import 'prismjs/components/prism-yaml';
+// 导入 highlight.js 样式
+import 'highlight.js/styles/atom-one-light.css';
 // 注释掉 pangu 导入，暂时不使用
 // import pangu from 'pangu';
 
