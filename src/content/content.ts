@@ -1,6 +1,6 @@
 import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
-// 先导入 Prism 核心库
-import Prism from 'prismjs';
+// 导入 highlight.js
+import hljs from 'highlight.js';
 
 // 先导入自定义样式
 // 注意：直接在代码中定义样式，避免导入文件的问题
@@ -12,24 +12,161 @@ const listStyles = document.createElement('style');
 listStyles.id = 'reading-mode-list-styles';
 document.head.appendChild(listStyles);
 
-// 添加自定义代码高亮样式
-const customCodeStyles = document.createElement('style');
-customCodeStyles.id = 'reading-mode-custom-code-styles';
-customCodeStyles.textContent = `
-  .highlighted-code {
+// 添加 highlight.js 样式
+const hljsStyles = document.createElement('style');
+hljsStyles.id = 'reading-mode-hljs-styles';
+hljsStyles.textContent = `
+  /* Base16 Atelier Dune Light - Theme */
+  /* by Bram de Haan (http://atelierbram.github.io/syntax-highlighting/atelier-schemes/dune) */
+  /* Original Base16 color scheme by Chris Kempson (https://github.com/chriskempson/base16) */
+
+  /* Light Theme */
+  .hljs {
     display: block;
     overflow-x: auto;
     padding: 1em;
-    background: #f8f8f8;
-    color: #333;
-    tab-size: 4;
+    background: #f5f5f5;
+    color: #2d2d2d;
   }
 
-  .dark .highlighted-code {
+  .hljs-comment,
+  .hljs-quote {
+    color: #5c6370;
+    font-style: italic;
+  }
+
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-addition {
+    color: #c678dd;
+  }
+
+  .hljs-number,
+  .hljs-string,
+  .hljs-meta .hljs-meta-string,
+  .hljs-literal,
+  .hljs-doctag,
+  .hljs-regexp {
+    color: #98c379;
+  }
+
+  .hljs-title,
+  .hljs-section,
+  .hljs-name,
+  .hljs-selector-id,
+  .hljs-selector-class {
+    color: #e06c75;
+  }
+
+  .hljs-attribute,
+  .hljs-attr,
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-class .hljs-title,
+  .hljs-type {
+    color: #d19a66;
+  }
+
+  .hljs-symbol,
+  .hljs-bullet,
+  .hljs-subst,
+  .hljs-meta,
+  .hljs-meta .hljs-keyword,
+  .hljs-selector-attr,
+  .hljs-selector-pseudo,
+  .hljs-link {
+    color: #61aeee;
+  }
+
+  .hljs-built_in,
+  .hljs-deletion {
+    color: #e6c07b;
+  }
+
+  .hljs-formula {
+    background: #eee;
+    font-style: italic;
+  }
+
+  .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .hljs-strong {
+    font-weight: bold;
+  }
+
+  /* Dark Theme */
+  .dark .hljs {
     background: #282c34;
     color: #abb2bf;
   }
 
+  .dark .hljs-comment,
+  .dark .hljs-quote {
+    color: #5c6370;
+    font-style: italic;
+  }
+
+  .dark .hljs-keyword,
+  .dark .hljs-selector-tag,
+  .dark .hljs-addition {
+    color: #c678dd;
+  }
+
+  .dark .hljs-number,
+  .dark .hljs-string,
+  .dark .hljs-meta .hljs-meta-string,
+  .dark .hljs-literal,
+  .dark .hljs-doctag,
+  .dark .hljs-regexp {
+    color: #98c379;
+  }
+
+  .dark .hljs-title,
+  .dark .hljs-section,
+  .dark .hljs-name,
+  .dark .hljs-selector-id,
+  .dark .hljs-selector-class {
+    color: #e06c75;
+  }
+
+  .dark .hljs-attribute,
+  .dark .hljs-attr,
+  .dark .hljs-variable,
+  .dark .hljs-template-variable,
+  .dark .hljs-class .hljs-title,
+  .dark .hljs-type {
+    color: #d19a66;
+  }
+
+  .dark .hljs-symbol,
+  .dark .hljs-bullet,
+  .dark .hljs-subst,
+  .dark .hljs-meta,
+  .dark .hljs-meta .hljs-keyword,
+  .dark .hljs-selector-attr,
+  .dark .hljs-selector-pseudo,
+  .dark .hljs-link {
+    color: #61aeee;
+  }
+
+  .dark .hljs-built_in,
+  .dark .hljs-deletion {
+    color: #e6c07b;
+  }
+
+  .dark .hljs-formula {
+    background: #282c34;
+    font-style: italic;
+  }
+`;
+document.head.appendChild(hljsStyles);
+
+// 添加自定义代码高亮样式
+const customCodeStyles = document.createElement('style');
+customCodeStyles.id = 'reading-mode-custom-code-styles';
+customCodeStyles.textContent = `
   pre.line-numbers {
     position: relative;
     padding-left: 3.8em;
@@ -122,40 +259,32 @@ customCodeStyles.textContent = `
   .dark .code-caption {
     color: #aaa;
   }
+
+  /* 纯文本代码样式 */
+  .plaintext {
+    display: block;
+    overflow-x: auto;
+    padding: 1em;
+    background: #f5f5f5;
+    color: #333;
+    tab-size: 4;
+  }
+
+  .dark .plaintext {
+    background: #282c34;
+    color: #abb2bf;
+  }
 `;
 document.head.appendChild(customCodeStyles);
 
-// 将 Prism 添加到全局窗口对象中
-window.Prism = Prism;
-
-// 禁用 Prism 的自动高亮功能
-if (window.Prism) {
-  // 禁用自动高亮
-  window.Prism.manual = true;
-
-  // 禁用自动加载插件
-  window.Prism.disableWorkerMessageHandler = true;
-
-  // 安全地创建插件对象
-  try {
-    // 使用更安全的方式创建插件对象
-    if (!window.Prism.plugins) {
-      Object.defineProperty(window.Prism, 'plugins', {
-        value: {},
-        writable: true
-      });
-    }
-
-    // 添加空的 tokenizePlaceholders 函数
-    if (window.Prism.plugins && !window.Prism.plugins.NormalizeWhitespace) {
-      window.Prism.plugins.NormalizeWhitespace = {
-        tokenizePlaceholders: function () { }
-      };
-    }
-  } catch (error) {
-    console.warn('创建 Prism 插件对象失败:', error);
-  }
-}
+// 配置 highlight.js
+hljs.configure({
+  languages: [
+    'javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp',
+    'css', 'html', 'xml', 'json', 'markdown', 'bash', 'shell',
+    'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'sql'
+  ]
+});
 
 // 导入 Prism 样式
 import 'prismjs/themes/prism.css';
@@ -390,30 +519,53 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
 
     // 确保代码块有语言类名
     const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
-    if (!hasLanguageClass) {
+    let language = 'plaintext';
+
+    if (hasLanguageClass) {
+      // 从类名中提取语言
+      language = Array.from(code.classList)
+        .find(cls => cls.startsWith('language-'))
+        ?.replace('language-', '') || 'plaintext';
+    } else {
+      // 尝试从其他属性中提取语言
       const preLanguage = pre.getAttribute('data-lang') ||
         pre.getAttribute('data-language') ||
         pre.className.match(/language-(\w+)/)?.[1];
-      code.classList.add(`language-${preLanguage || 'plaintext'}`);
+      language = preLanguage || 'plaintext';
+      code.classList.add(`language-${language}`);
     }
 
     // 添加数据属性以便于样式化
-    const language = code.className.replace('language-', '');
     pre.setAttribute('data-language', language);
 
-    // 使用简单的语法高亮而不使用 Prism
     try {
-      // 使用简单的文本处理
+      // 保存原始代码文本
       const codeText = code.textContent || '';
-      code.innerHTML = codeText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 
-      // 添加简单的语法高亮 CSS 类
-      code.classList.add('highlighted-code');
+      // 使用 highlight.js 进行高亮
+      if (language !== 'plaintext') {
+        try {
+          // 尝试使用指定语言高亮
+          const result = hljs.highlight(codeText, { language, ignoreIllegals: true });
+          code.innerHTML = result.value;
+          code.classList.add('hljs');
+        } catch (e) {
+          // 如果指定语言失败，尝试自动检测
+          console.warn(`使用语言 ${language} 高亮失败，尝试自动检测`);
+          const result = hljs.highlightAuto(codeText);
+          code.innerHTML = result.value;
+          code.classList.add('hljs');
+        }
+      } else {
+        // 如果是纯文本，仅进行 HTML 转义
+        code.innerHTML = codeText
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+        code.classList.add('plaintext');
+      }
 
       // 添加行号
       const lines = codeText.split('\n');
@@ -430,6 +582,14 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
       }
     } catch (error) {
       console.warn('代码高亮失败:', error);
+      // 如果高亮失败，回退到基本的 HTML 转义
+      const codeText = code.textContent || '';
+      code.innerHTML = codeText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
   }
 }

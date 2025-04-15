@@ -3,6 +3,9 @@
  * 用于增强代码块的提取和显示
  */
 
+// 导入 highlight.js
+import hljs from 'highlight.js';
+
 export interface CodeBlockInfo {
   code: string;
   language: string;
@@ -221,19 +224,35 @@ export class CodeExtractor {
     pre.appendChild(code);
     container.appendChild(pre);
 
-    // 使用简单的语法高亮而不使用 Prism
+    // 使用 highlight.js 进行代码高亮
     try {
-      // 使用简单的文本处理
+      // 保存原始代码文本
       const codeText = code.textContent || '';
-      code.innerHTML = codeText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 
-      // 添加简单的语法高亮 CSS 类
-      code.classList.add('highlighted-code');
+      // 使用 highlight.js 进行高亮
+      if (codeInfo.language && codeInfo.language !== 'plaintext') {
+        try {
+          // 尝试使用指定语言高亮
+          const result = hljs.highlight(codeText, { language: codeInfo.language, ignoreIllegals: true });
+          code.innerHTML = result.value;
+          code.classList.add('hljs');
+        } catch (e) {
+          // 如果指定语言失败，尝试自动检测
+          console.warn(`使用语言 ${codeInfo.language} 高亮失败，尝试自动检测`);
+          const result = hljs.highlightAuto(codeText);
+          code.innerHTML = result.value;
+          code.classList.add('hljs');
+        }
+      } else {
+        // 如果是纯文本，仅进行 HTML 转义
+        code.innerHTML = codeText
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+        code.classList.add('plaintext');
+      }
 
       // 添加行号
       const lines = codeText.split('\n');
@@ -250,6 +269,14 @@ export class CodeExtractor {
       }
     } catch (error) {
       console.warn('代码高亮失败:', error);
+      // 如果高亮失败，回退到基本的 HTML 转义
+      const codeText = code.textContent || '';
+      code.innerHTML = codeText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     return container;
