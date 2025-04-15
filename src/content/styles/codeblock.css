@@ -1,0 +1,385 @@
+/* 代码块样式 */
+.enhanced-code-container {
+  margin: 2em 0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  position: relative;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+}
+
+/* 代码块头部 */
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75em 1.25em;
+  background-color: var(--code-header-bg);
+  border-bottom: 1px solid var(--code-header-border);
+  position: relative;
+}
+
+/* 语言标签 */
+.code-language {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--code-language-color);
+  background-color: var(--code-language-bg);
+  padding: 0.25em 0.75em;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-size: 0.75em;
+}
+
+/* 代码标题 */
+.code-caption {
+  font-size: 0.9em;
+  color: var(--code-caption-color);
+  margin-left: 1em;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 复制按钮 */
+.code-copy-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--code-button-color);
+  padding: 0.25em 0.5em;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+.code-copy-button:hover {
+  color: var(--code-button-hover-color);
+  background-color: var(--code-button-hover-bg);
+  opacity: 1;
+}
+
+.code-copy-button.copied {
+  color: var(--code-button-success-color);
+  background-color: var(--code-button-success-bg);
+}
+
+.code-copy-button svg {
+  margin-right: 0.25em;
+}
+
+/* 代码块内容 */
+.enhanced-code-container pre {
+  margin: 0;
+  padding: 1.5em;
+  overflow-x: auto;
+  font-size: var(--code-font-size);
+  line-height: 1.6;
+  background-color: var(--code-bg);
+  color: var(--code-text-color);
+  tab-size: 2;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--code-scrollbar-thumb) var(--code-scrollbar-track);
+}
+
+.enhanced-code-container pre::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.enhanced-code-container pre::-webkit-scrollbar-track {
+  background: var(--code-scrollbar-track);
+  border-radius: 4px;
+}
+
+.enhanced-code-container pre::-webkit-scrollbar-thumb {
+  background-color: var(--code-scrollbar-thumb);
+  border-radius: 4px;
+}
+
+.enhanced-code-container code {
+  font-family: inherit;
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+/* 行号样式 */
+.enhanced-code-container pre.line-numbers {
+  padding-left: 3.5em;
+  counter-reset: line;
+  position: relative;
+}
+
+.enhanced-code-container pre.line-numbers::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 2.5em;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--code-line-number-border);
+}
+
+.enhanced-code-container pre.line-numbers code {
+  position: relative;
+}
+
+.enhanced-code-container pre.line-numbers .line {
+  position: relative;
+  display: block;
+}
+
+.enhanced-code-container pre.line-numbers .line::before {
+  content: counter(line);
+  counter-increment: line;
+  position: absolute;
+  left: -2.5em;
+  width: 2em;
+  text-align: right;
+  color: var(--code-line-number-color);
+  font-size: 0.85em;
+  opacity: 0.5;
+  user-select: none;
+}
+
+.enhanced-code-container pre.line-numbers .line:hover::before {
+  opacity: 1;
+  color: var(--code-line-number-hover-color);
+}
+
+/* 代码高亮 */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+.token.namespace {
+  opacity: 0.7;
+}
+
+.token.string,
+.token.attr-value {
+  color: var(--code-string);
+}
+
+.token.punctuation {
+  color: var(--code-punctuation);
+}
+
+.token.operator {
+  color: var(--code-operator);
+}
+
+.token.boolean,
+.token.number {
+  color: var(--code-number);
+}
+
+.token.property {
+  color: var(--code-property);
+}
+
+.token.tag {
+  color: var(--code-tag);
+}
+
+.token.attr-name {
+  color: var(--code-attr-name);
+}
+
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: var(--code-entity);
+}
+
+.token.selector {
+  color: var(--code-selector);
+}
+
+.token.atrule,
+.token.keyword,
+.token.control,
+.token.directive,
+.token.important,
+.token.statement,
+.token.unit {
+  color: var(--code-keyword);
+}
+
+.token.regex,
+.token.statement {
+  color: var(--code-regex);
+}
+
+.token.placeholder,
+.token.variable {
+  color: var(--code-variable);
+}
+
+.token.deleted {
+  text-decoration: line-through;
+  color: var(--code-deleted);
+}
+
+.token.inserted {
+  border-bottom: 1px dotted var(--code-inserted);
+  text-decoration: none;
+  color: var(--code-inserted);
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+/* 代码行高亮 */
+.enhanced-code-container pre .highlight-line {
+  background-color: var(--code-highlight-line-bg);
+  display: block;
+  margin: 0 -1.5em;
+  padding: 0 1.5em;
+}
+
+/* 内联代码样式 */
+.enhanced-inline-code {
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  background-color: var(--inline-code-bg);
+  color: var(--inline-code-color);
+  border: 1px solid var(--inline-code-border);
+  white-space: nowrap;
+}
+
+/* 暗色主题变量 */
+.dark-theme {
+  --code-header-bg: #2d333b;
+  --code-header-border: #444c56;
+  --code-language-color: #d7dce1;
+  --code-language-bg: #444c56;
+  --code-caption-color: #adbac7;
+  --code-button-color: #adbac7;
+  --code-button-hover-color: #d7dce1;
+  --code-button-hover-bg: #444c56;
+  --code-button-success-color: #7ee787;
+  --code-button-success-bg: #2da44e33;
+  --code-bg: #22272e;
+  --code-text-color: #adbac7;
+  --code-scrollbar-thumb: #444c56;
+  --code-scrollbar-track: #22272e;
+  --code-line-number-color: #768390;
+  --code-line-number-hover-color: #adbac7;
+  --code-line-number-border: #444c56;
+  --code-comment: #768390;
+  --code-string: #a5d6ff;
+  --code-punctuation: #adbac7;
+  --code-operator: #f47067;
+  --code-number: #f69d50;
+  --code-property: #6cb6ff;
+  --code-tag: #f47067;
+  --code-attr-name: #dcbdfb;
+  --code-entity: #96d0ff;
+  --code-selector: #dcbdfb;
+  --code-keyword: #f47067;
+  --code-regex: #a5d6ff;
+  --code-variable: #dcbdfb;
+  --code-deleted: #ff938a;
+  --code-inserted: #aff5b4;
+  --code-highlight-line-bg: #2d333b;
+  --inline-code-bg: #2d333b;
+  --inline-code-color: #adbac7;
+  --inline-code-border: #444c56;
+}
+
+/* 亮色主题变量 */
+.light-theme {
+  --code-header-bg: #f6f8fa;
+  --code-header-border: #d0d7de;
+  --code-language-color: #24292f;
+  --code-language-bg: #e6ebf1;
+  --code-caption-color: #57606a;
+  --code-button-color: #57606a;
+  --code-button-hover-color: #24292f;
+  --code-button-hover-bg: #e6ebf1;
+  --code-button-success-color: #1a7f37;
+  --code-button-success-bg: #dafbe1;
+  --code-bg: #ffffff;
+  --code-text-color: #24292f;
+  --code-scrollbar-thumb: #d0d7de;
+  --code-scrollbar-track: #f6f8fa;
+  --code-line-number-color: #8c959f;
+  --code-line-number-hover-color: #24292f;
+  --code-line-number-border: #d0d7de;
+  --code-comment: #6e7781;
+  --code-string: #0a3069;
+  --code-punctuation: #24292f;
+  --code-operator: #cf222e;
+  --code-number: #953800;
+  --code-property: #0550ae;
+  --code-tag: #116329;
+  --code-attr-name: #953800;
+  --code-entity: #0550ae;
+  --code-selector: #8250df;
+  --code-keyword: #cf222e;
+  --code-regex: #0a3069;
+  --code-variable: #8250df;
+  --code-deleted: #82071e;
+  --code-inserted: #116329;
+  --code-highlight-line-bg: #f6f8fa;
+  --inline-code-bg: #f6f8fa;
+  --inline-code-color: #24292f;
+  --inline-code-border: #d0d7de;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .enhanced-code-container pre {
+    font-size: calc(var(--code-font-size) - 1px);
+    padding: 1em;
+  }
+  
+  .code-header {
+    padding: 0.5em 1em;
+    flex-wrap: wrap;
+  }
+  
+  .code-caption {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 0.5em;
+  }
+  
+  .enhanced-code-container pre.line-numbers {
+    padding-left: 3em;
+  }
+  
+  .enhanced-code-container pre.line-numbers::before {
+    left: 2em;
+  }
+  
+  .enhanced-code-container pre.line-numbers .line::before {
+    left: -2em;
+  }
+}

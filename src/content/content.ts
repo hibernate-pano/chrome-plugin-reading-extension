@@ -1,10 +1,12 @@
 import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 import Prism from 'prismjs';
-// 先导入主题样式
-import 'prismjs/themes/prism.css';
+// 先导入自定义样式
+import './styles/codeblock.css';
+import './styles/list.css';
+// 再导入插件样式
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 import 'prismjs/plugins/toolbar/prism-toolbar.css';
-// 再导入语言支持
+// 导入语言支持
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-jsx';
@@ -15,6 +17,15 @@ import 'prismjs/components/prism-markdown';
 import 'prismjs/components/prism-python';
 import 'prismjs/components/prism-java';
 import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-csharp';
+import 'prismjs/components/prism-ruby';
+import 'prismjs/components/prism-rust';
+import 'prismjs/components/prism-php';
+import 'prismjs/components/prism-sql';
+import 'prismjs/components/prism-yaml';
 // 最后导入插件
 import 'prismjs/plugins/line-numbers/prism-line-numbers';
 import 'prismjs/plugins/toolbar/prism-toolbar';

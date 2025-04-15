@@ -15,6 +15,9 @@ export function updateReadingModeStyles(settings: ReadingModeSettings): void {
   root.style.setProperty('--reading-page-width', `${settings.pageWidth}px`);
   root.style.setProperty('--reading-line-spacing', `${settings.lineSpacing}rem`);
   root.style.setProperty('--reading-paragraph-spacing', `${settings.paragraphSpacing}rem`);
+  root.style.setProperty('--code-font-size', `${settings.codeFontSize || 14}px`);
+  root.style.setProperty('--list-font-size', `${settings.fontSize - 1}px`);
+  root.style.setProperty('--list-line-height', `${settings.lineHeight + 0.1}`);
 
   // 设置字体
   root.style.setProperty('--reading-font-family', FONT_FAMILIES[settings.fontFamily]);

@@ -61,10 +61,10 @@ export class CodeExtractor {
     let code = pre.querySelector('code');
     let codeText = '';
     let language = 'plaintext';
-    
+
     if (code) {
       codeText = code.textContent || '';
-      
+
       // 尝试从类名中提取语言
       const languageClass = Array.from(code.classList).find(cls => cls.startsWith('language-'));
       if (languageClass) {
@@ -73,27 +73,27 @@ export class CodeExtractor {
     } else {
       codeText = pre.textContent || '';
     }
-    
+
     // 如果没有从类名中找到语言，尝试其他方法
     if (language === 'plaintext') {
       // 从 pre 元素的属性中查找
-      language = pre.getAttribute('data-lang') || 
-                pre.getAttribute('data-language') || 
-                pre.className.match(/language-(\w+)/)?.[1] || 
-                this.detectLanguage(codeText);
+      language = pre.getAttribute('data-lang') ||
+        pre.getAttribute('data-language') ||
+        pre.className.match(/language-(\w+)/)?.[1] ||
+        this.detectLanguage(codeText);
     }
-    
+
     // 规范化语言名称
     language = this.normalizeLanguage(language);
-    
+
     // 检查是否有行号
-    const hasLineNumbers = pre.classList.contains('line-numbers') || 
-                          pre.classList.contains('numbered') ||
-                          pre.hasAttribute('data-line-numbers');
-    
+    const hasLineNumbers = pre.classList.contains('line-numbers') ||
+      pre.classList.contains('numbered') ||
+      pre.hasAttribute('data-line-numbers');
+
     // 尝试获取标题
     const caption = this.getCodeBlockCaption(pre);
-    
+
     return {
       code: codeText.trim(),
       language,
@@ -137,7 +137,7 @@ export class CodeExtractor {
     if (code.includes('#include') && (code.includes('<iostream>') || code.includes('<stdio.h>'))) {
       return 'cpp';
     }
-    
+
     return 'plaintext';
   }
 
@@ -156,19 +156,19 @@ export class CodeExtractor {
         return prevElement.textContent?.trim();
       }
     }
-    
+
     // 检查是否有 data-caption 属性
     const dataCaption = pre.getAttribute('data-caption');
     if (dataCaption) {
       return dataCaption;
     }
-    
+
     // 检查是否有 data-filename 属性
     const dataFilename = pre.getAttribute('data-filename') || pre.getAttribute('data-file');
     if (dataFilename) {
       return dataFilename;
     }
-    
+
     return undefined;
   }
 
@@ -178,17 +178,17 @@ export class CodeExtractor {
   public createEnhancedCodeBlock(codeInfo: CodeBlockInfo): HTMLElement {
     const container = document.createElement('div');
     container.className = 'enhanced-code-container';
-    
+
     // 添加代码块标题栏
     const header = document.createElement('div');
     header.className = 'code-header';
-    
+
     // 添加语言标签
     const languageLabel = document.createElement('span');
     languageLabel.className = 'code-language';
-    languageLabel.textContent = codeInfo.language;
+    languageLabel.textContent = this.getDisplayLanguageName(codeInfo.language);
     header.appendChild(languageLabel);
-    
+
     // 添加标题（如果有）
     if (codeInfo.caption) {
       const caption = document.createElement('span');
@@ -196,29 +196,85 @@ export class CodeExtractor {
       caption.textContent = codeInfo.caption;
       header.appendChild(caption);
     }
-    
+
     // 添加复制按钮
     const copyButton = document.createElement('button');
     copyButton.className = 'code-copy-button';
     copyButton.title = '复制代码';
-    copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+    copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
     copyButton.setAttribute('data-clipboard-text', codeInfo.code);
     header.appendChild(copyButton);
-    
+
     container.appendChild(header);
-    
+
     // 创建代码块
     const pre = document.createElement('pre');
-    pre.className = codeInfo.hasLineNumbers ? 'line-numbers' : '';
-    
+    pre.className = 'line-numbers';
+
     const code = document.createElement('code');
     code.className = `language-${codeInfo.language}`;
-    code.textContent = codeInfo.code;
-    
+
+    // 处理代码行
+    const lines = codeInfo.code.split('\n');
+    lines.forEach((line, index) => {
+      const lineElement = document.createElement('span');
+      lineElement.className = 'line';
+      lineElement.textContent = line + (index < lines.length - 1 ? '\n' : '');
+      code.appendChild(lineElement);
+    });
+
     pre.appendChild(code);
     container.appendChild(pre);
-    
+
     return container;
+  }
+
+  /**
+   * 获取可读的语言名称
+   */
+  private getDisplayLanguageName(language: string): string {
+    const languageDisplayNames: Record<string, string> = {
+      'js': 'JavaScript',
+      'javascript': 'JavaScript',
+      'ts': 'TypeScript',
+      'typescript': 'TypeScript',
+      'jsx': 'JSX',
+      'tsx': 'TSX',
+      'html': 'HTML',
+      'css': 'CSS',
+      'scss': 'SCSS',
+      'sass': 'Sass',
+      'less': 'Less',
+      'json': 'JSON',
+      'py': 'Python',
+      'python': 'Python',
+      'rb': 'Ruby',
+      'ruby': 'Ruby',
+      'java': 'Java',
+      'c': 'C',
+      'cpp': 'C++',
+      'cs': 'C#',
+      'csharp': 'C#',
+      'go': 'Go',
+      'rust': 'Rust',
+      'php': 'PHP',
+      'swift': 'Swift',
+      'kotlin': 'Kotlin',
+      'scala': 'Scala',
+      'shell': 'Shell',
+      'bash': 'Bash',
+      'sh': 'Shell',
+      'sql': 'SQL',
+      'xml': 'XML',
+      'yaml': 'YAML',
+      'yml': 'YAML',
+      'markdown': 'Markdown',
+      'md': 'Markdown',
+      'plaintext': 'Plain Text',
+      'txt': 'Plain Text'
+    };
+
+    return languageDisplayNames[language.toLowerCase()] || language;
   }
 
   /**
@@ -228,16 +284,16 @@ export class CodeExtractor {
     const preElements = container.querySelectorAll('pre');
     preElements.forEach(pre => {
       if (!(pre instanceof HTMLPreElement)) return;
-      
+
       // 跳过已经处理过的代码块
       if (pre.closest('.enhanced-code-container')) return;
-      
+
       // 提取代码块信息
       const codeInfo = this.extractCodeBlockInfo(pre);
-      
+
       // 创建增强的代码块
       const enhancedCodeBlock = this.createEnhancedCodeBlock(codeInfo);
-      
+
       // 替换原始代码块
       pre.replaceWith(enhancedCodeBlock);
     });
@@ -267,7 +323,7 @@ export class CodeExtractor {
             // 显示复制成功提示
             button.classList.add('copied');
             button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-            
+
             // 2秒后恢复原样
             setTimeout(() => {
               button.classList.remove('copied');
