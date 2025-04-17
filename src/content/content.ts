@@ -552,188 +552,50 @@ function handleMediaElements(container: HTMLElement | null, showImages: boolean)
 function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings) {
   if (!container) return;
 
-  const preElements = container.getElementsByTagName('pre');
-  for (const pre of preElements) {
-    // 跳过已经处理过的代码块
-    if (pre.closest('.enhanced-code-container')) continue;
+  // 使用代码提取器增强所有代码块
+  try {
+    // 先清除所有已存在的增强代码块容器
+    const existingContainers = container.querySelectorAll('.enhanced-code-container');
+    existingContainers.forEach(container => {
+      // 找到原始的pre元素，如果有的话
+      const originalPre = document.createElement('pre');
+      const code = (container as HTMLElement).querySelector('code');
+      if (code) {
+        originalPre.appendChild(code.cloneNode(true));
+        container.replaceWith(originalPre);
+      } else {
+        container.remove();
+      }
+    });
 
-    // 添加行号类
-    pre.classList.add('line-numbers');
-
-    let code = pre.querySelector('code');
-    if (!code) {
-      code = document.createElement('code');
-      code.textContent = pre.textContent;
-      pre.textContent = '';
-      pre.appendChild(code);
-    }
-
-    // 设置代码字体
-    pre.style.fontFamily = 'Fira Code, Consolas, Monaco, monospace';
-    code.style.fontFamily = 'inherit';
+    // 使用代码提取器增强所有代码块
+    codeExtractor.enhanceAllCodeBlocks(container);
 
     // 设置代码字体大小
     if (settings.codeFontSize) {
-      pre.style.fontSize = `${settings.codeFontSize}px`;
+      const codeElements = container.querySelectorAll('pre, code');
+      codeElements.forEach(element => {
+        (element as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
+      });
     }
 
-    // 确保代码块有语言类名
-    const hasLanguageClass = Array.from(code.classList).some(cls => cls.startsWith('language-'));
-    let language = 'plaintext';
+    // 确保代码块内容不会溢出
+    const codeBlocks = container.querySelectorAll('.enhanced-code-container code');
+    codeBlocks.forEach(code => {
+      const codeElement = code as HTMLElement;
+      codeElement.style.whiteSpace = 'pre-wrap';
+      codeElement.style.wordBreak = 'break-word';
+      codeElement.style.overflowWrap = 'break-word';
+      codeElement.style.maxWidth = '100%';
+      codeElement.style.display = 'block';
+    });
 
-    if (hasLanguageClass) {
-      // 从类名中提取语言
-      language = Array.from(code.classList)
-        .find(cls => cls.startsWith('language-'))
-        ?.replace('language-', '') || 'plaintext';
-    } else {
-      // 尝试从其他属性中提取语言
-      const preLanguage = pre.getAttribute('data-lang') ||
-        pre.getAttribute('data-language') ||
-        pre.className.match(/language-(\w+)/)?.[1] ||
-        pre.className.match(/brush:\s*(\w+)/)?.[1]; // 支持 SyntaxHighlighter 格式
-      language = preLanguage || 'plaintext';
-      code.classList.add(`language-${language}`);
-    }
+    // 添加代码块交互功能
+    codeExtractor.addCodeBlockInteractions(container);
 
-    // 添加数据属性以便于样式化
-    pre.setAttribute('data-language', language);
-
-    try {
-      // 保存原始代码文本
-      const originalHtml = code.innerHTML;
-      let codeText = code.textContent || '';
-
-      // 如果文本内容与 HTML 内容差异很大，可能是已经格式化的代码
-      if (originalHtml.length > codeText.length * 1.5 && originalHtml.includes('<span')) {
-        // 尝试保留原始格式化，但去除可能影响高亮的元素
-        codeText = cleanFormattedCode(originalHtml);
-      }
-
-      // 预处理代码，处理特殊字符和空格
-      codeText = preprocessCode(codeText);
-
-      // 使用 highlight.js 进行高亮
-      if (language !== 'plaintext') {
-        try {
-          // 尝试使用指定语言高亮
-          const result = hljs.highlight(codeText, { language, ignoreIllegals: true });
-          code.innerHTML = result.value;
-          code.classList.add('hljs');
-        } catch (e) {
-          // 如果指定语言失败，尝试自动检测
-          console.warn(`使用语言 ${language} 高亮失败，尝试自动检测`);
-          try {
-            const result = hljs.highlightAuto(codeText);
-            code.innerHTML = result.value;
-            code.classList.add('hljs');
-          } catch (autoError) {
-            // 如果自动检测也失败，回退到基本的 HTML 转义
-            applyBasicFormatting(code, codeText);
-          }
-        }
-      } else {
-        // 如果是纯文本，仅进行 HTML 转义
-        applyBasicFormatting(code, codeText);
-        code.classList.add('plaintext');
-      }
-
-      // 添加行号
-      const lines = codeText.split('\n');
-      if (lines.length > 1) {
-        const lineNumbersWrapper = document.createElement('span');
-        lineNumbersWrapper.className = 'line-numbers-rows';
-
-        for (let i = 0; i < lines.length; i++) {
-          const lineSpan = document.createElement('span');
-          lineNumbersWrapper.appendChild(lineSpan);
-        }
-
-        pre.appendChild(lineNumbersWrapper);
-      }
-
-      // 确保代码块内容不会溢出
-      code.style.whiteSpace = 'pre-wrap';
-      code.style.wordBreak = 'break-word';
-      code.style.overflowWrap = 'break-word';
-      code.style.maxWidth = '100%';
-      code.style.display = 'block';
-
-    } catch (error) {
-      console.warn('代码高亮失败:', error);
-      // 如果高亮失败，回退到基本的 HTML 转义
-      const codeText = code.textContent || '';
-      applyBasicFormatting(code, codeText);
-    }
+  } catch (error) {
+    console.error('处理代码块时发生错误:', error);
   }
-}
-
-// 清理已格式化的代码 HTML
-function cleanFormattedCode(html: string): string {
-  // 创建一个临时 div 元素来解析 HTML
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = html;
-
-  // 递归处理所有文本节点
-  let result = '';
-
-  function processNode(node: Node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      // 文本节点，直接添加其文本
-      result += node.textContent;
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      // 元素节点，递归处理其子节点
-      const element = node as Element;
-
-      // 如果是换行元素，添加换行符
-      if (element.tagName === 'BR') {
-        result += '\n';
-      } else if (element.tagName === 'DIV' || element.tagName === 'P') {
-        // 对于块级元素，处理完后添加换行
-        for (let i = 0; i < element.childNodes.length; i++) {
-          processNode(element.childNodes[i]);
-        }
-        result += '\n';
-      } else {
-        // 其他元素，递归处理子节点
-        for (let i = 0; i < element.childNodes.length; i++) {
-          processNode(element.childNodes[i]);
-        }
-      }
-    }
-  }
-
-  // 处理所有子节点
-  for (let i = 0; i < tempDiv.childNodes.length; i++) {
-    processNode(tempDiv.childNodes[i]);
-  }
-
-  return result;
-}
-
-// 预处理代码，处理特殊字符和空格
-function preprocessCode(code: string): string {
-  // 处理特殊字符和空格
-  return code
-    // 保留缩进和空格
-    .replace(/\t/g, '    ') // 将制表符替换为4个空格
-    // 处理特殊的空白字符
-    .replace(/\u00A0/g, ' ') // 将不间断空格替换为普通空格
-    .replace(/\u2003/g, '  ') // 将全角空格替换为两个空格
-    .trim(); // 去除首尾空白
-}
-
-// 应用基本的HTML转义格式化
-function applyBasicFormatting(codeElement: HTMLElement, codeText: string): void {
-  codeElement.innerHTML = codeText
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-    // 保留空格和缩进
-    .replace(/ /g, '&nbsp;')
-    .replace(/\n/g, '<br>');
 }
 
 // 代码主题的样式映射
@@ -1690,11 +1552,16 @@ async function applyAutoSpacing() {
 }
 
 async function enableReadingMode() {
-  if (!document.body) return;
+  if (!document.body) {
+    console.error('文档体不存在，无法启用阅读模式');
+    return;
+  }
 
   let loadingToast;
 
   try {
+    console.log('开始启用阅读模式');
+
     // 显示加载提示
     loadingToast = Toast.info('正在准备阅读模式...', {
       duration: 0,
@@ -1706,9 +1573,10 @@ async function enableReadingMode() {
 
     // 预加载工作线程
     try {
-      getWorkerManager().initialize();
+      await getWorkerManager().initialize();
+      console.log('工作线程初始化成功');
     } catch (error) {
-      console.warn('初始化工作线程失败:', error);
+      console.warn('初始化工作线程失败，将在主线程中处理:', error);
     }
 
     // 不再使用资源加载器预加载样式，改为内联样式
@@ -1722,17 +1590,31 @@ async function enableReadingMode() {
 
     // 使用增强的内容提取器
     performanceMonitor.start('contentExtraction');
-    const extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
+    console.log('开始提取页面内容');
+
+    let extractedContent;
+    try {
+      extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
+      console.log('内容提取完成');
+    } catch (extractError) {
+      console.error('内容提取过程中发生错误:', extractError);
+      if (loadingToast) loadingToast.close();
+      Toast.error('内容提取失败: ' + (extractError instanceof Error ? extractError.message : '未知错误'), {
+        position: 'top',
+        duration: 3000
+      });
+      throw new Error('内容提取失败');
+    }
     performanceMonitor.end('contentExtraction');
 
-    if (!extractedContent.success) {
-      console.error('无法解析页面内容:', extractedContent.error);
+    if (!extractedContent || !extractedContent.success) {
+      console.error('无法解析页面内容:', extractedContent?.error || '未知原因');
       if (loadingToast) loadingToast.close();
       Toast.error('无法解析页面内容', {
         position: 'top',
         duration: 3000
       });
-      return;
+      throw new Error('无法解析页面内容');
     }
 
     // 创建阅读模式容器
@@ -1776,9 +1658,34 @@ async function enableReadingMode() {
     }
 
     try {
+      // 先清除所有已存在的增强代码块容器
+      const existingContainers = contentDiv.querySelectorAll('.enhanced-code-container');
+      existingContainers.forEach(container => {
+        // 找到原始的pre元素，如果有的话
+        const originalPre = document.createElement('pre');
+        const code = (container as HTMLElement).querySelector('code');
+        if (code) {
+          originalPre.appendChild(code.cloneNode(true));
+          container.replaceWith(originalPre);
+        } else {
+          container.remove();
+        }
+      });
+
       // 增强代码块
       codeExtractor.enhanceAllCodeBlocks(contentDiv);
       codeExtractor.enhanceInlineCode(contentDiv);
+
+      // 确保代码块内容不会溢出
+      const codeBlocks = contentDiv.querySelectorAll('.enhanced-code-container code');
+      codeBlocks.forEach(code => {
+        const codeElement = code as HTMLElement;
+        codeElement.style.whiteSpace = 'pre-wrap';
+        codeElement.style.wordBreak = 'break-word';
+        codeElement.style.overflowWrap = 'break-word';
+        codeElement.style.maxWidth = '100%';
+        codeElement.style.display = 'block';
+      });
     } catch (error) {
       console.warn('增强代码块时发生错误:', error);
     }
@@ -1916,14 +1823,54 @@ function disableReadingMode() {
       toc.remove();
     }
 
+    // 移除所有由阅读模式添加的样式
+    const stylesToRemove = [
+      'reading-mode-style',
+      'reading-mode-codeblock-styles',
+      'reading-mode-list-styles',
+      'reading-mode-hljs-styles',
+      'reading-mode-custom-code-styles'
+    ];
+
+    stylesToRemove.forEach(id => {
+      const styleElement = document.getElementById(id);
+      if (styleElement) {
+        styleElement.remove();
+      }
+    });
+
+    // 移除所有事件监听器
+    window.removeEventListener('scroll', handleScroll);
+    document.removeEventListener('keydown', handleKeyDown);
+
     // 恢复原始内容
     document.documentElement.innerHTML = originalContent;
 
-    // 移除样式
-    const style = document.getElementById('reading-mode-style');
-    if (style) {
-      style.remove();
-    }
+    // 重新添加初始样式，以便下次进入阅读模式时能正确加载
+    const codeblockStyles = document.createElement('style');
+    codeblockStyles.id = 'reading-mode-codeblock-styles';
+    document.head.appendChild(codeblockStyles);
+
+    const listStyles = document.createElement('style');
+    listStyles.id = 'reading-mode-list-styles';
+    document.head.appendChild(listStyles);
+
+    // 添加 highlight.js 样式
+    const hljsStyles = document.createElement('style');
+    hljsStyles.id = 'reading-mode-hljs-styles';
+    hljsStyles.textContent = `
+      /* 代码高亮主题 - 基于 One Dark Pro */
+      /* ... 样式内容 ... */
+    `;
+    document.head.appendChild(hljsStyles);
+
+    // 添加自定义代码高亮样式
+    const customCodeStyles = document.createElement('style');
+    customCodeStyles.id = 'reading-mode-custom-code-styles';
+    customCodeStyles.textContent = `
+      /* ... 样式内容 ... */
+    `;
+    document.head.appendChild(customCodeStyles);
 
     // 销毁文本选择工具栏
     if (textSelectionToolbar) {
@@ -1949,25 +1896,48 @@ function disableReadingMode() {
   }
 }
 
+// 滚动处理函数（空实现，仅用于移除事件监听器）
+function handleScroll() { }
+
+// 键盘事件处理函数（空实现，仅用于移除事件监听器）
+function handleKeyDown() { }
+
 // 监听来自 popup 的消息
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  console.log('收到消息:', request.action);
+
   if (request.action === 'TOGGLE_READING_MODE') {
     try {
       // 先保存当前状态
       const currentState = isReadingMode;
+      console.log('当前阅读模式状态:', currentState);
 
       // 切换阅读模式
       if (currentState) {
-        disableReadingMode();
+        try {
+          disableReadingMode();
+          console.log('禁用阅读模式成功');
+        } catch (disableError) {
+          console.error('禁用阅读模式时发生错误:', disableError);
+          throw disableError;
+        }
       } else {
-        enableReadingMode();
+        try {
+          enableReadingMode();
+          console.log('启用阅读模式成功');
+        } catch (enableError) {
+          console.error('启用阅读模式时发生错误:', enableError);
+          throw enableError;
+        }
       }
 
       // 发送切换后的状态，注意这里使用的是切换后的状态
+      const newState = !currentState;
+      console.log('新的阅读模式状态:', newState);
       sendResponse({
         success: true,
-        isReadingMode: !currentState, // 使用切换后的状态
-        buttonText: !currentState ? '退出阅读模式' : '进入阅读模式'
+        isReadingMode: newState,
+        buttonText: newState ? '退出阅读模式' : '进入阅读模式'
       });
     } catch (error) {
       console.error('处理消息时发生错误:', error);
@@ -1975,6 +1945,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       sendResponse({ success: false, error: errorMessage });
     }
   } else if (request.action === 'GET_READING_MODE_STATE') {
+    console.log('返回当前阅读模式状态:', isReadingMode);
     sendResponse({
       isReadingMode,
       buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'

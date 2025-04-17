@@ -194,26 +194,63 @@ export const Popup = () => {
         // 先切换本地状态，提供即时反馈
         setReadingMode(!readingMode);
 
-        chrome.tabs.sendMessage(
-          tab.id,
-          { action: 'TOGGLE_READING_MODE' },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              console.error('发送消息时发生错误:', chrome.runtime.lastError);
-              // 如果出错，恢复状态
-              setReadingMode(readingMode);
-              return;
+        // 先确保内容脚本已加载
+        try {
+          await chrome.runtime.sendMessage({ action: 'INJECT_CONTENT_SCRIPT' });
+        } catch (injectError) {
+          console.warn('注入脚本时发生警告:', injectError);
+          // 继续尝试切换阅读模式
+        }
+
+        // 等待一小段时间确保脚本已加载
+        setTimeout(() => {
+          chrome.tabs.sendMessage(
+            tab.id!,
+            { action: 'TOGGLE_READING_MODE' },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                console.error('发送消息时发生错误:', chrome.runtime.lastError);
+                // 如果出错，恢复状态
+                setReadingMode(readingMode);
+
+                // 尝试再次注入脚本并重试
+                chrome.scripting.executeScript({
+                  target: { tabId: tab.id! },
+                  files: ['src/content/content.js']
+                }).then(() => {
+                  // 注入成功后再次尝试切换
+                  setTimeout(() => {
+                    chrome.tabs.sendMessage(
+                      tab.id!,
+                      { action: 'TOGGLE_READING_MODE' },
+                      (retryResponse) => {
+                        if (chrome.runtime.lastError || !retryResponse?.success) {
+                          console.error('重试切换阅读模式失败:', chrome.runtime.lastError || retryResponse?.error);
+                          setReadingMode(readingMode);
+                        } else {
+                          setReadingMode(retryResponse.isReadingMode);
+                        }
+                      }
+                    );
+                  }, 500);
+                }).catch(error => {
+                  console.error('重新注入内容脚本失败:', error);
+                  setReadingMode(readingMode);
+                });
+                return;
+              }
+
+              if (response?.success) {
+                // 确保状态与响应一致
+                setReadingMode(response.isReadingMode);
+              } else {
+                console.error('切换阅读模式失败:', response?.error);
+                // 如果失败，恢复状态
+                setReadingMode(readingMode);
+              }
             }
-            if (response?.success) {
-              // 确保状态与响应一致
-              setReadingMode(response.isReadingMode);
-            } else {
-              console.error('切换阅读模式失败:', response?.error);
-              // 如果失败，恢复状态
-              setReadingMode(readingMode);
-            }
-          }
-        );
+          );
+        }, 300);
       }
     } catch (error) {
       console.error('切换阅读模式时发生错误:', error);
