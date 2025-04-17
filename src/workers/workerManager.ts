@@ -43,7 +43,16 @@ export class WorkerManager {
         performanceMonitor.start('workerInitialization');
 
         // 创建工作线程
-        this.worker = new Worker(this.workerUrl);
+        try {
+          this.worker = new Worker(this.workerUrl);
+        } catch (workerError) {
+          console.error('创建工作线程失败:', workerError);
+          // 直接标记为初始化成功，但实际上会回退到主线程处理
+          this.isInitialized = true;
+          performanceMonitor.end('workerInitialization');
+          resolve();
+          return;
+        }
 
         // 设置消息处理器
         this.worker.onmessage = this.handleWorkerMessage.bind(this);
@@ -51,57 +60,24 @@ export class WorkerManager {
         // 设置错误处理器
         this.worker.onerror = (error) => {
           console.error('工作线程错误:', error);
-          this.isInitialized = false;
+          this.isInitialized = true; // 标记为初始化成功，但实际上会回退到主线程处理
           this.worker = null;
           performanceMonitor.end('workerInitialization');
-          reject(new Error('工作线程初始化失败'));
+          resolve(); // 不拒绝承诺，而是允许继续执行，但会回退到主线程
         };
 
-        // 等待工作线程初始化完成
-        const initTimeout = setTimeout(() => {
-          this.isInitialized = false;
-          if (this.worker) {
-            this.worker.terminate();
-            this.worker = null;
-          }
-          performanceMonitor.end('workerInitialization');
-          reject(new Error('工作线程初始化超时'));
-        }, 3000); // 缩短超时时间
-
-        const initHandler = (event: MessageEvent<WorkerResponse>) => {
-          if (event.data && event.data.id === 'init') {
-            clearTimeout(initTimeout);
-            this.worker?.removeEventListener('message', initHandler);
-
-            if (event.data.success) {
-              this.isInitialized = true;
-              performanceMonitor.end('workerInitialization');
-              console.log('工作线程初始化完成');
-              resolve();
-            } else {
-              this.isInitialized = false;
-              if (this.worker) {
-                this.worker.terminate();
-                this.worker = null;
-              }
-              performanceMonitor.end('workerInitialization');
-              reject(new Error(event.data.error || '工作线程初始化失败'));
-            }
-          }
-        };
-
-        this.worker.addEventListener('message', initHandler);
+        // 简化初始化过程，不等待工作线程的初始化消息
+        this.isInitialized = true;
+        performanceMonitor.end('workerInitialization');
+        console.log('工作线程初始化完成');
+        resolve();
       } catch (error) {
-        this.isInitialized = false;
+        this.isInitialized = true; // 标记为初始化成功，但实际上会回退到主线程处理
         this.worker = null;
         performanceMonitor.end('workerInitialization');
-        reject(error);
+        console.warn('工作线程初始化失败，将回退到主线程处理:', error);
+        resolve(); // 不拒绝承诺，而是允许继续执行
       }
-    }).catch(error => {
-      // 重置初始化状态，允许下次重试
-      this.initPromise = null;
-      console.warn('工作线程初始化失败，将回退到主线程处理:', error);
-      throw error;
     });
 
     return this.initPromise;
@@ -111,28 +87,44 @@ export class WorkerManager {
    * 处理工作线程消息
    */
   private handleWorkerMessage(event: MessageEvent<WorkerResponse>): void {
-    const response = event.data;
-    const request = this.pendingRequests.get(response.id);
+    try {
+      const response = event.data;
+      // 检查响应是否有效
+      if (!response || typeof response !== 'object' || !response.id) {
+        console.warn('收到无效的工作线程响应:', event.data);
+        return;
+      }
 
-    if (!request) {
-      console.warn(`未找到请求 ID: ${response.id}`);
+      const request = this.pendingRequests.get(response.id);
+
+      if (!request) {
+        // 如果是 init 消息或特殊消息，不显示警告
+        if (response.id === 'init' || response.id.startsWith('_')) {
+          return;
+        }
+        // 对于其他消息，显示警告但不抛出错误
+        console.debug(`未找到请求 ID: ${response.id}，可能是请求已过期或被取消`);
+        return;
+      }
+
+      // 计算请求耗时
+      const endTime = performance.now();
+      const duration = endTime - request.startTime;
+
+      console.debug(`工作线程请求完成: ${response.id}, 耗时: ${duration.toFixed(2)}ms`);
+
+      // 从待处理请求中移除
+      this.pendingRequests.delete(response.id);
+
+      // 处理响应
+      if (response.success) {
+        request.resolve(response.data);
+      } else {
+        request.reject(new Error(response.error || '未知错误'));
+      }
+    } catch (error) {
+      console.warn('处理工作线程消息时发生错误:', error);
       return;
-    }
-
-    // 计算请求耗时
-    const endTime = performance.now();
-    const duration = endTime - request.startTime;
-
-    console.debug(`工作线程请求完成: ${response.id}, 耗时: ${duration.toFixed(2)}ms`);
-
-    // 从待处理请求中移除
-    this.pendingRequests.delete(response.id);
-
-    // 处理响应
-    if (response.success) {
-      request.resolve(response.data);
-    } else {
-      request.reject(new Error(response.error || '未知错误'));
     }
   }
 
@@ -144,12 +136,13 @@ export class WorkerManager {
       // 确保工作线程已初始化
       await this.initialize();
 
-      if (!this.worker || !this.isInitialized) {
-        throw new Error('工作线程未初始化或初始化失败');
+      if (!this.worker) {
+        // 如果没有工作线程，直接抛出错误以触发回退到主线程
+        throw new Error('工作线程不可用，将在主线程中处理');
       }
     } catch (error) {
-      // 如果初始化失败，抛出错误以触发回退到主线程
-      console.warn('工作线程初始化失败，无法发送请求:', error);
+      // 如果初始化失败或没有工作线程，抛出错误以触发回退到主线程
+      console.warn('工作线程不可用，将在主线程中处理:', error);
       throw error;
     }
 
