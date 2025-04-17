@@ -159,7 +159,9 @@ export class ContentExtractor {
         }
 
         // 检查是否支持工作线程
-        if (typeof Worker !== 'undefined' && this.shouldUseWorker(html)) {
+        // 注意：由于 Web Worker 不能使用 document，我们直接在主线程中处理
+        // 下面的代码保留以便将来可能的改进
+        if (false && typeof Worker !== 'undefined' && this.shouldUseWorker(html)) {
           try {
             // 使用工作线程提取内容
             console.debug('使用工作线程提取内容');
