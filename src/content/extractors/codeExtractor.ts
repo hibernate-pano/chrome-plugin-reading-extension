@@ -66,7 +66,15 @@ export class CodeExtractor {
     let language = 'plaintext';
 
     if (code) {
+      // 先保存原始 HTML，以处理可能的格式化代码
+      const originalHtml = code.innerHTML;
       codeText = code.textContent || '';
+
+      // 如果文本内容与 HTML 内容差异很大，可能是已经格式化的代码
+      if (originalHtml.length > codeText.length * 1.5 && originalHtml.includes('<span')) {
+        // 尝试保留原始格式化，但去除可能影响高亮的元素
+        codeText = this.cleanFormattedCode(originalHtml);
+      }
 
       // 尝试从类名中提取语言
       const languageClass = Array.from(code.classList).find(cls => cls.startsWith('language-'));
@@ -83,6 +91,7 @@ export class CodeExtractor {
       language = pre.getAttribute('data-lang') ||
         pre.getAttribute('data-language') ||
         pre.className.match(/language-(\w+)/)?.[1] ||
+        pre.className.match(/brush:\s*(\w+)/)?.[1] || // 支持 SyntaxHighlighter 格式
         this.detectLanguage(codeText);
     }
 
@@ -92,7 +101,8 @@ export class CodeExtractor {
     // 检查是否有行号
     const hasLineNumbers = pre.classList.contains('line-numbers') ||
       pre.classList.contains('numbered') ||
-      pre.hasAttribute('data-line-numbers');
+      pre.hasAttribute('data-line-numbers') ||
+      pre.classList.contains('linenums');
 
     // 尝试获取标题
     const caption = this.getCodeBlockCaption(pre);
@@ -104,6 +114,51 @@ export class CodeExtractor {
       hasLineNumbers,
       caption
     };
+  }
+
+  /**
+   * 清理已格式化的代码 HTML
+   */
+  private cleanFormattedCode(html: string): string {
+    // 创建一个临时 div 元素来解析 HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    // 递归处理所有文本节点
+    let result = '';
+
+    function processNode(node: Node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        // 文本节点，直接添加其文本
+        result += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        // 元素节点，递归处理其子节点
+        const element = node as Element;
+
+        // 如果是换行元素，添加换行符
+        if (element.tagName === 'BR') {
+          result += '\n';
+        } else if (element.tagName === 'DIV' || element.tagName === 'P') {
+          // 对于块级元素，处理完后添加换行
+          for (let i = 0; i < element.childNodes.length; i++) {
+            processNode(element.childNodes[i]);
+          }
+          result += '\n';
+        } else {
+          // 其他元素，递归处理子节点
+          for (let i = 0; i < element.childNodes.length; i++) {
+            processNode(element.childNodes[i]);
+          }
+        }
+      }
+    }
+
+    // 处理所有子节点
+    for (let i = 0; i < tempDiv.childNodes.length; i++) {
+      processNode(tempDiv.childNodes[i]);
+    }
+
+    return result;
   }
 
   /**
@@ -218,44 +273,47 @@ export class CodeExtractor {
     const code = document.createElement('code');
     code.className = `language-${codeInfo.language}`;
 
-    // 直接设置代码内容，而不是通过创建行元素
-    code.textContent = codeInfo.code;
+    // 保存原始代码文本
+    const codeText = codeInfo.code;
+
+    // 预处理代码，处理特殊字符和空格
+    const processedCode = this.preprocessCode(codeText);
+
+    // 先设置原始文本，以便复制功能使用
+    code.textContent = processedCode;
 
     pre.appendChild(code);
     container.appendChild(pre);
 
     // 使用 highlight.js 进行代码高亮
     try {
-      // 保存原始代码文本
-      const codeText = code.textContent || '';
-
       // 使用 highlight.js 进行高亮
       if (codeInfo.language && codeInfo.language !== 'plaintext') {
         try {
           // 尝试使用指定语言高亮
-          const result = hljs.highlight(codeText, { language: codeInfo.language, ignoreIllegals: true });
+          const result = hljs.highlight(processedCode, { language: codeInfo.language, ignoreIllegals: true });
           code.innerHTML = result.value;
           code.classList.add('hljs');
         } catch (e) {
           // 如果指定语言失败，尝试自动检测
           console.warn(`使用语言 ${codeInfo.language} 高亮失败，尝试自动检测`);
-          const result = hljs.highlightAuto(codeText);
-          code.innerHTML = result.value;
-          code.classList.add('hljs');
+          try {
+            const result = hljs.highlightAuto(processedCode);
+            code.innerHTML = result.value;
+            code.classList.add('hljs');
+          } catch (autoError) {
+            // 如果自动检测也失败，回退到基本的 HTML 转义
+            this.applyBasicFormatting(code, processedCode);
+          }
         }
       } else {
         // 如果是纯文本，仅进行 HTML 转义
-        code.innerHTML = codeText
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
+        this.applyBasicFormatting(code, processedCode);
         code.classList.add('plaintext');
       }
 
       // 添加行号
-      const lines = codeText.split('\n');
+      const lines = processedCode.split('\n');
       if (lines.length > 1) {
         const lineNumbersWrapper = document.createElement('span');
         lineNumbersWrapper.className = 'line-numbers-rows';
@@ -270,16 +328,39 @@ export class CodeExtractor {
     } catch (error) {
       console.warn('代码高亮失败:', error);
       // 如果高亮失败，回退到基本的 HTML 转义
-      const codeText = code.textContent || '';
-      code.innerHTML = codeText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+      this.applyBasicFormatting(code, processedCode);
     }
 
     return container;
+  }
+
+  /**
+   * 预处理代码，处理特殊字符和空格
+   */
+  private preprocessCode(code: string): string {
+    // 处理特殊字符和空格
+    return code
+      // 保留缩进和空格
+      .replace(/\t/g, '    ') // 将制表符替换为4个空格
+      // 处理特殊的空白字符
+      .replace(/\u00A0/g, ' ') // 将不间断空格替换为普通空格
+      .replace(/\u2003/g, '  ') // 将全角空格替换为两个空格
+      .trim(); // 去除首尾空白
+  }
+
+  /**
+   * 应用基本的HTML转义格式化
+   */
+  private applyBasicFormatting(codeElement: HTMLElement, codeText: string): void {
+    codeElement.innerHTML = codeText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      // 保留空格和缩进
+      .replace(/ /g, '&nbsp;')
+      .replace(/\n/g, '<br>');
   }
 
   /**

@@ -590,7 +590,8 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
       // 尝试从其他属性中提取语言
       const preLanguage = pre.getAttribute('data-lang') ||
         pre.getAttribute('data-language') ||
-        pre.className.match(/language-(\w+)/)?.[1];
+        pre.className.match(/language-(\w+)/)?.[1] ||
+        pre.className.match(/brush:\s*(\w+)/)?.[1]; // 支持 SyntaxHighlighter 格式
       language = preLanguage || 'plaintext';
       code.classList.add(`language-${language}`);
     }
@@ -600,7 +601,17 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
 
     try {
       // 保存原始代码文本
-      const codeText = code.textContent || '';
+      const originalHtml = code.innerHTML;
+      let codeText = code.textContent || '';
+
+      // 如果文本内容与 HTML 内容差异很大，可能是已经格式化的代码
+      if (originalHtml.length > codeText.length * 1.5 && originalHtml.includes('<span')) {
+        // 尝试保留原始格式化，但去除可能影响高亮的元素
+        codeText = cleanFormattedCode(originalHtml);
+      }
+
+      // 预处理代码，处理特殊字符和空格
+      codeText = preprocessCode(codeText);
 
       // 使用 highlight.js 进行高亮
       if (language !== 'plaintext') {
@@ -612,18 +623,18 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
         } catch (e) {
           // 如果指定语言失败，尝试自动检测
           console.warn(`使用语言 ${language} 高亮失败，尝试自动检测`);
-          const result = hljs.highlightAuto(codeText);
-          code.innerHTML = result.value;
-          code.classList.add('hljs');
+          try {
+            const result = hljs.highlightAuto(codeText);
+            code.innerHTML = result.value;
+            code.classList.add('hljs');
+          } catch (autoError) {
+            // 如果自动检测也失败，回退到基本的 HTML 转义
+            applyBasicFormatting(code, codeText);
+          }
         }
       } else {
         // 如果是纯文本，仅进行 HTML 转义
-        code.innerHTML = codeText
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
+        applyBasicFormatting(code, codeText);
         code.classList.add('plaintext');
       }
 
@@ -640,18 +651,89 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
 
         pre.appendChild(lineNumbersWrapper);
       }
+
+      // 确保代码块内容不会溢出
+      code.style.whiteSpace = 'pre-wrap';
+      code.style.wordBreak = 'break-word';
+      code.style.overflowWrap = 'break-word';
+      code.style.maxWidth = '100%';
+      code.style.display = 'block';
+
     } catch (error) {
       console.warn('代码高亮失败:', error);
       // 如果高亮失败，回退到基本的 HTML 转义
       const codeText = code.textContent || '';
-      code.innerHTML = codeText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+      applyBasicFormatting(code, codeText);
     }
   }
+}
+
+// 清理已格式化的代码 HTML
+function cleanFormattedCode(html: string): string {
+  // 创建一个临时 div 元素来解析 HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+
+  // 递归处理所有文本节点
+  let result = '';
+
+  function processNode(node: Node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // 文本节点，直接添加其文本
+      result += node.textContent;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // 元素节点，递归处理其子节点
+      const element = node as Element;
+
+      // 如果是换行元素，添加换行符
+      if (element.tagName === 'BR') {
+        result += '\n';
+      } else if (element.tagName === 'DIV' || element.tagName === 'P') {
+        // 对于块级元素，处理完后添加换行
+        for (let i = 0; i < element.childNodes.length; i++) {
+          processNode(element.childNodes[i]);
+        }
+        result += '\n';
+      } else {
+        // 其他元素，递归处理子节点
+        for (let i = 0; i < element.childNodes.length; i++) {
+          processNode(element.childNodes[i]);
+        }
+      }
+    }
+  }
+
+  // 处理所有子节点
+  for (let i = 0; i < tempDiv.childNodes.length; i++) {
+    processNode(tempDiv.childNodes[i]);
+  }
+
+  return result;
+}
+
+// 预处理代码，处理特殊字符和空格
+function preprocessCode(code: string): string {
+  // 处理特殊字符和空格
+  return code
+    // 保留缩进和空格
+    .replace(/\t/g, '    ') // 将制表符替换为4个空格
+    // 处理特殊的空白字符
+    .replace(/\u00A0/g, ' ') // 将不间断空格替换为普通空格
+    .replace(/\u2003/g, '  ') // 将全角空格替换为两个空格
+    .trim(); // 去除首尾空白
+}
+
+// 应用基本的HTML转义格式化
+function applyBasicFormatting(codeElement: HTMLElement, codeText: string): void {
+  codeElement.innerHTML = codeText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    // 保留空格和缩进
+    .replace(/ /g, '&nbsp;')
+    .replace(/\n/g, '<br>');
 }
 
 // 代码主题的样式映射
@@ -905,6 +987,17 @@ function applyStyles(settings: ReadingModeSettings) {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         position: relative;
         font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+        max-width: 100%;
+        background-color: ${settings.theme === 'dark' ? '#22272e' : '#ffffff'};
+      }
+
+      /* 确保代码块内容不会溢出 */
+      .enhanced-code-container pre code {
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
+        display: block;
       }
 
       /* 代码块头部 */

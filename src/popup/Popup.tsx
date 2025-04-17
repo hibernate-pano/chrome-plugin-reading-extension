@@ -133,6 +133,7 @@ export const Popup = () => {
                 return;
               }
               if (response) {
+                console.log('当前阅读模式状态:', response.isReadingMode);
                 setReadingMode(response.isReadingMode);
               } else {
                 console.error('获取阅读模式状态失败');
@@ -145,6 +146,44 @@ export const Popup = () => {
       }
     };
     getReadingModeState();
+  }, []);
+
+  // 每次打开popup时都重新获取阅读模式状态
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (tab.id) {
+            chrome.tabs.sendMessage(
+              tab.id,
+              { action: 'GET_READING_MODE_STATE' },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  return;
+                }
+                if (response) {
+                  setReadingMode(response.isReadingMode);
+                }
+              }
+            );
+          }
+        } catch (error) {
+          console.error('获取阅读模式状态时发生错误:', error);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    // 初始加载时也执行一次
+    handleVisibilityChange();
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, []);
 
   const toggleReadingMode = async () => {
