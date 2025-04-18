@@ -37,7 +37,7 @@ export class EnhancedMediaExtractor extends MediaExtractor {
 
     // 背景图片属性
     'data-background', 'data-bg', 'data-background-image', 'data-background-src',
-    
+
     // 新增的懒加载属性
     'loading-src', 'data-lazy-srcset', 'original',
     'data-ll-status', 'data-was-processed', 'data-lazy-loaded',
@@ -135,14 +135,14 @@ export class EnhancedMediaExtractor extends MediaExtractor {
     for (const sibling of siblings) {
       if (sibling && sibling.tagName === 'NOSCRIPT') {
         const noscriptContent = sibling.textContent || sibling.innerHTML;
-        
+
         // 净化 noscript 内容，防止 XSS
         const sanitizedContent = sanitizeHtml(noscriptContent);
-        
+
         // 创建临时元素解析 noscript 内容
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = sanitizedContent;
-        
+
         // 查找 noscript 中的图片
         const noscriptImg = tempDiv.querySelector('img');
         if (noscriptImg && noscriptImg instanceof HTMLImageElement && noscriptImg.src) {
@@ -150,7 +150,7 @@ export class EnhancedMediaExtractor extends MediaExtractor {
             return noscriptImg.src;
           }
         }
-        
+
         // 查找 noscript 中的 src 属性
         const imgMatch = sanitizedContent.match(/<img[^>]+src=['"]([^'"]+)['"][^>]*>/i);
         if (imgMatch && imgMatch[1] && this.isValidImageUrl(imgMatch[1])) {
@@ -185,10 +185,25 @@ export class EnhancedMediaExtractor extends MediaExtractor {
 
     // 检查是否是完整的 URL
     try {
+      // 确保 URL 有协议前缀
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        // 如果是相对路径，直接返回 true
+        if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
+          return true;
+        }
+        // 尝试修复 URL
+        if (url.startsWith('//')) {
+          url = 'https:' + url;
+        } else if (!url.includes('://')) {
+          // 如果不是相对路径也不是完整 URL，尝试添加协议
+          url = 'https://' + url;
+        }
+      }
+
       new URL(url);
       return true;
     } catch (e) {
-      // 如果不是完整的 URL，检查是否是相对路径
+      // 如果不是有效的 URL，检查是否是相对路径
       return url.startsWith('/') || url.startsWith('./') || url.startsWith('../');
     }
   }
@@ -333,11 +348,11 @@ export class EnhancedMediaExtractor extends MediaExtractor {
 
         // 净化 noscript 内容，防止 XSS
         const sanitizedContent = sanitizeHtml(content);
-        
+
         // 创建临时元素解析 noscript 内容
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = sanitizedContent;
-        
+
         // 查找 noscript 中的图片
         const noscriptImg = tempDiv.querySelector('img');
         if (noscriptImg && noscriptImg instanceof HTMLImageElement && noscriptImg.src) {
@@ -433,27 +448,27 @@ export class EnhancedMediaExtractor extends MediaExtractor {
     // 查找具有背景图片的元素
     const elementsWithBgImage = Array.from(container.querySelectorAll('*')).filter(el => {
       if (!(el instanceof HTMLElement)) return false;
-      
+
       // 跳过已处理的元素
-      if (el.classList.contains('enhanced-image-container') || 
-          el.classList.contains('image-placeholder') ||
-          el.classList.contains('image-loading-spinner')) {
+      if (el.classList.contains('enhanced-image-container') ||
+        el.classList.contains('image-placeholder') ||
+        el.classList.contains('image-loading-spinner')) {
         return false;
       }
-      
+
       // 检查计算样式
       const style = window.getComputedStyle(el);
       if (style.backgroundImage && style.backgroundImage !== 'none') {
         return true;
       }
-      
+
       // 检查背景图片属性
       for (const attr of this.EXTENDED_BG_ATTRIBUTES) {
         if (el.hasAttribute(attr)) {
           return true;
         }
       }
-      
+
       return false;
     });
 
@@ -462,18 +477,18 @@ export class EnhancedMediaExtractor extends MediaExtractor {
     elementsWithBgImage.forEach((el, index) => {
       try {
         if (!(el instanceof HTMLElement)) return;
-        
+
         // 检查元素大小，跳过小元素
         const rect = el.getBoundingClientRect();
         if (rect.width < 100 || rect.height < 100) return;
-        
+
         // 尝试从计算样式中获取背景图片
         const style = window.getComputedStyle(el);
         const bgImage = style.backgroundImage;
-        
+
         // 提取 URL
         let imageUrl = '';
-        
+
         // 从计算样式中提取
         if (bgImage && bgImage !== 'none') {
           const match = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
@@ -481,7 +496,7 @@ export class EnhancedMediaExtractor extends MediaExtractor {
             imageUrl = match[1];
           }
         }
-        
+
         // 如果计算样式中没有找到，尝试从属性中提取
         if (!imageUrl) {
           for (const attr of this.EXTENDED_BG_ATTRIBUTES) {
@@ -492,29 +507,29 @@ export class EnhancedMediaExtractor extends MediaExtractor {
             }
           }
         }
-        
+
         // 检查是否找到有效的图片 URL
         if (!imageUrl || !this.isValidImageUrl(imageUrl)) return;
-        
+
         // 创建图片元素
         const img = document.createElement('img');
         img.alt = el.getAttribute('aria-label') || el.title || '';
         img.className = 'extracted-background-image';
-        
+
         // 设置懒加载
         this.setupLazyLoading(img, imageUrl);
-        
+
         // 创建容器
         const figure = document.createElement('figure');
         figure.className = 'enhanced-image-container background-image-container';
         figure.appendChild(img);
-        
+
         // 在元素后插入图片
         el.parentNode?.insertBefore(figure, el.nextSibling);
-        
+
         // 移除原始背景图片（可选）
         // el.style.backgroundImage = 'none';
-        
+
         console.log(`处理背景图片元素 ${index + 1}: ${imageUrl.substring(0, 50)}...`);
       } catch (error) {
         console.warn(`处理背景图片元素 ${index + 1} 时出错:`, error);

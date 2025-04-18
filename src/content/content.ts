@@ -612,6 +612,10 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     container.setAttribute('data-code-theme', codeTheme);
     console.log(`应用代码块主题类: ${themeClass}, 代码主题: ${codeTheme}`);
 
+    // 强制设置代码块主题变量
+    document.documentElement.style.setProperty('--code-theme', codeTheme);
+    document.documentElement.style.setProperty('--code-theme-class', themeClass);
+
     // 使用代码提取器增强所有代码块
     console.log('开始增强代码块');
     codeExtractor.enhanceAllCodeBlocks(container);
@@ -848,11 +852,31 @@ function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: Read
   const themeStyles = CODE_THEME_STYLES[theme] || CODE_THEME_STYLES['github'];
 
   return `
+    /* 代码块主题变量 */
+    :root {
+      --code-bg-color: ${themeStyles.background};
+      --code-text-color: ${themeStyles.text};
+      --code-selection-color: ${themeStyles.selection};
+      --code-comment-color: ${themeStyles.comment};
+      --code-punctuation-color: ${themeStyles.punctuation};
+      --code-keyword-color: ${themeStyles.keyword};
+      --code-function-color: ${themeStyles.function};
+      --code-string-color: ${themeStyles.string};
+      --code-number-color: ${themeStyles.number};
+      --code-class-color: ${themeStyles.class};
+      --code-variable-color: ${themeStyles.variable};
+      --code-border-color: ${themeStyles.comment}40;
+      --code-shadow-color: ${themeStyles.comment}20;
+      --code-font-size: ${settings.codeFontSize}px;
+    }
+
     /* 代码块基础样式 */
-    pre.line-numbers {
-      background-color: ${themeStyles.background} !important;
-      color: ${themeStyles.text};
-      font-size: ${settings.codeFontSize}px !important;
+    pre.line-numbers,
+    .enhanced-code-container pre,
+    .code-block pre {
+      background-color: var(--code-bg-color) !important;
+      color: var(--code-text-color) !important;
+      font-size: var(--code-font-size) !important;
       line-height: 1.5;
       padding: 1em;
       margin: 1em 0;
@@ -861,20 +885,30 @@ function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: Read
       position: relative;
       padding-left: 3.8em !important;
       counter-reset: linenumber;
-      border: 1px solid ${themeStyles.comment}40;
-      box-shadow: 0 2px 4px ${themeStyles.comment}20;
+      border: 1px solid var(--code-border-color);
+      box-shadow: 0 2px 4px var(--code-shadow-color);
+    }
+
+    /* 代码工具栏样式 */
+    .code-toolbar {
+      background-color: var(--code-bg-color) !important;
+      color: var(--code-text-color) !important;
+      border-bottom: 1px solid var(--code-border-color);
+      font-size: var(--code-font-size) !important;
     }
 
     /* 行号容器样式 */
-    pre.line-numbers .line-numbers-rows {
+    pre.line-numbers .line-numbers-rows,
+    .enhanced-code-container .line-numbers-rows,
+    .code-block .line-numbers-rows {
       position: absolute;
       pointer-events: none;
       top: 1em;
-      font-size: ${settings.codeFontSize}px !important;
+      font-size: var(--code-font-size) !important;
       left: 0;
       width: 3em;
       letter-spacing: -1px;
-      border-right: 1px solid ${themeStyles.comment}40;
+      border-right: 1px solid var(--code-border-color);
       user-select: none;
     }
 
@@ -887,7 +921,7 @@ function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: Read
 
     .line-numbers-rows > span:before {
       content: counter(linenumber);
-      color: ${themeStyles.comment}80;
+      color: var(--code-comment-color)80;
       display: block;
       padding-right: 0.8em;
       text-align: right;
@@ -898,54 +932,70 @@ function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: Read
     .token.prolog,
     .token.doctype,
     .token.cdata {
-      color: ${themeStyles.comment};
+      color: var(--code-comment-color) !important;
       font-style: italic;
     }
 
     .token.punctuation {
-      color: ${themeStyles.punctuation};
+      color: var(--code-punctuation-color) !important;
     }
 
     .token.keyword,
     .token.operator {
-      color: ${themeStyles.keyword};
+      color: var(--code-keyword-color) !important;
     }
 
     .token.function {
-      color: ${themeStyles.function};
+      color: var(--code-function-color) !important;
     }
 
     .token.string {
-      color: ${themeStyles.string};
+      color: var(--code-string-color) !important;
     }
 
     .token.number {
-      color: ${themeStyles.number};
+      color: var(--code-number-color) !important;
     }
 
     .token.class-name {
-      color: ${themeStyles.class};
+      color: var(--code-class-color) !important;
     }
 
     .token.variable {
-      color: ${themeStyles.variable};
+      color: var(--code-variable-color) !important;
     }
 
     /* 代码选择样式 */
     pre.line-numbers ::selection,
-    pre.line-numbers ::-moz-selection {
-      background: ${themeStyles.selection};
+    pre.line-numbers ::-moz-selection,
+    .enhanced-code-container ::selection,
+    .enhanced-code-container ::-moz-selection,
+    .code-block ::selection,
+    .code-block ::-moz-selection {
+      background: var(--code-selection-color) !important;
     }
 
     /* 内联代码样式 */
     #reading-mode-container code:not(pre code) {
-      background-color: ${themeStyles.background}40;
-      color: ${themeStyles.keyword};
+      background-color: var(--code-bg-color)40;
+      color: var(--code-keyword-color);
       padding: 0.2em 0.4em;
       border-radius: 3px;
-      font-size: ${settings.codeFontSize}px !important;
+      font-size: var(--code-font-size) !important;
       font-family: 'Fira Code', Consolas, Monaco, monospace;
-      border: 1px solid ${themeStyles.comment}20;
+      border: 1px solid var(--code-border-color);
+    }
+
+    /* 确保代码块工具栏按钮样式正确 */
+    .code-toolbar .toolbar-item button {
+      color: var(--code-text-color) !important;
+      background-color: var(--code-bg-color) !important;
+      border: 1px solid var(--code-border-color) !important;
+      font-size: calc(var(--code-font-size) * 0.9) !important;
+    }
+
+    .code-toolbar .toolbar-item button:hover {
+      background-color: var(--code-selection-color) !important;
     }
   `;
 }

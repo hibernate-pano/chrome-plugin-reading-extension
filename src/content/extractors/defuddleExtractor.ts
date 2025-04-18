@@ -1,4 +1,4 @@
-import { Defuddle } from 'defuddle';
+import Defuddle from 'defuddle';
 import { performanceMonitor } from '../../utils/performance';
 import { extractionCache } from '../../utils/cache';
 import { sanitizeHtml } from '../../utils/sanitizer';
@@ -33,7 +33,75 @@ const defaultOptions: DefuddleExtractorOptions = {
     // 使用默认的净化选项
   },
   specialSites: {
-    // 特殊站点处理将在后续添加
+    // 特殊站点处理
+    'juejin.cn': (doc: Document) => {
+      // 掘金网特殊处理
+      console.log('应用掘金网特殊处理');
+
+      // 移除广告和干扰元素
+      const selectors = [
+        '.article-suspended-panel', // 悬浮面板
+        '.recommend-box', // 推荐框
+        '.comment-box', // 评论框
+        '.author-info-block', // 作者信息
+        '.article-banner', // 文章横幅
+        '.article-end', // 文章结尾
+        '.column-container', // 专栏容器
+        '.markdown-body > .copy-code-btn', // 复制代码按钮
+        '.markdown-body > .code-block-header' // 代码块头部
+      ];
+
+      selectors.forEach(selector => {
+        const elements = doc.querySelectorAll(selector);
+        elements.forEach(el => el.remove());
+      });
+
+      // 处理文章内容区域
+      const articleContent = doc.querySelector('.article-content');
+      if (articleContent) {
+        // 移除文章内的广告
+        const ads = articleContent.querySelectorAll('[data-ad]');
+        ads.forEach(ad => ad.remove());
+
+        // 移除标题下的大空白
+        const markdownBody = articleContent.querySelector('.markdown-body');
+        if (markdownBody) {
+          // 移除所有空白段落
+          const emptyParagraphs = markdownBody.querySelectorAll('p:empty, p:only-child:not(:has(*)):not([style]):not([class])');
+          emptyParagraphs.forEach(p => {
+            if (p.textContent?.trim() === '') {
+              p.remove();
+            }
+          });
+
+          // 处理代码块
+          const codeBlocks = markdownBody.querySelectorAll('pre[data-lang]');
+          codeBlocks.forEach(pre => {
+            // 移除掘金的代码块头部
+            const codeBlockHeader = pre.previousElementSibling;
+            if (codeBlockHeader && codeBlockHeader.classList.contains('code-block-header')) {
+              codeBlockHeader.remove();
+            }
+
+            // 移除复制按钮
+            const copyButton = pre.nextElementSibling;
+            if (copyButton && copyButton.classList.contains('copy-code-btn')) {
+              copyButton.remove();
+            }
+
+            // 确保代码块有正确的语言标记
+            const lang = pre.getAttribute('data-lang');
+            if (lang) {
+              pre.classList.add(`language-${lang}`);
+              const code = pre.querySelector('code');
+              if (code) {
+                code.classList.add(`language-${lang}`);
+              }
+            }
+          });
+        }
+      }
+    }
   }
 };
 
@@ -206,9 +274,43 @@ export class DefuddleExtractor {
    */
   private extractDomain(url: string): string {
     try {
+      // 验证 URL 是否有效
+      if (!url || typeof url !== 'string') {
+        console.warn('无效的 URL:', url);
+        return '';
+      }
+
+      // 特殊处理掘金网的 URL
+      if (url.includes('juejin.cn')) {
+        return 'juejin.cn';
+      }
+
+      // 确保 URL 有协议前缀
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        // 尝试修复 URL
+        if (url.startsWith('//')) {
+          url = 'https:' + url;
+        } else if (!url.includes('://')) {
+          url = 'https://' + url;
+        }
+      }
+
       const urlObj = new URL(url);
       return urlObj.hostname;
     } catch (error) {
+      console.error('解析 URL 时出错:', error, 'URL:', url);
+
+      // 如果解析失败，尝试使用正则表达式提取域名
+      const domainMatch = url.match(/https?:\/\/([^/]+)/);
+      if (domainMatch && domainMatch[1]) {
+        return domainMatch[1];
+      }
+
+      // 如果 URL 包含特定域名，直接返回
+      if (url.includes('juejin.cn')) {
+        return 'juejin.cn';
+      }
+
       return '';
     }
   }
@@ -232,14 +334,25 @@ export class DefuddleExtractor {
   private fixLinks(container: HTMLElement): void {
     const links = container.querySelectorAll('a');
     links.forEach(link => {
-      // 确保链接是绝对路径
-      if (link.href && link.href.startsWith('/')) {
+      // 获取 href 值
+      const href = link.getAttribute('href') || '';
+
+      // 如果没有 href 属性或为空，跳过
+      if (!href) return;
+
+      // 处理相对路径
+      if (href.startsWith('/')) {
         try {
+          // 确保基础 URL 有效
           const baseUrl = new URL(window.location.href).origin;
-          link.href = baseUrl + link.href;
+          link.setAttribute('href', baseUrl + href);
         } catch (error) {
-          // 忽略无效的 URL
+          console.warn('无法处理相对链接:', href, error);
         }
+      }
+      // 处理协议相对路径
+      else if (href.startsWith('//')) {
+        link.setAttribute('href', 'https:' + href);
       }
 
       // 添加 target="_blank" 和 rel="noopener noreferrer"

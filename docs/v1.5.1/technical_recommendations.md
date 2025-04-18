@@ -28,7 +28,7 @@ import { Readability } from '@mozilla/readability';
 const article = new Readability(document.cloneNode(true)).parse();
 
 // 建议的 Defuddle 实现
-import { Defuddle } from 'defuddle';
+import Defuddle from 'defuddle';
 const result = new Defuddle(document).parse();
 ```
 
@@ -152,13 +152,13 @@ import { Copy, Check, Code, Image } from 'lucide';
 // 在 React 中使用
 function CopyButton({ onClick }) {
   const [copied, setCopied] = useState(false);
-  
+
   const handleClick = () => {
     onClick();
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   return (
     <button onClick={handleClick}>
       {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -204,7 +204,7 @@ Defuddle 提供了更好的内容提取能力，特别是对代码块、数学�
 // npm install defuddle
 
 // 在内容提取模块中使用
-import { Defuddle } from 'defuddle';
+import Defuddle from 'defuddle';
 
 export async function extractContent(document) {
   try {
@@ -212,9 +212,9 @@ export async function extractContent(document) {
       debug: false, // 生产环境关闭调试
       url: document.location.href // 提供原始 URL
     });
-    
+
     const result = defuddle.parse();
-    
+
     return {
       title: result.title,
       content: result.content,
@@ -303,20 +303,20 @@ const hljsConfig = {
 // 处理代码块
 export function processCodeBlocks(container) {
   const codeBlocks = container.querySelectorAll('pre code');
-  
+
   codeBlocks.forEach(codeBlock => {
     // 检测语言
     const classMatch = codeBlock.className.match(/language-(\w+)/);
     const language = classMatch ? classMatch[1] : '';
-    
+
     // 设置数据属性
     if (language) {
       codeBlock.setAttribute('data-lang', language);
     }
-    
+
     // 应用高亮
     hljs.highlightElement(codeBlock);
-    
+
     // 添加行号
     addLineNumbers(codeBlock);
   });
@@ -326,13 +326,13 @@ export function processCodeBlocks(container) {
 function addLineNumbers(codeBlock) {
   const lines = codeBlock.innerHTML.split('\n');
   let numberedLines = '';
-  
+
   lines.forEach((line, index) => {
     if (index === lines.length - 1 && line === '') return;
     const lineNumber = index + 1;
     numberedLines += `<span class="line" data-line="${lineNumber}">${line}</span>`;
   });
-  
+
   codeBlock.innerHTML = numberedLines;
 }
 ```
@@ -347,7 +347,7 @@ function addLineNumbers(codeBlock) {
 // 处理懒加载图片
 export function processLazyImages(container) {
   const images = container.querySelectorAll('img');
-  
+
   images.forEach(img => {
     // 检查各种懒加载属性
     const dataSrc = img.getAttribute('data-src');
@@ -355,7 +355,7 @@ export function processLazyImages(container) {
     const lazySrc = img.getAttribute('loading-src');
     const lazySrcset = img.getAttribute('data-lazy-srcset');
     const originalSrc = img.getAttribute('original');
-    
+
     // 应用实际图片源
     if (dataSrc && (!img.src || img.src.includes('data:image') || img.src.includes('base64'))) {
       img.src = dataSrc;
@@ -364,14 +364,14 @@ export function processLazyImages(container) {
     } else if (originalSrc) {
       img.src = originalSrc;
     }
-    
+
     // 处理 srcset
     if (dataSrcset) {
       img.srcset = dataSrcset;
     } else if (lazySrcset) {
       img.srcset = lazySrcset;
     }
-    
+
     // 移除懒加载属性
     img.removeAttribute('data-src');
     img.removeAttribute('data-srcset');
@@ -379,16 +379,16 @@ export function processLazyImages(container) {
     img.removeAttribute('data-lazy-srcset');
     img.removeAttribute('original');
     img.removeAttribute('loading');
-    
+
     // 添加加载状态类
     img.classList.add('loading');
-    
+
     // 监听加载完成
     img.onload = () => {
       img.classList.remove('loading');
       img.classList.add('loaded');
     };
-    
+
     img.onerror = () => {
       img.classList.remove('loading');
       img.classList.add('error');
@@ -396,7 +396,7 @@ export function processLazyImages(container) {
       img.src = 'data:image/svg+xml,...'; // 占位图 SVG
     };
   });
-  
+
   // 检查 noscript 中的图片
   const noscripts = container.querySelectorAll('noscript');
   noscripts.forEach(noscript => {
@@ -405,7 +405,7 @@ export function processLazyImages(container) {
       const div = document.createElement('div');
       div.innerHTML = content;
       const noscriptImg = div.querySelector('img');
-      
+
       if (noscriptImg && noscriptImg.src) {
         const img = noscript.previousElementSibling;
         if (img && img.tagName === 'IMG') {
@@ -428,22 +428,22 @@ export function processLazyImages(container) {
 // 图片查看器
 export function setupImageViewer(container) {
   const images = container.querySelectorAll('img');
-  
+
   images.forEach(img => {
     // 创建图片容器
     const wrapper = document.createElement('div');
     wrapper.className = 'image-wrapper';
-    
+
     // 将图片移动到容器中
     img.parentNode.insertBefore(wrapper, img);
     wrapper.appendChild(img);
-    
+
     // 添加悬停提示
     const tooltip = document.createElement('div');
     tooltip.className = 'image-tooltip';
     tooltip.textContent = '点击查看大图';
     wrapper.appendChild(tooltip);
-    
+
     // 点击查看大图
     img.addEventListener('click', () => {
       showLightbox(img.src, img.alt);
@@ -456,7 +456,7 @@ function showLightbox(src, caption) {
   // 创建灯箱元素
   const lightbox = document.createElement('div');
   lightbox.className = 'obsidian-reader-lightbox';
-  
+
   // 灯箱内容
   lightbox.innerHTML = `
     <div class="lightbox-content">
@@ -472,15 +472,15 @@ function showLightbox(src, caption) {
       </button>
     </div>
   `;
-  
+
   // 添加到文档
   document.body.appendChild(lightbox);
-  
+
   // 显示灯箱
   setTimeout(() => {
     lightbox.classList.add('active');
   }, 10);
-  
+
   // 关闭按钮
   const closeButton = lightbox.querySelector('.lightbox-close');
   closeButton.addEventListener('click', () => {
@@ -489,14 +489,14 @@ function showLightbox(src, caption) {
       lightbox.remove();
     }, 300);
   });
-  
+
   // 点击背景关闭
   lightbox.addEventListener('click', (e) => {
     if (e.target === lightbox) {
       closeButton.click();
     }
   });
-  
+
   // ESC 键关闭
   document.addEventListener('keydown', function escHandler(e) {
     if (e.key === 'Escape') {
@@ -518,17 +518,17 @@ function showLightbox(src, caption) {
 export function setupThemeSystem() {
   // 检测系统主题
   const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  
+
   // 获取用户设置
   const userTheme = localStorage.getItem('reading-theme') || 'auto';
-  
+
   // 应用主题
   if (userTheme === 'auto') {
     applyTheme(prefersDarkMode ? 'dark' : 'light');
   } else {
     applyTheme(userTheme);
   }
-  
+
   // 监听系统主题变化
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
     if (userTheme === 'auto') {
@@ -540,13 +540,13 @@ export function setupThemeSystem() {
 // 应用主题
 function applyTheme(theme) {
   const body = document.body;
-  
+
   // 移除现有主题类
   body.classList.remove('light-theme', 'dark-theme');
-  
+
   // 添加新主题类
   body.classList.add(`${theme}-theme`);
-  
+
   // 更新 meta theme-color
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (metaThemeColor) {
@@ -555,7 +555,7 @@ function applyTheme(theme) {
       theme === 'dark' ? '#1a1a1a' : '#ffffff'
     );
   }
-  
+
   // 触发主题变化事件
   document.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme } }));
 }
@@ -580,7 +580,7 @@ export const useReadingStore = create(
       // 阅读模式状态
       isReadingMode: false,
       originalContent: null,
-      
+
       // 设置
       settings: {
         theme: 'auto',
@@ -597,29 +597,29 @@ export const useReadingStore = create(
         showDirectory: true,
         paragraphSpacing: 1.5,
       },
-      
+
       // 阅读进度
       progress: 0,
-      
+
       // 操作方法
       enableReadingMode: () => {
         const { isReadingMode } = get();
         if (isReadingMode) return; // 防止重复进入
-        
+
         set({ isReadingMode: true });
       },
-      
+
       disableReadingMode: () => {
         const { isReadingMode } = get();
         if (!isReadingMode) return; // 防止重复退出
-        
-        set({ 
+
+        set({
           isReadingMode: false,
           originalContent: null,
           progress: 0
         });
       },
-      
+
       updateSettings: (newSettings) => {
         set((state) => ({
           settings: {
@@ -628,11 +628,11 @@ export const useReadingStore = create(
           }
         }));
       },
-      
+
       updateProgress: (progress) => {
         set({ progress });
       },
-      
+
       setOriginalContent: (content) => {
         set({ originalContent: content });
       }

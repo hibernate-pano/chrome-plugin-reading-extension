@@ -328,9 +328,13 @@ export class CodeExtractor {
       container.classList.add(themeClass);
 
       // 继承代码主题属性
-      const codeTheme = parentContainer.getAttribute('data-code-theme');
+      const codeTheme = parentContainer.getAttribute('data-code-theme') ||
+        document.documentElement.style.getPropertyValue('--code-theme') ||
+        'github';
       if (codeTheme) {
         container.setAttribute('data-code-theme', codeTheme);
+        // 确保代码块也有正确的 CSS 变量
+        container.style.setProperty('--code-theme', codeTheme);
       }
     }
 

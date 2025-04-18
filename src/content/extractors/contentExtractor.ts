@@ -290,9 +290,26 @@ export class ContentExtractor {
    */
   private extractDomain(url: string): string {
     try {
+      // 验证 URL 是否有效
+      if (!url || typeof url !== 'string') {
+        console.warn('无效的 URL:', url);
+        return '';
+      }
+
+      // 确保 URL 有协议前缀
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        // 尝试修复 URL
+        if (url.startsWith('//')) {
+          url = 'https:' + url;
+        } else if (!url.includes('://')) {
+          url = 'https://' + url;
+        }
+      }
+
       const urlObj = new URL(url);
       return urlObj.hostname;
-    } catch (e) {
+    } catch (error) {
+      console.error('解析 URL 时出错:', error, 'URL:', url);
       return '';
     }
   }
@@ -742,11 +759,19 @@ export class ContentExtractor {
 
       // 如果是相对链接，尝试转换为绝对链接
       if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('#')) {
-        try {
-          const absoluteUrl = new URL(href, window.location.href).href;
-          link.setAttribute('href', absoluteUrl);
-        } catch (e) {
-          // 忽略无效 URL
+        // 如果是协议相对路径（以 // 开头）
+        if (href.startsWith('//')) {
+          link.setAttribute('href', 'https:' + href);
+        } else {
+          try {
+            // 处理其他相对路径，确保基础 URL 有效
+            let baseUrl = window.location.href;
+            const absoluteUrl = new URL(href, baseUrl).href;
+            link.setAttribute('href', absoluteUrl);
+          } catch (e) {
+            console.warn('无法处理相对链接:', href, e);
+            // 忽略无效 URL
+          }
         }
       }
 
