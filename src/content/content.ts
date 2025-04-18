@@ -390,16 +390,18 @@ import { Toast } from '../ui/components/Toast';
 // 导入增强提取器
 import {
   contentExtractor,
+  defuddleExtractor,
   tableExtractor,
   mediaExtractor,
+  enhancedMediaExtractor,
   codeExtractor,
   listExtractor
 } from './extractors';
 
 // 导入提取器样式
 import './extractors/extractors.css';
-// 导入极简代码块样式
-import './styles/minimalist-code.css';
+// 导入 GitHub 风格代码块样式
+import './styles/github-code.css';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -1665,8 +1667,16 @@ async function enableReadingMode() {
 
     let extractedContent;
     try {
-      extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
-      console.log('内容提取完成');
+      // 尝试使用 Defuddle 提取器
+      try {
+        extractedContent = await defuddleExtractor.extractFromHTML(originalContent, window.location.href);
+        console.log('Defuddle 内容提取完成');
+      } catch (defuddleError) {
+        // 如果 Defuddle 失败，回退到 Readability
+        console.warn('Defuddle 提取失败，回退到 Readability:', defuddleError);
+        extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
+        console.log('Readability 内容提取完成');
+      }
     } catch (extractError) {
       console.error('内容提取过程中发生错误:', extractError);
       if (loadingToast) loadingToast.close();
@@ -1716,16 +1726,29 @@ async function enableReadingMode() {
     try {
       // 增强图片和媒体
       if (settings.showImages) {
-        mediaExtractor.enhanceAllImages(contentDiv);
-        mediaExtractor.enhanceVideos(contentDiv);
-        mediaExtractor.enhanceIframes(contentDiv);
-        mediaExtractor.processBackgroundImages(contentDiv);
+        // 使用增强型媒体提取器
+        enhancedMediaExtractor.enhanceAllImages(contentDiv);
+        enhancedMediaExtractor.enhanceVideos(contentDiv);
+        enhancedMediaExtractor.enhanceIframes(contentDiv);
+        enhancedMediaExtractor.processBackgroundImages(contentDiv);
       } else {
         // 如果不显示图片，隐藏所有媒体元素
         handleMediaElements(contentDiv, false);
       }
     } catch (error) {
       console.warn('增强媒体元素时发生错误:', error);
+      // 如果增强型媒体提取器失败，回退到原始媒体提取器
+      try {
+        if (settings.showImages) {
+          console.log('尝试使用原始媒体提取器');
+          mediaExtractor.enhanceAllImages(contentDiv);
+          mediaExtractor.enhanceVideos(contentDiv);
+          mediaExtractor.enhanceIframes(contentDiv);
+          mediaExtractor.processBackgroundImages(contentDiv);
+        }
+      } catch (fallbackError) {
+        console.error('原始媒体提取器也失败:', fallbackError);
+      }
     }
 
     try {
