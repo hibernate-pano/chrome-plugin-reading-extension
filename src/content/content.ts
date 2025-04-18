@@ -398,6 +398,8 @@ import {
 
 // 导入提取器样式
 import './extractors/extractors.css';
+// 导入极简代码块样式
+import './styles/minimalist-code.css';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -557,7 +559,7 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     console.log('开始处理代码块');
 
     // 先彻底清除所有已存在的增强代码块容器
-    const existingContainers = container.querySelectorAll('.enhanced-code-container');
+    const existingContainers = container.querySelectorAll('.enhanced-code-container, .code-block');
     console.log(`找到 ${existingContainers.length} 个现有代码块容器`);
 
     existingContainers.forEach((codeContainer, index) => {
@@ -585,14 +587,20 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     });
 
     // 清除可能存在的其他代码相关元素
-    const codeHeaders = container.querySelectorAll('.code-header, .code-top-bar');
+    const codeHeaders = container.querySelectorAll('.code-header, .code-top-bar, .code-toolbar');
     codeHeaders.forEach(header => header.remove());
 
     const copyButtons = container.querySelectorAll('.code-copy-button');
     copyButtons.forEach(button => button.remove());
 
-    const contentWrappers = container.querySelectorAll('.code-content-wrapper');
+    const contentWrappers = container.querySelectorAll('.code-content-wrapper, .code-content, .code-wrapper');
     contentWrappers.forEach(wrapper => wrapper.remove());
+
+    const lineNumbers = container.querySelectorAll('.line-numbers');
+    lineNumbers.forEach(lineNumber => lineNumber.remove());
+
+    const codeToasts = container.querySelectorAll('.code-toast');
+    codeToasts.forEach(toast => toast.remove());
 
     // 使用代码提取器增强所有代码块
     console.log('开始增强代码块');
@@ -607,7 +615,7 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     }
 
     // 确保代码块内容不会溢出
-    const codeBlocks = container.querySelectorAll('.code-content-wrapper code');
+    const codeBlocks = container.querySelectorAll('.code-block code');
     codeBlocks.forEach(code => {
       const codeElement = code as HTMLElement;
       codeElement.style.whiteSpace = 'pre-wrap';
@@ -615,6 +623,13 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
       codeElement.style.overflowWrap = 'break-word';
       codeElement.style.maxWidth = '100%';
       codeElement.style.display = 'block';
+    });
+
+    // 设置代码块容器最大宽度
+    const codeBlockContainers = container.querySelectorAll('.code-block');
+    codeBlockContainers.forEach(block => {
+      (block as HTMLElement).style.maxWidth = '100%';
+      (block as HTMLElement).style.overflowX = 'auto';
     });
 
     // 添加代码块交互功能
@@ -868,92 +883,20 @@ function applyStyles(settings: ReadingModeSettings) {
   // 应用代码块样式
   const codeblockStyles = document.getElementById('reading-mode-codeblock-styles');
   if (codeblockStyles) {
-    // 设置代码块样式
+    // 设置代码块主题
+    const themeClass = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
+
+    // 添加主题类到容器
+    const container = document.getElementById('reading-mode-container');
+    if (container) {
+      container.classList.remove('dark-theme', 'light-theme');
+      container.classList.add(themeClass);
+    }
+
+    // 设置代码字体大小变量
     codeblockStyles.textContent = `
-      /* 代码块样式 */
-      .enhanced-code-container {
-        margin: 2em 0;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        position: relative;
-        font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
-        max-width: 100%;
-        background-color: ${settings.theme === 'dark' ? '#22272e' : '#ffffff'};
-      }
-
-      /* 确保代码块内容不会溢出 */
-      .enhanced-code-container pre code {
-        white-space: pre-wrap;
-        word-break: break-word;
-        overflow-wrap: break-word;
-        max-width: 100%;
-        display: block;
-      }
-
-      /* 代码块头部 */
-      .code-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75em 1.25em;
-        background-color: ${settings.theme === 'dark' ? '#2d333b' : '#f6f8fa'};
-        border-bottom: 1px solid ${settings.theme === 'dark' ? '#444c56' : '#d0d7de'};
-        position: relative;
-      }
-
-      /* 语言标签 */
-      .code-language {
-        font-size: 0.85em;
-        font-weight: 600;
-        color: ${settings.theme === 'dark' ? '#d7dce1' : '#24292f'};
-        background-color: ${settings.theme === 'dark' ? '#444c56' : '#e6ebf1'};
-        padding: 0.25em 0.75em;
-        border-radius: 4px;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        font-size: 0.75em;
-      }
-
-      /* 代码标题 */
-      .code-caption {
-        font-size: 0.9em;
-        color: ${settings.theme === 'dark' ? '#adbac7' : '#57606a'};
-        margin-left: 1em;
-        flex-grow: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      /* 复制按钮 */
-      .code-copy-button {
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: ${settings.theme === 'dark' ? '#adbac7' : '#57606a'};
-        padding: 0.25em 0.5em;
-        border-radius: 4px;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        font-size: 0.85em;
-        opacity: 0.7;
-      }
-
-      .code-copy-button:hover {
-        color: ${settings.theme === 'dark' ? '#d7dce1' : '#24292f'};
-        background-color: ${settings.theme === 'dark' ? '#444c56' : '#e6ebf1'};
-        opacity: 1;
-      }
-
-      .code-copy-button.copied {
-        color: ${settings.theme === 'dark' ? '#7ee787' : '#1a7f37'};
-        background-color: ${settings.theme === 'dark' ? '#2da44e33' : '#dafbe1'};
-      }
-
-      .code-copy-button svg {
-        margin-right: 0.25em;
+      :root {
+        --code-font-size: ${settings.codeFontSize}px;
       }
     `;
   }
