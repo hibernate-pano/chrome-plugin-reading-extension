@@ -59,10 +59,30 @@ export class MediaExtractor {
 
     // 检查其他常见的懒加载属性
     const lazyAttributes = [
+      // 基础懒加载属性
       'data-lazy', 'data-lazy-src', 'data-src-lazy',
       'data-original-src', 'data-load-src', 'data-img-src',
       'data-origin', 'data-lazyload', 'data-srcset-lazy',
-      'data-lazy-srcset', 'data-lazy-original'
+      'data-lazy-srcset', 'data-lazy-original',
+
+      // 扩展懒加载属性
+      'data-echo', 'data-lazy-img', 'data-url', 'data-original-image',
+      'data-src-retina', 'data-lazy-original', 'data-lazy-load',
+      'data-src-mobile', 'data-src-desktop', 'data-src-tablet',
+      'data-thumb', 'data-bg-src', 'data-full-src', 'data-image-src',
+      'data-link', 'data-image', 'data-original-file', 'data-large-file',
+      'data-medium-file', 'data-source-url', 'data-high-res-src',
+      'data-low-res-src', 'data-normal-src', 'data-full-image',
+      'data-zoom-image', 'data-large-image', 'data-main-image',
+      'data-super-size-src', 'data-super-size', 'data-hd-src',
+      'data-retina-src', 'data-raw-src', 'data-actualsrc',
+      'data-original-image-src', 'data-original-image-url',
+      'data-fullsize-src', 'data-fullsize-url', 'data-big',
+      'data-big-src', 'data-big-url', 'data-src-large',
+      'data-full', 'data-full-url', 'data-hires',
+      'data-hires-src', 'data-hires-url', 'data-2x',
+      'data-2x-src', 'data-2x-url', 'data-desktop',
+      'data-desktop-src', 'data-desktop-url'
     ];
 
     for (const attr of lazyAttributes) {
@@ -82,6 +102,40 @@ export class MediaExtractor {
         const match = img.parentElement.style.backgroundImage.match(/url\(['"](.*?)['"]\)/);
         if (match && match[1]) return match[1];
       }
+
+      // 检查父元素的 data-background 属性
+      const dataBackground = img.parentElement.getAttribute('data-background');
+      if (dataBackground) return dataBackground;
+
+      // 检查父元素的其他背景图片属性
+      const bgAttributes = ['data-bg', 'data-background-image', 'data-background-src'];
+      for (const attr of bgAttributes) {
+        const value = img.parentElement.getAttribute(attr);
+        if (value) return value;
+      }
+    }
+
+    // 检查 srcset 属性
+    const srcset = img.getAttribute('srcset');
+    if (srcset) {
+      const firstSrc = srcset.split(',')[0].trim().split(' ')[0];
+      if (firstSrc) return firstSrc;
+    }
+
+    // 检查 noscript 标签中的图片
+    const noscript = img.closest('noscript');
+    if (noscript) {
+      const noscriptContent = noscript.textContent || noscript.innerHTML;
+      const imgMatch = noscriptContent.match(/<img[^>]+src=['"]([^'"]+)['"][^>]*>/i);
+      if (imgMatch && imgMatch[1]) return imgMatch[1];
+    }
+
+    // 检查相邻的 noscript 标签
+    const nextNoscript = img.nextElementSibling;
+    if (nextNoscript && nextNoscript.tagName === 'NOSCRIPT') {
+      const noscriptContent = nextNoscript.textContent || nextNoscript.innerHTML;
+      const imgMatch = noscriptContent.match(/<img[^>]+src=['"]([^'"]+)['"][^>]*>/i);
+      if (imgMatch && imgMatch[1]) return imgMatch[1];
     }
 
     // 如果没有找到懒加载属性，返回原始 src
@@ -203,16 +257,48 @@ export class MediaExtractor {
           if (entry.isIntersecting) {
             // 当图片进入视口时加载
             const imgElement = entry.target as HTMLImageElement;
-            imgElement.src = src;
-            imgElement.classList.add('loaded');
 
-            // 图片加载完成后移除占位图
-            imgElement.onload = () => {
+            // 预加载图片，使用新的 Image 对象
+            const preloadImg = new Image();
+
+            // 设置加载完成的回调
+            preloadImg.onload = () => {
+              // 延迟一小段时间再显示，使过渡更平滑
+              setTimeout(() => {
+                // 设置实际图片的 src
+                imgElement.src = src;
+                imgElement.classList.add('loaded');
+
+                // 慢慢淡出占位图
+                const placeholder = imgElement.parentElement?.querySelector('.image-placeholder');
+                if (placeholder && placeholder instanceof HTMLElement) {
+                  placeholder.style.opacity = '0';
+
+                  // 等待过渡完成后移除占位图
+                  setTimeout(() => {
+                    placeholder.remove();
+                  }, 300);
+                }
+              }, 100);
+            };
+
+            // 处理加载错误
+            preloadImg.onerror = () => {
+              // 尝试直接设置 src，作为备用方案
+              imgElement.src = src;
+              imgElement.classList.add('loaded');
+
+              // 移除占位图
               const placeholder = imgElement.parentElement?.querySelector('.image-placeholder');
               if (placeholder) {
                 placeholder.remove();
               }
+
+              console.warn(`图片加载失败: ${src}`);
             };
+
+            // 开始加载图片
+            preloadImg.src = src;
 
             // 停止观察该图片
             observer.unobserve(entry.target);
@@ -220,7 +306,7 @@ export class MediaExtractor {
         });
       },
       {
-        rootMargin: '200px 0px', // 提前 200px 加载
+        rootMargin: '300px 0px', // 提前 300px 加载，增加提前量
         threshold: 0.01 // 当 1% 的图片可见时开始加载
       }
     );
@@ -237,6 +323,9 @@ export class MediaExtractor {
     const placeholder = document.createElement('div');
     placeholder.className = 'image-placeholder';
 
+    // 添加过渡效果
+    placeholder.style.transition = 'opacity 0.3s ease';
+
     // 设置占位图尺寸
     if (imageInfo.width && imageInfo.height) {
       const ratio = (imageInfo.height / imageInfo.width) * 100;
@@ -252,6 +341,13 @@ export class MediaExtractor {
 
     // 将占位图添加到图片前面
     img.parentElement?.insertBefore(placeholder, img);
+
+    // 如果图片已经有宽高，设置占位图的具体尺寸
+    if (imageInfo.width && imageInfo.height) {
+      // 设置图片的尺寸属性，使得占位图能够正确计算大小
+      img.setAttribute('width', imageInfo.width.toString());
+      img.setAttribute('height', imageInfo.height.toString());
+    }
   }
 
   /**
@@ -314,13 +410,24 @@ export class MediaExtractor {
       .enhanced-image-container {
         position: relative;
         overflow: hidden;
-        margin: 1em 0;
-        border-radius: 4px;
+        margin: 1.5em 0;
+        border-radius: 8px;
         background-color: transparent;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+      }
+
+      .enhanced-image-container:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
 
       .dark .enhanced-image-container {
         background-color: transparent;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .dark .enhanced-image-container:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       }
 
       .enhanced-image {
@@ -328,11 +435,13 @@ export class MediaExtractor {
         width: 100%;
         height: auto;
         opacity: 0;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.5s ease, transform 0.3s ease;
+        transform: scale(0.98);
       }
 
       .enhanced-image.loaded {
         opacity: 1;
+        transform: scale(1);
       }
 
       .image-placeholder {
@@ -340,28 +449,42 @@ export class MediaExtractor {
         top: 0;
         left: 0;
         width: 100%;
-        background-color: rgba(240, 240, 240, 0.5);
+        background: linear-gradient(110deg, #f5f5f5 30%, #eeeeee 50%, #f5f5f5 70%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 8px;
       }
 
       .dark .image-placeholder {
-        background-color: rgba(68, 68, 68, 0.5);
+        background: linear-gradient(110deg, #2a2a2a 30%, #333333 50%, #2a2a2a 70%);
+        background-size: 200% 100%;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
       }
 
       .image-loading-spinner {
-        width: 24px;
-        height: 24px;
-        border: 2px solid rgba(0, 0, 0, 0.1);
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(0, 0, 0, 0.05);
         border-radius: 50%;
-        border-top-color: #3498db;
-        animation: spin 1s ease-in-out infinite;
+        border-top-color: #3b82f6;
+        animation: spin 0.8s ease-in-out infinite;
+        opacity: 0.7;
       }
 
       .dark .image-loading-spinner {
-        border-color: rgba(255, 255, 255, 0.1);
-        border-top-color: #3498db;
+        border-color: rgba(255, 255, 255, 0.05);
+        border-top-color: #60a5fa;
       }
 
       @keyframes spin {
@@ -378,11 +501,34 @@ export class MediaExtractor {
   private processLazyLoadImages(container: HTMLElement): void {
     // 查找所有具有懒加载属性的元素
     const lazyAttributes = [
+      // 基础懒加载属性
       'data-src', 'data-srcset', 'data-original', 'data-lazy-src',
       'data-lazy', 'data-lazy-src', 'data-src-lazy',
       'data-original-src', 'data-load-src', 'data-img-src',
       'data-origin', 'data-lazyload', 'data-srcset-lazy',
-      'data-lazy-srcset', 'data-lazy-original'
+      'data-lazy-srcset', 'data-lazy-original',
+
+      // 扩展懒加载属性
+      'data-echo', 'data-lazy-img', 'data-url', 'data-original-image',
+      'data-src-retina', 'data-lazy-original', 'data-lazy-load',
+      'data-src-mobile', 'data-src-desktop', 'data-src-tablet',
+      'data-thumb', 'data-bg-src', 'data-full-src', 'data-image-src',
+      'data-link', 'data-image', 'data-original-file', 'data-large-file',
+      'data-medium-file', 'data-source-url', 'data-high-res-src',
+      'data-low-res-src', 'data-normal-src', 'data-full-image',
+      'data-zoom-image', 'data-large-image', 'data-main-image',
+      'data-super-size-src', 'data-super-size', 'data-hd-src',
+      'data-retina-src', 'data-raw-src', 'data-actualsrc',
+      'data-original-image-src', 'data-original-image-url',
+      'data-fullsize-src', 'data-fullsize-url', 'data-big',
+      'data-big-src', 'data-big-url', 'data-src-large',
+      'data-full', 'data-full-url', 'data-hires',
+      'data-hires-src', 'data-hires-url', 'data-2x',
+      'data-2x-src', 'data-2x-url', 'data-desktop',
+      'data-desktop-src', 'data-desktop-url',
+
+      // 背景图片属性
+      'data-background', 'data-bg', 'data-background-image', 'data-background-src'
     ];
 
     // 构建选择器
