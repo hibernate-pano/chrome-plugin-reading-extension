@@ -614,22 +614,52 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
       });
     }
 
-    // 确保代码块内容不会溢出
-    const codeBlocks = container.querySelectorAll('.code-block code');
-    codeBlocks.forEach(code => {
-      const codeElement = code as HTMLElement;
-      codeElement.style.whiteSpace = 'pre-wrap';
-      codeElement.style.wordBreak = 'break-word';
-      codeElement.style.overflowWrap = 'break-word';
-      codeElement.style.maxWidth = '100%';
-      codeElement.style.display = 'block';
-    });
-
     // 设置代码块容器最大宽度
     const codeBlockContainers = container.querySelectorAll('.code-block');
     codeBlockContainers.forEach(block => {
       (block as HTMLElement).style.maxWidth = '100%';
-      (block as HTMLElement).style.overflowX = 'auto';
+    });
+
+    // 处理代码块内容的溢出方式
+    const codeContents = container.querySelectorAll('.code-content');
+    codeContents.forEach(content => {
+      // 默认使用水平滚动模式
+      (content as HTMLElement).style.overflowX = 'auto';
+      (content as HTMLElement).style.whiteSpace = 'pre';
+
+      // 添加切换按钮
+      const toolbar = (content as HTMLElement).closest('.code-block')?.querySelector('.code-toolbar');
+      if (toolbar) {
+        const wrapButton = document.createElement('button');
+        wrapButton.className = 'code-wrap-button';
+        wrapButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>';
+        wrapButton.title = '切换换行模式';
+
+        wrapButton.addEventListener('click', () => {
+          const codeContent = (content as HTMLElement);
+          const isWrapped = codeContent.style.whiteSpace === 'pre-wrap';
+
+          if (isWrapped) {
+            // 切换到滚动模式
+            codeContent.style.whiteSpace = 'pre';
+            codeContent.style.wordBreak = 'normal';
+            codeContent.style.overflowWrap = 'normal';
+            wrapButton.title = '切换换行模式';
+            wrapButton.classList.remove('active');
+          } else {
+            // 切换到换行模式
+            codeContent.style.whiteSpace = 'pre-wrap';
+            codeContent.style.wordBreak = 'break-word';
+            codeContent.style.overflowWrap = 'break-word';
+            wrapButton.title = '切换滚动模式';
+            wrapButton.classList.add('active');
+          }
+        });
+
+        // 将按钮添加到工具栏中
+        const rightGroup = toolbar.querySelector('.code-right-group') || toolbar;
+        rightGroup.insertBefore(wrapButton, rightGroup.firstChild);
+      }
     });
 
     // 添加代码块交互功能
