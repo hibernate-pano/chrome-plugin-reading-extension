@@ -585,11 +585,14 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     });
 
     // 清除可能存在的其他代码相关元素
-    const codeHeaders = container.querySelectorAll('.code-header');
+    const codeHeaders = container.querySelectorAll('.code-header, .code-top-bar');
     codeHeaders.forEach(header => header.remove());
 
     const copyButtons = container.querySelectorAll('.code-copy-button');
     copyButtons.forEach(button => button.remove());
+
+    const contentWrappers = container.querySelectorAll('.code-content-wrapper');
+    contentWrappers.forEach(wrapper => wrapper.remove());
 
     // 使用代码提取器增强所有代码块
     console.log('开始增强代码块');
@@ -604,7 +607,7 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     }
 
     // 确保代码块内容不会溢出
-    const codeBlocks = container.querySelectorAll('.enhanced-code-container code');
+    const codeBlocks = container.querySelectorAll('.code-content-wrapper code');
     codeBlocks.forEach(code => {
       const codeElement = code as HTMLElement;
       codeElement.style.whiteSpace = 'pre-wrap';

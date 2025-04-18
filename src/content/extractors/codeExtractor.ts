@@ -231,28 +231,33 @@ export class CodeExtractor {
   }
 
   /**
-   * 创建增强的代码块
+   * 创建增强的代码块 - 单一卡片设计
    */
   public createEnhancedCodeBlock(codeInfo: CodeBlockInfo): HTMLElement {
+    // 创建单一卡片容器
     const container = document.createElement('div');
     container.className = 'enhanced-code-container';
 
-    // 添加代码块标题栏
-    const header = document.createElement('div');
-    header.className = 'code-header';
+    // 创建内容区域
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'code-content-wrapper';
+
+    // 添加语言标签和复制按钮区域
+    const topBar = document.createElement('div');
+    topBar.className = 'code-top-bar';
 
     // 添加语言标签
     const languageLabel = document.createElement('span');
     languageLabel.className = 'code-language';
     languageLabel.textContent = this.getDisplayLanguageName(codeInfo.language);
-    header.appendChild(languageLabel);
+    topBar.appendChild(languageLabel);
 
     // 添加标题（如果有）
     if (codeInfo.caption) {
       const caption = document.createElement('span');
       caption.className = 'code-caption';
       caption.textContent = codeInfo.caption;
-      header.appendChild(caption);
+      topBar.appendChild(caption);
     }
 
     // 添加复制按钮
@@ -261,9 +266,9 @@ export class CodeExtractor {
     copyButton.title = '复制代码';
     copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>复制</span>';
     copyButton.setAttribute('data-clipboard-text', codeInfo.code);
-    header.appendChild(copyButton);
+    topBar.appendChild(copyButton);
 
-    container.appendChild(header);
+    contentWrapper.appendChild(topBar);
 
     // 创建代码块
     const pre = document.createElement('pre');
@@ -283,7 +288,8 @@ export class CodeExtractor {
     code.textContent = processedCode;
 
     pre.appendChild(code);
-    container.appendChild(pre);
+    contentWrapper.appendChild(pre);
+    container.appendChild(contentWrapper);
 
     // 使用 highlight.js 进行代码高亮
     try {
