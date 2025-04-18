@@ -8,7 +8,7 @@
   font-size: var(--code-font-size, 14px);
   line-height: 1.5;
   background-color: var(--code-bg);
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -16,6 +16,7 @@
   border: 1px solid var(--code-border);
   /* 确保主题变量生效 */
   color: var(--code-text-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* 代码包装器 */
@@ -40,6 +41,7 @@
   scrollbar-color: var(--code-scrollbar-thumb) var(--code-scrollbar-track);
   flex: 1;
   line-height: 1.45;
+  padding-left: 16px;
 }
 
 /* 行号区域 */
@@ -47,10 +49,10 @@
   display: flex;
   flex-direction: column;
   padding: 12px 0;
-  background-color: var(--code-line-number-bg);
-  border-right: 1px solid var(--code-line-number-border);
+  background-color: var(--code-bg);
+  border-right: 1px solid var(--code-border);
   user-select: none;
-  min-width: 50px;
+  min-width: 55px;
   text-align: right;
 }
 
@@ -60,9 +62,10 @@
   color: var(--code-line-number-color);
   font-size: 12px;
   text-align: right;
-  opacity: 0.4;
+  opacity: 0.6;
   transition: opacity 0.2s ease, color 0.2s ease;
   line-height: 20px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 工具栏 */
@@ -72,9 +75,11 @@
   align-items: center;
   padding: 8px 16px;
   opacity: 1;
-  background-color: var(--code-toolbar-bg);
-  border-bottom: 1px solid var(--code-toolbar-border);
+  background-color: var(--code-bg);
+  border-bottom: 1px solid var(--code-border);
   font-size: var(--code-font-size, 14px);
+  height: 40px;
+  box-sizing: border-box;
 }
 
 /* 语言标签 */
@@ -100,11 +105,11 @@
 /* 复制按钮 */
 .code-copy-button {
   background-color: transparent;
-  border: none;
+  border: 1px solid var(--code-button-border, var(--code-border));
   cursor: pointer;
   color: var(--code-button-color);
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -199,7 +204,7 @@
 /* 代码元素 */
 .code-block code {
   font-family: inherit;
-  padding: 0 16px;
+  padding: 0;
   background: none;
   font-size: inherit;
   letter-spacing: 0;
@@ -208,7 +213,8 @@
 /* 悬停状态 */
 .code-block:hover .line-number,
 .code-block.hover .line-number {
-  opacity: 0.8;
+  opacity: 0.9;
+  color: var(--code-line-number-hover-color);
 }
 
 /* 语言特定样式 */
@@ -261,24 +267,31 @@
   --code-text-color: #657b83;
 }
 
-/* 确保深色主题下的代码块有正确的文本颜色 */
-.dark-theme .code-block {
+/* 确保深色主题下的代码块有正确的颜色 */
+.dark-theme .code-block,
+.dark-theme .code-toolbar,
+.dark-theme .line-numbers {
+  --code-bg: #0d1117;
   --code-text-color: #e0e0e0;
+  --code-border: #30363d;
 }
 
-/* 确保浅色主题下的代码块有正确的文本颜色 */
-.light-theme .code-block {
+/* 确保浅色主题下的代码块有正确的颜色 */
+.light-theme .code-block,
+.light-theme .code-toolbar,
+.light-theme .line-numbers {
+  --code-bg: #f6f8fa;
   --code-text-color: #24292e;
+  --code-border: #d0d7de;
 }
 
 /* 暗色主题变量 */
 .dark-theme {
   --code-border: #30363d;
-  --code-toolbar-border: #21262d;
-  --code-toolbar-bg: #161b22;
   --code-language-color: #8b949e;
   --code-caption-color: #8b949e;
   --code-button-color: #8b949e;
+  --code-button-border: #30363d;
   --code-button-hover-color: #c9d1d9;
   --code-button-hover-bg: #30363d;
   --code-button-active-color: #58a6ff;
@@ -290,8 +303,6 @@
   --code-scrollbar-track: #0d1117;
   --code-line-number-color: #6e7681;
   --code-line-number-hover-color: #c9d1d9;
-  --code-line-number-border: #21262d;
-  --code-line-number-bg: #0d1117;
   --code-toast-bg: #2d333b;
   --code-toast-color: #adbac7;
   --code-toast-border: #444c56;
@@ -317,11 +328,10 @@
 /* 亮色主题变量 */
 .light-theme {
   --code-border: #d0d7de;
-  --code-toolbar-border: #d8dee4;
-  --code-toolbar-bg: #f6f8fa;
   --code-language-color: #57606a;
   --code-caption-color: #57606a;
   --code-button-color: #57606a;
+  --code-button-border: #d0d7de;
   --code-button-hover-color: #24292f;
   --code-button-hover-bg: #eaeef2;
   --code-button-active-color: #0969da;
@@ -333,8 +343,6 @@
   --code-scrollbar-track: #f6f8fa;
   --code-line-number-color: #8c959f;
   --code-line-number-hover-color: #24292f;
-  --code-line-number-border: #d8dee4;
-  --code-line-number-bg: #f6f8fa;
   --code-toast-bg: #ffffff;
   --code-toast-color: #24292f;
   --code-toast-border: #d0d7de;

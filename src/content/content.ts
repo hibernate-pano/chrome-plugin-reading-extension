@@ -616,9 +616,15 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
 
     // 设置代码字体大小
     if (settings.codeFontSize) {
-      const codeElements = container.querySelectorAll('pre, code');
+      const codeElements = container.querySelectorAll('pre, code, .code-toolbar, .line-number');
       codeElements.forEach(element => {
         (element as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
+      });
+
+      // 特别调整行号字体大小
+      const lineNumbers = container.querySelectorAll('.line-number');
+      lineNumbers.forEach(element => {
+        (element as HTMLElement).style.fontSize = `${Math.max(settings.codeFontSize - 2, 10)}px`;
       });
     }
 
@@ -640,6 +646,13 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
         code.classList.remove('dark-theme', 'light-theme');
         code.classList.add(themeClass);
       });
+
+      // 确保行号区域也有正确的主题类
+      const lineNumbers = block.querySelector('.line-numbers');
+      if (lineNumbers) {
+        lineNumbers.classList.remove('dark-theme', 'light-theme');
+        lineNumbers.classList.add(themeClass);
+      }
     });
 
     // 处理代码块内容的溢出方式
@@ -655,6 +668,7 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
         // 确保工具栏也有正确的主题类
         toolbar.classList.remove('dark-theme', 'light-theme');
         toolbar.classList.add(themeClass);
+        toolbar.setAttribute('data-code-theme', settings.codeTheme || 'github');
 
         const wrapButton = document.createElement('button');
         wrapButton.className = 'code-wrap-button';
@@ -958,6 +972,18 @@ function applyStyles(settings: ReadingModeSettings) {
       /* 确保工具栏字体大小与代码内容一致 */
       .code-toolbar {
         font-size: var(--code-font-size, ${settings.codeFontSize}px);
+      }
+
+      /* 确保代码块主题颜色统一 */
+      .code-block, .code-toolbar, .line-numbers {
+        background-color: var(--code-bg);
+        color: var(--code-text-color);
+        border-color: var(--code-border);
+      }
+
+      /* 行号字体大小特别调整 */
+      .line-number {
+        font-size: ${Math.max(settings.codeFontSize - 2, 10)}px;
       }
     `;
   }

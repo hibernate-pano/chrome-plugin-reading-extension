@@ -324,11 +324,8 @@ export class CodeExtractor {
     const parentContainer = document.getElementById('reading-mode-container');
     if (parentContainer) {
       // 继承主题类
-      if (parentContainer.classList.contains('dark-theme')) {
-        container.classList.add('dark-theme');
-      } else if (parentContainer.classList.contains('light-theme')) {
-        container.classList.add('light-theme');
-      }
+      const themeClass = parentContainer.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
+      container.classList.add(themeClass);
 
       // 继承代码主题属性
       const codeTheme = parentContainer.getAttribute('data-code-theme');
