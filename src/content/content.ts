@@ -554,21 +554,45 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
 
   // 使用代码提取器增强所有代码块
   try {
-    // 先清除所有已存在的增强代码块容器
+    console.log('开始处理代码块');
+
+    // 先彻底清除所有已存在的增强代码块容器
     const existingContainers = container.querySelectorAll('.enhanced-code-container');
-    existingContainers.forEach(container => {
-      // 找到原始的pre元素，如果有的话
-      const originalPre = document.createElement('pre');
-      const code = (container as HTMLElement).querySelector('code');
-      if (code) {
-        originalPre.appendChild(code.cloneNode(true));
-        container.replaceWith(originalPre);
-      } else {
-        container.remove();
+    console.log(`找到 ${existingContainers.length} 个现有代码块容器`);
+
+    existingContainers.forEach((codeContainer, index) => {
+      try {
+        // 找到原始的pre元素，如果有的话
+        const originalPre = document.createElement('pre');
+        const code = (codeContainer as HTMLElement).querySelector('code');
+        if (code) {
+          originalPre.appendChild(code.cloneNode(true));
+          codeContainer.replaceWith(originalPre);
+          console.log(`成功替换代码块容器 ${index + 1}`);
+        } else {
+          codeContainer.remove();
+          console.log(`移除没有代码元素的容器 ${index + 1}`);
+        }
+      } catch (containerError) {
+        console.error(`处理代码块容器 ${index + 1} 时出错:`, containerError);
+        // 尝试直接移除容器
+        try {
+          codeContainer.remove();
+        } catch (removeError) {
+          console.error('移除容器失败:', removeError);
+        }
       }
     });
 
+    // 清除可能存在的其他代码相关元素
+    const codeHeaders = container.querySelectorAll('.code-header');
+    codeHeaders.forEach(header => header.remove());
+
+    const copyButtons = container.querySelectorAll('.code-copy-button');
+    copyButtons.forEach(button => button.remove());
+
     // 使用代码提取器增强所有代码块
+    console.log('开始增强代码块');
     codeExtractor.enhanceAllCodeBlocks(container);
 
     // 设置代码字体大小
@@ -591,8 +615,10 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     });
 
     // 添加代码块交互功能
+    console.log('添加代码块交互功能');
     codeExtractor.addCodeBlockInteractions(container);
 
+    console.log('代码块处理完成');
   } catch (error) {
     console.error('处理代码块时发生错误:', error);
   }
@@ -1552,6 +1578,12 @@ async function applyAutoSpacing() {
 }
 
 async function enableReadingMode() {
+  // 检查是否已经处于阅读模式，避免重复进入
+  if (isReadingMode) {
+    console.log('已经处于阅读模式，无需重复进入');
+    return;
+  }
+
   if (!document.body) {
     console.error('文档体不存在，无法启用阅读模式');
     return;
@@ -1658,21 +1690,43 @@ async function enableReadingMode() {
     }
 
     try {
-      // 先清除所有已存在的增强代码块容器
+      // 先彻底清除所有已存在的增强代码块容器
       const existingContainers = contentDiv.querySelectorAll('.enhanced-code-container');
-      existingContainers.forEach(container => {
-        // 找到原始的pre元素，如果有的话
-        const originalPre = document.createElement('pre');
-        const code = (container as HTMLElement).querySelector('code');
-        if (code) {
-          originalPre.appendChild(code.cloneNode(true));
-          container.replaceWith(originalPre);
-        } else {
-          container.remove();
+      console.log(`内容处理中找到 ${existingContainers.length} 个现有代码块容器`);
+
+      existingContainers.forEach((codeContainer, index) => {
+        try {
+          // 找到原始的pre元素，如果有的话
+          const originalPre = document.createElement('pre');
+          const code = (codeContainer as HTMLElement).querySelector('code');
+          if (code) {
+            originalPre.appendChild(code.cloneNode(true));
+            codeContainer.replaceWith(originalPre);
+            console.log(`成功替换内容中的代码块容器 ${index + 1}`);
+          } else {
+            codeContainer.remove();
+            console.log(`移除内容中没有代码元素的容器 ${index + 1}`);
+          }
+        } catch (containerError) {
+          console.error(`处理内容中的代码块容器 ${index + 1} 时出错:`, containerError);
+          // 尝试直接移除容器
+          try {
+            codeContainer.remove();
+          } catch (removeError) {
+            console.error('移除容器失败:', removeError);
+          }
         }
       });
 
+      // 清除可能存在的其他代码相关元素
+      const codeHeaders = contentDiv.querySelectorAll('.code-header');
+      codeHeaders.forEach(header => header.remove());
+
+      const copyButtons = contentDiv.querySelectorAll('.code-copy-button');
+      copyButtons.forEach(button => button.remove());
+
       // 增强代码块
+      console.log('开始增强内容中的代码块');
       codeExtractor.enhanceAllCodeBlocks(contentDiv);
       codeExtractor.enhanceInlineCode(contentDiv);
 
@@ -1686,6 +1740,8 @@ async function enableReadingMode() {
         codeElement.style.maxWidth = '100%';
         codeElement.style.display = 'block';
       });
+
+      console.log('内容中的代码块处理完成');
     } catch (error) {
       console.warn('增强代码块时发生错误:', error);
     }
@@ -1802,7 +1858,9 @@ function processLists(_container: HTMLElement) { }
 function disableReadingMode() {
   performanceMonitor.start('disableReadingMode');
 
-  if (!originalContent) {
+  // 检查是否处于阅读模式
+  if (!isReadingMode || !originalContent) {
+    console.log('当前不在阅读模式中或原始内容不存在');
     performanceMonitor.end('disableReadingMode');
     return;
   }
@@ -1847,30 +1905,31 @@ function disableReadingMode() {
     document.documentElement.innerHTML = originalContent;
 
     // 重新添加初始样式，以便下次进入阅读模式时能正确加载
-    const codeblockStyles = document.createElement('style');
-    codeblockStyles.id = 'reading-mode-codeblock-styles';
-    document.head.appendChild(codeblockStyles);
+    try {
+      // 添加必要的样式元素，但不添加内容
+      // 这样可以避免样式冲突，同时确保元素存在
+      const codeblockStyles = document.createElement('style');
+      codeblockStyles.id = 'reading-mode-codeblock-styles';
+      document.head.appendChild(codeblockStyles);
 
-    const listStyles = document.createElement('style');
-    listStyles.id = 'reading-mode-list-styles';
-    document.head.appendChild(listStyles);
+      const listStyles = document.createElement('style');
+      listStyles.id = 'reading-mode-list-styles';
+      document.head.appendChild(listStyles);
 
-    // 添加 highlight.js 样式
-    const hljsStyles = document.createElement('style');
-    hljsStyles.id = 'reading-mode-hljs-styles';
-    hljsStyles.textContent = `
-      /* 代码高亮主题 - 基于 One Dark Pro */
-      /* ... 样式内容 ... */
-    `;
-    document.head.appendChild(hljsStyles);
+      // 添加 highlight.js 样式元素，但不添加内容
+      const hljsStyles = document.createElement('style');
+      hljsStyles.id = 'reading-mode-hljs-styles';
+      document.head.appendChild(hljsStyles);
 
-    // 添加自定义代码高亮样式
-    const customCodeStyles = document.createElement('style');
-    customCodeStyles.id = 'reading-mode-custom-code-styles';
-    customCodeStyles.textContent = `
-      /* ... 样式内容 ... */
-    `;
-    document.head.appendChild(customCodeStyles);
+      // 添加自定义代码高亮样式元素，但不添加内容
+      const customCodeStyles = document.createElement('style');
+      customCodeStyles.id = 'reading-mode-custom-code-styles';
+      document.head.appendChild(customCodeStyles);
+
+      console.log('样式元素重置完成');
+    } catch (styleError) {
+      console.error('重置样式元素时发生错误:', styleError);
+    }
 
     // 销毁文本选择工具栏
     if (textSelectionToolbar) {
@@ -1878,8 +1937,20 @@ function disableReadingMode() {
       textSelectionToolbar = null;
     }
 
+    // 完全重置状态
     isReadingMode = false;
     originalContent = null;
+    textSelectionToolbar = null;
+
+    // 清除可能的全局事件监听器
+    window.removeEventListener('resize', handleResize);
+    window.removeEventListener('click', handleDocumentClick);
+
+    // 清除可能的定时器
+    const timers = window.setTimeout(() => { }, 0);
+    for (let i = 0; i < timers; i++) {
+      window.clearTimeout(i);
+    }
 
     const perfRecord = performanceMonitor.end('disableReadingMode');
     console.info(`阅读模式禁用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
@@ -1890,17 +1961,19 @@ function disableReadingMode() {
       position: 'top',
       duration: 2000
     });
+
+    console.log('阅读模式完全禁用，状态已重置');
   } catch (error) {
     console.error('禁用阅读模式时发生错误:', error);
     throw error;
   }
 }
 
-// 滚动处理函数（空实现，仅用于移除事件监听器）
+// 事件处理函数（空实现，仅用于移除事件监听器）
 function handleScroll() { }
-
-// 键盘事件处理函数（空实现，仅用于移除事件监听器）
 function handleKeyDown() { }
+function handleResize() { }
+function handleDocumentClick() { }
 
 // 监听来自 popup 的消息
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
