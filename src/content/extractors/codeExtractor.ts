@@ -338,6 +338,18 @@ export class CodeExtractor {
     const toolbar = document.createElement('div');
     toolbar.className = 'code-toolbar';
 
+    // 继承代码主题属性
+    if (parentContainer) {
+      const codeTheme = parentContainer.getAttribute('data-code-theme');
+      if (codeTheme) {
+        toolbar.setAttribute('data-code-theme', codeTheme);
+      }
+
+      // 继承主题类
+      const themeClass = parentContainer.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
+      toolbar.classList.add(themeClass);
+    }
+
     // 添加语言标签
     const languageLabel = document.createElement('span');
     languageLabel.className = 'code-language';
@@ -373,6 +385,18 @@ export class CodeExtractor {
     // 创建左侧行号区域
     const lineNumbers = document.createElement('div');
     lineNumbers.className = 'line-numbers';
+
+    // 继承代码主题属性
+    if (parentContainer) {
+      const codeTheme = parentContainer.getAttribute('data-code-theme');
+      if (codeTheme) {
+        lineNumbers.setAttribute('data-code-theme', codeTheme);
+      }
+
+      // 继承主题类
+      const themeClass = parentContainer.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
+      lineNumbers.classList.add(themeClass);
+    }
 
     // 添加行号
     const lines = processedCode.split('\n');

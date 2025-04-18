@@ -49,7 +49,7 @@
   display: flex;
   flex-direction: column;
   padding: 12px 0;
-  background-color: var(--code-bg);
+  background-color: inherit;
   border-right: 1px solid var(--code-border);
   user-select: none;
   min-width: 55px;
@@ -75,7 +75,7 @@
   align-items: center;
   padding: 8px 16px;
   opacity: 1;
-  background-color: var(--code-bg);
+  background-color: inherit;
   border-bottom: 1px solid var(--code-border);
   font-size: var(--code-font-size, 14px);
   height: 40px;
@@ -242,47 +242,56 @@
 }
 
 /* 代码主题特定样式 */
-.code-block[data-code-theme="github"] {
-  --code-bg: #f6f8fa;
-  --code-text-color: #24292e;
-}
-
-.code-block[data-code-theme="one-dark"] {
-  --code-bg: #282c34;
-  --code-text-color: #abb2bf;
-}
-
-.code-block[data-code-theme="dracula"] {
-  --code-bg: #282a36;
-  --code-text-color: #f8f8f2;
-}
-
-.code-block[data-code-theme="solarized-dark"] {
-  --code-bg: #002b36;
-  --code-text-color: #839496;
-}
-
-.code-block[data-code-theme="solarized-light"] {
-  --code-bg: #fdf6e3;
-  --code-text-color: #657b83;
-}
-
-/* 确保深色主题下的代码块有正确的颜色 */
-.dark-theme .code-block,
-.dark-theme .code-toolbar,
-.dark-theme .line-numbers {
-  --code-bg: #0d1117;
-  --code-text-color: #e0e0e0;
-  --code-border: #30363d;
-}
-
-/* 确保浅色主题下的代码块有正确的颜色 */
-.light-theme .code-block,
-.light-theme .code-toolbar,
-.light-theme .line-numbers {
+.code-block[data-code-theme="github"],
+.code-toolbar[data-code-theme="github"],
+.line-numbers[data-code-theme="github"] {
   --code-bg: #f6f8fa;
   --code-text-color: #24292e;
   --code-border: #d0d7de;
+}
+
+.code-block[data-code-theme="one-dark"],
+.code-toolbar[data-code-theme="one-dark"],
+.line-numbers[data-code-theme="one-dark"] {
+  --code-bg: #282c34;
+  --code-text-color: #abb2bf;
+  --code-border: #3e4451;
+}
+
+.code-block[data-code-theme="dracula"],
+.code-toolbar[data-code-theme="dracula"],
+.line-numbers[data-code-theme="dracula"] {
+  --code-bg: #282a36;
+  --code-text-color: #f8f8f2;
+  --code-border: #44475a;
+}
+
+.code-block[data-code-theme="solarized-dark"],
+.code-toolbar[data-code-theme="solarized-dark"],
+.line-numbers[data-code-theme="solarized-dark"] {
+  --code-bg: #002b36;
+  --code-text-color: #839496;
+  --code-border: #073642;
+}
+
+.code-block[data-code-theme="solarized-light"],
+.code-toolbar[data-code-theme="solarized-light"],
+.line-numbers[data-code-theme="solarized-light"] {
+  --code-bg: #fdf6e3;
+  --code-text-color: #657b83;
+  --code-border: #eee8d5;
+}
+
+/* 确保深色主题下的代码块有正确的颜色 */
+.dark-theme .code-toolbar,
+.dark-theme .line-numbers {
+  border-color: var(--code-border);
+}
+
+/* 确保浅色主题下的代码块有正确的颜色 */
+.light-theme .code-toolbar,
+.light-theme .line-numbers {
+  border-color: var(--code-border);
 }
 
 /* 暗色主题变量 */

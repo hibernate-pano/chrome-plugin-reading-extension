@@ -647,11 +647,19 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
         code.classList.add(themeClass);
       });
 
-      // 确保行号区域也有正确的主题类
+      // 确保工具栏和行号区域也有正确的主题类
+      const toolbar = block.querySelector('.code-toolbar');
+      if (toolbar) {
+        toolbar.classList.remove('dark-theme', 'light-theme');
+        toolbar.classList.add(themeClass);
+        toolbar.setAttribute('data-code-theme', settings.codeTheme || 'github');
+      }
+
       const lineNumbers = block.querySelector('.line-numbers');
       if (lineNumbers) {
         lineNumbers.classList.remove('dark-theme', 'light-theme');
         lineNumbers.classList.add(themeClass);
+        lineNumbers.setAttribute('data-code-theme', settings.codeTheme || 'github');
       }
     });
 
@@ -975,9 +983,7 @@ function applyStyles(settings: ReadingModeSettings) {
       }
 
       /* 确保代码块主题颜色统一 */
-      .code-block, .code-toolbar, .line-numbers {
-        background-color: var(--code-bg);
-        color: var(--code-text-color);
+      .code-toolbar, .line-numbers {
         border-color: var(--code-border);
       }
 
