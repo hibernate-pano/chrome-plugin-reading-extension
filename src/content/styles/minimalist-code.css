@@ -14,6 +14,8 @@
   flex-direction: column;
   transition: all 0.2s ease;
   border: 1px solid var(--code-border);
+  /* 确保主题变量生效 */
+  color: var(--code-text-color);
 }
 
 /* 代码包装器 */
@@ -231,6 +233,42 @@
 .code-block.lang-python .code-language,
 .code-block.lang-py .code-language {
   color: #3776ab;
+}
+
+/* 代码主题特定样式 */
+.code-block[data-code-theme="github"] {
+  --code-bg: #f6f8fa;
+  --code-text-color: #24292e;
+}
+
+.code-block[data-code-theme="one-dark"] {
+  --code-bg: #282c34;
+  --code-text-color: #abb2bf;
+}
+
+.code-block[data-code-theme="dracula"] {
+  --code-bg: #282a36;
+  --code-text-color: #f8f8f2;
+}
+
+.code-block[data-code-theme="solarized-dark"] {
+  --code-bg: #002b36;
+  --code-text-color: #839496;
+}
+
+.code-block[data-code-theme="solarized-light"] {
+  --code-bg: #fdf6e3;
+  --code-text-color: #657b83;
+}
+
+/* 确保深色主题下的代码块有正确的文本颜色 */
+.dark-theme .code-block {
+  --code-text-color: #e0e0e0;
+}
+
+/* 确保浅色主题下的代码块有正确的文本颜色 */
+.light-theme .code-block {
+  --code-text-color: #24292e;
 }
 
 /* 暗色主题变量 */

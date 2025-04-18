@@ -29,57 +29,61 @@ hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('markdown', markdown);
 
 // 自定义语言处理
-// 为 npm 创建一个简单的语法高亮器
-hljs.registerLanguage('npm', () => {
+// 为 npm 创建一个简单的语法高亮器 - 基于 JSON
+hljs.registerLanguage('npm', function () {
   return {
     name: 'NPM',
-    case_insensitive: true,
+    aliases: ['package.json'],
+    subLanguage: 'json',  // 使用 JSON 高亮器作为基础
     contains: [
-      hljs.HASH_COMMENT_MODE,
       {
-        className: 'attr',
-        begin: /"[^"]+"(?=\s*:)/,
-        relevance: 1.5
-      },
-      {
-        begin: /:/,
-        end: /,/,
-        contains: [
-          hljs.QUOTE_STRING_MODE,
-          hljs.C_NUMBER_MODE,
-          hljs.C_BLOCK_COMMENT_MODE
-        ]
+        className: 'comment',
+        begin: /\/\//,
+        end: /$/
       }
     ]
   };
 });
 
-// 为 Vue 创建一个简单的语法高亮器
-hljs.registerLanguage('vue', () => {
+// 为 Vue 创建一个简单的语法高亮器 - 组合 HTML, JS 和 CSS
+hljs.registerLanguage('vue', function () {
   return {
     name: 'Vue',
-    subLanguage: 'xml',
+    aliases: ['vue', 'vuejs'],
     contains: [
-      hljs.COMMENT('<!--', '-->', {
-        relevance: 10
-      }),
+      // HTML 部分
       {
-        begin: /^(\s*)(<script>)/,
-        end: /^(\s*)(<\/script>)/,
-        subLanguage: 'javascript',
-        excludeBegin: true,
-        excludeEnd: true
+        className: 'tag',
+        begin: /<template[\s>]/, end: /<\/template>/,
+        starts: {
+          subLanguage: 'xml',
+          end: /<\/template>/,
+        }
       },
+      // JavaScript 部分
       {
-        begin: /^(\s*)(<style(\sscoped)?>)/,
-        end: /^(\s*)(<\/style>)/,
-        subLanguage: 'css',
-        excludeBegin: true,
-        excludeEnd: true
+        className: 'tag',
+        begin: /<script[\s>]/, end: /<\/script>/,
+        starts: {
+          subLanguage: 'javascript',
+          end: /<\/script>/,
+        }
+      },
+      // CSS 部分
+      {
+        className: 'tag',
+        begin: /<style[\s>]/, end: /<\/style>/,
+        starts: {
+          subLanguage: 'css',
+          end: /<\/style>/,
+        }
       }
     ]
   };
 });
+
+// 确保语言模块已注册
+console.log('已注册语言模块:', Object.keys(hljs.listLanguages()));
 
 export interface CodeBlockInfo {
   code: string;
@@ -315,6 +319,23 @@ export class CodeExtractor {
     // 创建主容器
     const container = document.createElement('div');
     container.className = 'code-block';
+
+    // 从父容器继承主题类
+    const parentContainer = document.getElementById('reading-mode-container');
+    if (parentContainer) {
+      // 继承主题类
+      if (parentContainer.classList.contains('dark-theme')) {
+        container.classList.add('dark-theme');
+      } else if (parentContainer.classList.contains('light-theme')) {
+        container.classList.add('light-theme');
+      }
+
+      // 继承代码主题属性
+      const codeTheme = parentContainer.getAttribute('data-code-theme');
+      if (codeTheme) {
+        container.setAttribute('data-code-theme', codeTheme);
+      }
+    }
 
     // 创建工具栏
     const toolbar = document.createElement('div');

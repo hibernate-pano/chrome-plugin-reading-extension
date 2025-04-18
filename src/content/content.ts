@@ -602,6 +602,14 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     const codeToasts = container.querySelectorAll('.code-toast');
     codeToasts.forEach(toast => toast.remove());
 
+    // 设置代码块主题类
+    const themeClass = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
+    const codeTheme = settings.codeTheme || 'github';
+    container.classList.remove('dark-theme', 'light-theme');
+    container.classList.add(themeClass);
+    container.setAttribute('data-code-theme', codeTheme);
+    console.log(`应用代码块主题类: ${themeClass}, 代码主题: ${codeTheme}`);
+
     // 使用代码提取器增强所有代码块
     console.log('开始增强代码块');
     codeExtractor.enhanceAllCodeBlocks(container);
@@ -618,6 +626,20 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
     const codeBlockContainers = container.querySelectorAll('.code-block');
     codeBlockContainers.forEach(block => {
       (block as HTMLElement).style.maxWidth = '100%';
+
+      // 确保代码块容器也有正确的主题类
+      block.classList.remove('dark-theme', 'light-theme');
+      block.classList.add(themeClass);
+
+      // 传递代码主题属性
+      block.setAttribute('data-code-theme', settings.codeTheme || 'github');
+
+      // 确保代码块内的所有元素都有正确的主题类
+      const codeElements = block.querySelectorAll('code');
+      codeElements.forEach(code => {
+        code.classList.remove('dark-theme', 'light-theme');
+        code.classList.add(themeClass);
+      });
     });
 
     // 处理代码块内容的溢出方式
@@ -630,6 +652,10 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
       // 添加切换按钮
       const toolbar = (content as HTMLElement).closest('.code-block')?.querySelector('.code-toolbar');
       if (toolbar) {
+        // 确保工具栏也有正确的主题类
+        toolbar.classList.remove('dark-theme', 'light-theme');
+        toolbar.classList.add(themeClass);
+
         const wrapButton = document.createElement('button');
         wrapButton.className = 'code-wrap-button';
         wrapButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>';
@@ -2024,6 +2050,32 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
     // 处理代码主题或字体大小变化
     if (changes[StorageKeys.CODE_THEME] || changes[StorageKeys.CODE_FONT_SIZE]) {
       const container = document.getElementById('reading-mode-container');
+
+      // 如果是主题变化，先更新主题样式
+      if (changes[StorageKeys.CODE_THEME]) {
+        console.log('代码主题变化为:', settings.codeTheme);
+
+        // 更新主题样式
+        const styleElement = document.getElementById('reading-mode-style');
+        if (styleElement) {
+          // 重新生成主题样式
+          styleElement.textContent = `
+            ${generateCodeThemeStyles(settings.codeTheme, settings)}
+            ${styleElement.textContent.split('/* 基础样式 */')[1] || ''}
+          `;
+        }
+
+        // 更新容器的代码主题属性
+        container.setAttribute('data-code-theme', settings.codeTheme);
+
+        // 更新所有代码块的代码主题属性
+        const codeBlocks = container.querySelectorAll('.code-block');
+        codeBlocks.forEach(block => {
+          block.setAttribute('data-code-theme', settings.codeTheme);
+        });
+      }
+
+      // 重新处理代码块
       handleCodeBlocks(container, settings);
 
       // 如果是字体大小变化，更新工具栏字体大小
