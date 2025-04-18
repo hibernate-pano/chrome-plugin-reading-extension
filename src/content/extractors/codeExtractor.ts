@@ -3,8 +3,83 @@
  * 用于增强代码块的提取和显示
  */
 
-// 导入 highlight.js
+// 导入 highlight.js 及其语言模块
 import hljs from 'highlight.js';
+// 导入常用语言
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import python from 'highlight.js/lib/languages/python';
+import java from 'highlight.js/lib/languages/java';
+import css from 'highlight.js/lib/languages/css';
+import xml from 'highlight.js/lib/languages/xml';
+import json from 'highlight.js/lib/languages/json';
+import bash from 'highlight.js/lib/languages/bash';
+import markdown from 'highlight.js/lib/languages/markdown';
+
+// 注册语言
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('html', xml); // HTML 使用 XML 高亮器
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('markdown', markdown);
+
+// 自定义语言处理
+// 为 npm 创建一个简单的语法高亮器
+hljs.registerLanguage('npm', () => {
+  return {
+    name: 'NPM',
+    case_insensitive: true,
+    contains: [
+      hljs.HASH_COMMENT_MODE,
+      {
+        className: 'attr',
+        begin: /"[^"]+"(?=\s*:)/,
+        relevance: 1.5
+      },
+      {
+        begin: /:/,
+        end: /,/,
+        contains: [
+          hljs.QUOTE_STRING_MODE,
+          hljs.C_NUMBER_MODE,
+          hljs.C_BLOCK_COMMENT_MODE
+        ]
+      }
+    ]
+  };
+});
+
+// 为 Vue 创建一个简单的语法高亮器
+hljs.registerLanguage('vue', () => {
+  return {
+    name: 'Vue',
+    subLanguage: 'xml',
+    contains: [
+      hljs.COMMENT('<!--', '-->', {
+        relevance: 10
+      }),
+      {
+        begin: /^(\s*)(<script>)/,
+        end: /^(\s*)(<\/script>)/,
+        subLanguage: 'javascript',
+        excludeBegin: true,
+        excludeEnd: true
+      },
+      {
+        begin: /^(\s*)(<style(\sscoped)?>)/,
+        end: /^(\s*)(<\/style>)/,
+        subLanguage: 'css',
+        excludeBegin: true,
+        excludeEnd: true
+      }
+    ]
+  };
+});
 
 export interface CodeBlockInfo {
   code: string;
@@ -54,6 +129,9 @@ export class CodeExtractor {
     'plaintext': 'plaintext',
     'text': 'plaintext',
     'txt': 'plaintext',
+    // 添加新的语言映射
+    'npm': 'npm',
+    'vue': 'vue',
   };
 
   /**
@@ -431,7 +509,10 @@ export class CodeExtractor {
       'markdown': 'Markdown',
       'md': 'Markdown',
       'plaintext': 'Plain Text',
-      'txt': 'Plain Text'
+      'txt': 'Plain Text',
+      // 添加新的语言显示名称
+      'npm': 'NPM',
+      'vue': 'Vue'
     };
 
     return languageDisplayNames[language.toLowerCase()] || language;

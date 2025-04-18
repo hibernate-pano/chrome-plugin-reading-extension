@@ -928,6 +928,11 @@ function applyStyles(settings: ReadingModeSettings) {
       :root {
         --code-font-size: ${settings.codeFontSize}px;
       }
+
+      /* 确保工具栏字体大小与代码内容一致 */
+      .code-toolbar {
+        font-size: var(--code-font-size, ${settings.codeFontSize}px);
+      }
     `;
   }
 
@@ -2016,10 +2021,19 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
     const settings = await fetchSettings();
     applyStyles(settings);
 
-    // 处理代码主题变化
-    if (changes[StorageKeys.CODE_THEME]) {
+    // 处理代码主题或字体大小变化
+    if (changes[StorageKeys.CODE_THEME] || changes[StorageKeys.CODE_FONT_SIZE]) {
       const container = document.getElementById('reading-mode-container');
       handleCodeBlocks(container, settings);
+
+      // 如果是字体大小变化，更新工具栏字体大小
+      if (changes[StorageKeys.CODE_FONT_SIZE]) {
+        // 更新所有代码块工具栏的字体大小
+        const toolbars = container.querySelectorAll('.code-toolbar');
+        toolbars.forEach(toolbar => {
+          (toolbar as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
+        });
+      }
     }
 
     // 使用提取的函数处理多媒体内容显示状态的变化
