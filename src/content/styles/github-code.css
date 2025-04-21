@@ -60,12 +60,17 @@
   border-spacing: 0;
   table-layout: fixed;
   font-family: var(--reading-code-font-family);
+  margin: 0;
+  padding: 0;
+  background-color: var(--code-bg);
+  color: var(--code-text-color);
 }
 
 /* 代码行 */
 .code-row {
   background-color: var(--code-bg);
   line-height: 1.45;
+  border: none;
 }
 
 /* 行号区域 */
@@ -80,7 +85,7 @@
 
 /* 行号单元格 */
 .line-number {
-  padding: 0 16px 0 12px;
+  padding: 0 8px 0 4px;
   color: var(--code-line-number-color);
   font-size: 12px;
   text-align: right;
@@ -92,7 +97,7 @@
   border-right: 1px solid var(--code-border);
   background-color: var(--code-line-number-bg, var(--code-bg));
   user-select: none;
-  width: 3em;
+  width: 1.5em;
   position: sticky;
   left: 0;
   z-index: 1;
@@ -323,6 +328,7 @@
 .code-block[data-code-theme="github"],
 .code-header[data-code-theme="github"],
 .code-toolbar[data-code-theme="github"],
+.code-table[data-code-theme="github"],
 .line-numbers[data-code-theme="github"] {
   --code-bg: #f6f8fa;
   --code-text-color: #24292e;
@@ -339,6 +345,7 @@
 .code-block[data-code-theme="github-dark"],
 .code-header[data-code-theme="github-dark"],
 .code-toolbar[data-code-theme="github-dark"],
+.code-table[data-code-theme="github-dark"],
 .line-numbers[data-code-theme="github-dark"] {
   --code-bg: #0d1117;
   --code-text-color: #c9d1d9;
@@ -515,7 +522,7 @@
 /* 代码行单元格 */
 .code-line {
   line-height: 1.45;
-  padding: 0 16px 0 8px;
+  padding: 0 16px 0 12px;
   white-space: pre;
   overflow: visible;
   font-family: var(--reading-code-font-family);

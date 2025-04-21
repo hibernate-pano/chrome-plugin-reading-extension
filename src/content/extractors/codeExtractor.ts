@@ -487,6 +487,7 @@ export class CodeExtractor {
           // 创建表格布局
           const codeTable = document.createElement('table');
           codeTable.className = 'code-table';
+          codeTable.setAttribute('data-code-theme', codeInfo.language);
 
           highlightedLines.forEach((line: string, index: number) => {
             // 创建行
@@ -534,6 +535,7 @@ export class CodeExtractor {
             // 创建表格布局
             const codeTable = document.createElement('table');
             codeTable.className = 'code-table';
+            codeTable.setAttribute('data-code-theme', result.language || 'plaintext');
 
             highlightedLines.forEach((line: string, index: number) => {
               // 创建行
@@ -656,6 +658,7 @@ export class CodeExtractor {
     // 创建表格布局
     const codeTable = document.createElement('table');
     codeTable.className = 'code-table';
+    codeTable.setAttribute('data-code-theme', 'plaintext');
 
     // 分行处理
     const lines = codeText.split('\n');

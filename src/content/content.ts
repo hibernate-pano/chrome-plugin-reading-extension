@@ -2450,6 +2450,12 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
         const codeBlocks = container.querySelectorAll('.code-block');
         codeBlocks.forEach(block => {
           block.setAttribute('data-code-theme', settings.codeTheme);
+
+          // 更新表格元素的主题
+          const codeTables = block.querySelectorAll('.code-table');
+          codeTables.forEach(table => {
+            table.setAttribute('data-code-theme', settings.codeTheme);
+          });
         });
       }
 
