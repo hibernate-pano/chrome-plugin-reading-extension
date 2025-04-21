@@ -398,6 +398,8 @@ import {
   listExtractor
 } from './extractors';
 
+// 导入基础变量系统
+import './styles/variables.css';
 // 导入提取器样式
 import './extractors/extractors.css';
 // 导入优雅的代码块样式

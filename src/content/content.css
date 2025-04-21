@@ -1,4 +1,4 @@
-/* 阅读模式的基础样式 */
+/* 阅读模式的基础样式 - 基于 Obsidian Clipper 设计理念 */
 #reading-mode-container {
   position: fixed;
   top: 0;
@@ -8,16 +8,16 @@
   z-index: 9999;
   overflow-y: auto;
   background-color: var(--reading-bg-color);
-  padding: 2rem;
-  font-family: var(--reading-font-family);
   color: var(--reading-text-color);
+  font-family: var(--reading-font-family);
   line-height: var(--reading-line-height);
   letter-spacing: var(--reading-letter-spacing);
-}
 
-#reading-mode-container::before {
-  @apply absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 rounded-t-xl;
-  content: "";
+  /* 更加灵活的内边距 */
+  padding: max(4rem, 4vh) max(2rem, 5vw);
+
+  /* 平滑过渡效果 */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* 标题系统优化 */
@@ -61,28 +61,32 @@
 }
 
 #reading-mode-container img {
-  @apply max-w-full h-auto mx-auto my-8 block rounded-lg shadow-card transition-transform duration-300;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5em auto;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 #reading-mode-container img:hover {
-  @apply scale-[1.02] -translate-y-1 shadow-float;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 /* 引用块优化 */
 #reading-mode-container blockquote {
-  @apply my-8 p-6 border-l-4 border-brand-500 bg-white/80 rounded-lg text-gray-700 italic shadow-sm relative;
-  font-size: 1.1em;
+  margin: 1.5em 0;
+  padding: 1em 1.5em;
+  border-left: 3px solid var(--reading-blockquote-border);
+  background-color: var(--reading-blockquote-bg);
+  border-radius: 4px;
+  color: var(--reading-blockquote-text);
+  font-style: italic;
+  font-size: 1em;
   line-height: 1.6;
-}
-
-#reading-mode-container blockquote::before {
-  @apply absolute top-[-0.5em] left-4 text-5xl text-brand-500 opacity-20 font-serif z-10;
-  content: """;
-}
-
-#reading-mode-container blockquote::after {
-  @apply absolute bottom-[-0.5em] right-4 text-5xl text-brand-500 opacity-20 font-serif z-10;
-  content: """;
+  position: relative;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* 列表优化 */
@@ -101,11 +105,11 @@
   list-style: none;
 }
 
-#reading-mode-container ul > li {
+#reading-mode-container ul>li {
   @apply pl-5;
 }
 
-#reading-mode-container ul > li::before {
+#reading-mode-container ul>li::before {
   @apply absolute left-0 top-[0.6em] w-2 h-2 rounded-full bg-brand-500 transform scale-75;
   content: "";
 }
@@ -117,12 +121,12 @@
   counter-reset: item;
 }
 
-#reading-mode-container ol > li {
+#reading-mode-container ol>li {
   @apply pl-2;
   counter-increment: item;
 }
 
-#reading-mode-container ol > li::before {
+#reading-mode-container ol>li::before {
   @apply absolute left-[-1.5em] top-0 text-brand-500 font-semibold text-sm;
   content: counter(item) ".";
 }
@@ -135,7 +139,7 @@
   @apply mt-2 mb-0 ml-4;
 }
 
-#reading-mode-container ul ul > li::before {
+#reading-mode-container ul ul>li::before {
   @apply bg-brand-400 scale-[0.6];
 }
 
@@ -143,26 +147,26 @@
   counter-reset: subitem;
 }
 
-#reading-mode-container ol ol > li {
+#reading-mode-container ol ol>li {
   counter-increment: subitem;
 }
 
-#reading-mode-container ol ol > li::before {
+#reading-mode-container ol ol>li::before {
   content: counter(subitem, lower-alpha) ".";
   @apply text-brand-400;
 }
 
 /* 列表项内容样式 */
-#reading-mode-container li > p {
+#reading-mode-container li>p {
   @apply my-1 !important;
   text-indent: 0 !important;
 }
 
-#reading-mode-container li > p:first-child {
+#reading-mode-container li>p:first-child {
   @apply mt-0 !important;
 }
 
-#reading-mode-container li > p:last-child {
+#reading-mode-container li>p:last-child {
   @apply mb-0 !important;
 }
 
@@ -172,11 +176,11 @@ body.dark-theme #reading-mode-container ol {
   @apply text-gray-300;
 }
 
-body.dark-theme #reading-mode-container ul > li::before {
+body.dark-theme #reading-mode-container ul>li::before {
   @apply bg-brand-400;
 }
 
-body.dark-theme #reading-mode-container ol > li::before {
+body.dark-theme #reading-mode-container ol>li::before {
   @apply text-brand-400;
 }
 
@@ -241,11 +245,11 @@ body.dark-theme #reading-mode-container ol > li::before {
   @apply pl-12 relative;
 }
 
-#reading-mode-container pre code.line-numbers > span {
+#reading-mode-container pre code.line-numbers>span {
   @apply relative;
 }
 
-#reading-mode-container pre code.line-numbers > span::before {
+#reading-mode-container pre code.line-numbers>span::before {
   @apply absolute -left-10 top-0 text-right w-8 text-gray-500 select-none;
   content: attr(data-line);
   font-size: 0.85em;
@@ -288,12 +292,9 @@ body.dark-theme #reading-mode-container p {
 }
 
 body.dark-theme #reading-mode-container blockquote {
-  @apply bg-gray-800/50 border-brand-400 text-gray-300;
-}
-
-body.dark-theme #reading-mode-container blockquote::before,
-body.dark-theme #reading-mode-container blockquote::after {
-  @apply text-brand-400;
+  background-color: var(--reading-blockquote-bg);
+  border-left-color: var(--reading-blockquote-border);
+  color: var(--reading-blockquote-text);
 }
 
 body.dark-theme #reading-mode-container ul li::before {
@@ -316,7 +317,7 @@ body.dark-theme #reading-mode-container pre code {
   @apply text-gray-300;
 }
 
-body.dark-theme #reading-mode-container pre code.line-numbers > span::before {
+body.dark-theme #reading-mode-container pre code.line-numbers>span::before {
   @apply text-gray-600;
 }
 
@@ -444,13 +445,26 @@ body.dark-theme #reading-mode-toc a.active {
 
 /* 快捷工具栏 */
 #reading-mode-toolbar {
-  @apply fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full shadow-card border border-gray-200/30 transition-all duration-300 z-50;
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--reading-content-bg-color);
+  border: 1px solid var(--reading-border-color);
+  border-radius: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   opacity: 0.7;
-  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 50;
 }
 
 #reading-mode-toolbar:hover {
-  @apply opacity-100 shadow-float;
+  opacity: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 #reading-mode-toolbar.hidden {
@@ -458,33 +472,39 @@ body.dark-theme #reading-mode-toc a.active {
 }
 
 #reading-mode-toolbar button {
-  @apply w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-brand-600 transition-colors;
+  background: transparent;
+  border: none;
+  color: var(--reading-muted-color);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#reading-mode-toolbar button:hover {
+  background-color: var(--reading-border-color);
+  color: var(--reading-text-color);
 }
 
 #reading-mode-toolbar button.active {
-  @apply bg-brand-50 text-brand-600;
+  background-color: var(--reading-accent-color);
+  color: white;
 }
 
-/* 深色主题下的工具栏样式 */
-body.dark-theme #reading-mode-toolbar {
-  @apply bg-gray-800/90 border-gray-700/50;
-}
-
-body.dark-theme #reading-mode-toolbar button {
-  @apply text-gray-400 hover:bg-gray-700/50 hover:text-brand-400;
-}
-
-body.dark-theme #reading-mode-toolbar button.active {
-  @apply bg-brand-900/30 text-brand-400;
-}
+/* 深色主题下的工具栏样式由变量控制 */
 
 .reading-mode-content {
   max-width: var(--reading-page-width);
   margin: 0 auto;
-  padding: 2rem;
+  padding: var(--reading-content-padding);
   background-color: var(--reading-content-bg-color);
   border-radius: 8px;
   box-shadow: var(--reading-content-shadow);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* 自定义滚动条样式 */
@@ -493,14 +513,21 @@ body.dark-theme #reading-mode-toolbar button.active {
 }
 
 #reading-mode-container::-webkit-scrollbar-track {
-  background-color: transparent;
+  background-color: var(--reading-scrollbar-track);
 }
 
 #reading-mode-container::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: var(--reading-scrollbar-thumb);
   border-radius: 4px;
+  transition: background-color 0.2s ease;
 }
 
 #reading-mode-container::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 0, 0, 0.3);
-} 
+  background-color: var(--reading-scrollbar-thumb-hover);
+}
+
+/* 文字选择样式 */
+#reading-mode-container ::selection {
+  background-color: var(--reading-selection-bg);
+  color: var(--reading-selection-text);
+}

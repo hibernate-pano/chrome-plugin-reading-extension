@@ -28,47 +28,52 @@ export function updateReadingModeStyles(settings: ReadingModeSettings, isReading
   // 设置字体
   root.style.setProperty('--reading-font-family', FONT_FAMILIES[settings.fontFamily]);
 
-  // 设置背景颜色
-  if (settings.theme === 'dark') {
-    // 深色主题特殊处理
-    root.style.setProperty('--reading-bg-color', '#121212');
-    root.style.setProperty('--reading-content-bg-color', '#1e1e1e');
-    root.style.setProperty('--reading-content-shadow', '0 2px 8px rgba(0, 0, 0, 0.5)');
-    root.style.setProperty('--reading-text-color', '#e0e0e0');
-    root.style.setProperty('--reading-heading-color', '#ffffff');
-    root.style.setProperty('--reading-link-color', '#90caf9');
-    root.style.setProperty('--reading-border-color', '#333333');
-    root.style.setProperty('--reading-code-bg-color', '#2d2d2d');
-    root.style.setProperty('--reading-blockquote-color', '#aaaaaa');
-    root.style.setProperty('--reading-blockquote-border', '#444444');
-    root.style.setProperty('--reading-table-border', '#444444');
-    root.style.setProperty('--reading-table-header-bg', '#333333');
-    root.style.setProperty('--reading-table-row-odd', '#262626');
-    root.style.setProperty('--reading-table-row-even', '#2a2a2a');
+  // 设置动态内容宽度和内边距
+  root.style.setProperty('--reading-content-padding', 'clamp(1rem, 5vw, 2rem)');
 
+  // 设置滚动条颜色
+  if (settings.theme === 'dark') {
     // 添加深色主题类
     document.body.classList.add('dark-theme');
     document.body.classList.remove('light-theme');
-  } else {
-    // 浅色主题
-    root.style.setProperty('--reading-bg-color', BACKGROUND_COLORS[settings.backgroundColor]);
-    root.style.setProperty('--reading-content-bg-color', '#ffffff');
-    root.style.setProperty('--reading-content-shadow', '0 1px 3px rgba(0, 0, 0, 0.1)');
-    root.style.setProperty('--reading-text-color', '#2c3e50');
-    root.style.setProperty('--reading-heading-color', '#1a1a1a');
-    root.style.setProperty('--reading-link-color', '#1976d2');
-    root.style.setProperty('--reading-border-color', '#e0e0e0');
-    root.style.setProperty('--reading-code-bg-color', '#f5f5f5');
-    root.style.setProperty('--reading-blockquote-color', '#666666');
-    root.style.setProperty('--reading-blockquote-border', '#dddddd');
-    root.style.setProperty('--reading-table-border', '#e0e0e0');
-    root.style.setProperty('--reading-table-header-bg', '#f5f5f5');
-    root.style.setProperty('--reading-table-row-odd', '#ffffff');
-    root.style.setProperty('--reading-table-row-even', '#f9f9f9');
 
+    // 设置深色主题下的颜色变量
+    root.style.setProperty('--reading-bg-color', 'var(--color-background)');
+    root.style.setProperty('--reading-content-bg-color', 'var(--color-background-alt)');
+    root.style.setProperty('--reading-text-color', 'var(--color-text)');
+    root.style.setProperty('--reading-muted-color', 'var(--color-text-muted)');
+    root.style.setProperty('--reading-border-color', 'var(--color-border)');
+    root.style.setProperty('--reading-accent-color', 'var(--color-accent)');
+
+    // 设置滚动条颜色
+    root.style.setProperty('--reading-scrollbar-thumb', 'rgba(255, 255, 255, 0.2)');
+    root.style.setProperty('--reading-scrollbar-thumb-hover', 'rgba(255, 255, 255, 0.3)');
+
+    // 设置引用块颜色
+    root.style.setProperty('--reading-blockquote-bg', 'rgba(255, 255, 255, 0.05)');
+    root.style.setProperty('--reading-blockquote-border', 'rgba(255, 255, 255, 0.1)');
+    root.style.setProperty('--reading-blockquote-text', 'rgba(255, 255, 255, 0.7)');
+  } else {
     // 添加浅色主题类
     document.body.classList.add('light-theme');
     document.body.classList.remove('dark-theme');
+
+    // 设置浅色主题下的颜色变量
+    root.style.setProperty('--reading-bg-color', BACKGROUND_COLORS[settings.backgroundColor]);
+    root.style.setProperty('--reading-content-bg-color', 'var(--color-white)');
+    root.style.setProperty('--reading-text-color', 'var(--color-text)');
+    root.style.setProperty('--reading-muted-color', 'var(--color-text-muted)');
+    root.style.setProperty('--reading-border-color', 'var(--color-border)');
+    root.style.setProperty('--reading-accent-color', 'var(--color-accent)');
+
+    // 设置滚动条颜色
+    root.style.setProperty('--reading-scrollbar-thumb', 'rgba(0, 0, 0, 0.2)');
+    root.style.setProperty('--reading-scrollbar-thumb-hover', 'rgba(0, 0, 0, 0.3)');
+
+    // 设置引用块颜色
+    root.style.setProperty('--reading-blockquote-bg', 'var(--color-gray-50)');
+    root.style.setProperty('--reading-blockquote-border', 'var(--color-gray-300)');
+    root.style.setProperty('--reading-blockquote-text', 'var(--color-gray-700)');
   }
 
   // 设置文本对齐方式

@@ -1,12 +1,15 @@
-/* GitHub 风格代码块样式 */
+/*
+ * GitHub 风格代码块样式 - 基于 Obsidian Clipper 设计理念
+ * 简洁、优雅、无过度装饰
+ */
 
 /* 代码块容器 */
 .code-block {
   position: relative;
   margin: 1.5em 0;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-  font-size: var(--code-font-size, 14px);
-  line-height: 1.5;
+  font-family: var(--reading-code-font-family);
+  font-size: var(--code-font-size);
+  line-height: var(--code-line-height);
   background-color: var(--code-bg);
   border-radius: 6px;
   overflow: hidden;
@@ -15,7 +18,7 @@
   transition: all 0.2s ease;
   border: 1px solid var(--code-border);
   color: var(--code-text-color);
-  box-shadow: var(--code-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--code-shadow);
 }
 
 /* 代码包装器 */
@@ -28,7 +31,7 @@
 /* 代码内容区域 */
 .code-content {
   margin: 0;
-  padding: 12px 0;
+  padding: 0.75em 1em;
   overflow-x: auto;
   background-color: var(--code-bg);
   color: var(--code-text-color);
@@ -39,20 +42,25 @@
   scrollbar-width: thin;
   scrollbar-color: var(--code-scrollbar-thumb) var(--code-scrollbar-track);
   flex: 1;
-  line-height: 1.45;
-  padding-left: 16px;
+  line-height: var(--code-line-height);
 }
 
 /* 行号区域 */
 .line-numbers {
-  display: flex;
-  flex-direction: column;
-  padding: 12px 0;
-  background-color: var(--code-line-number-bg, var(--code-bg));
+  padding: 0.75em 0;
+  color: var(--code-line-number-color);
+  opacity: 0.5;
   border-right: 1px solid var(--code-border);
   user-select: none;
-  min-width: 55px;
+  font-size: 0.85em;
   text-align: right;
+  min-width: 2.5em;
+  transition: opacity 0.2s ease;
+  background-color: var(--code-bg);
+}
+
+.code-block:hover .line-numbers {
+  opacity: 0.7;
 }
 
 /* 行号 */
@@ -67,27 +75,29 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 工具栏 */
+/* 代码块顶部工具栏 */
 .code-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
-  opacity: 1;
-  background-color: var(--code-toolbar-bg, var(--code-bg));
+  padding: 0.5em 0.75em;
+  background-color: var(--code-bg);
   border-bottom: 1px solid var(--code-border);
-  font-size: var(--code-font-size, 14px);
-  height: 40px;
-  box-sizing: border-box;
+  font-size: 0.85em;
+  color: var(--code-language-color);
+  transition: background-color 0.2s ease;
 }
 
 /* 语言标签 */
 .code-language {
-  font-size: inherit;
-  font-weight: 600;
-  color: var(--code-language-color);
-  display: flex;
-  align-items: center;
+  font-size: 0.85em;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+
+.code-toolbar:hover .code-language {
+  opacity: 1;
 }
 
 /* 代码标题 */
@@ -101,21 +111,25 @@
   text-overflow: ellipsis;
 }
 
-/* 复制按钮 */
+/* 代码块工具按钮 */
+.code-toolbar-buttons {
+  display: flex;
+  gap: 0.5em;
+}
+
 .code-copy-button {
-  background-color: transparent;
-  border: 1px solid var(--code-button-border, var(--code-border));
-  cursor: pointer;
-  color: var(--code-button-color);
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: inherit;
-  font-weight: 500;
-  gap: 0.4em;
+  padding: 0.25em 0.5em;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--code-button-color);
+  border: none;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: all 0.2s ease;
+  opacity: 0.7;
 }
 
 /* 换行模式切换按钮 */
@@ -345,54 +359,34 @@
 @media (max-width: 768px) {
   .code-block {
     margin: 1.5em 0;
-    border-radius: 6px;
-  }
-
-  .code-wrapper {
-    display: block;
-  }
-
-  .line-numbers {
-    display: none;
+    border-radius: 4px;
   }
 
   .code-content {
-    padding: 12px 8px;
     font-size: calc(var(--code-font-size) - 1px);
+    padding: 0.6em 0.8em;
   }
 
   .code-toolbar {
-    padding: 8px 12px;
-    font-size: calc(var(--code-font-size) - 1px);
+    padding: 0.5em 0.8em;
   }
 
   .code-language {
-    font-size: inherit;
-  }
-
-  .code-caption {
-    font-size: inherit;
-    max-width: 50%;
+    font-size: 0.7em;
   }
 
   .code-copy-button {
-    padding: 4px 6px;
-    font-size: inherit;
+    font-size: 0.75em;
   }
 
-  .code-wrap-button {
-    padding: 4px;
-    font-size: inherit;
-    margin-right: 6px;
+  .line-numbers {
+    font-size: 0.75em;
+    min-width: 2em;
   }
 
-  .code-toast {
-    font-size: 11px;
-    padding: 4px 8px;
-  }
-
-  .code-block code {
-    padding: 0 8px;
+  .enhanced-inline-code {
+    font-size: 0.8em;
+    padding: 0.1em 0.3em;
   }
 }
 
@@ -403,14 +397,15 @@
 
 /* 内联代码样式 */
 .enhanced-inline-code {
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-  font-size: 85%;
-  padding: 0.2em 0.4em;
+  font-family: var(--reading-code-font-family);
+  font-size: 0.85em;
+  padding: 0.15em 0.35em;
   border-radius: 3px;
-  background-color: var(--code-bg);
-  color: var(--code-text-color);
-  border: none;
+  background-color: var(--reading-code-bg);
+  color: var(--reading-code-text);
+  border: 1px solid var(--reading-code-border);
   white-space: nowrap;
+  letter-spacing: 0;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -455,7 +450,9 @@
 }
 
 @keyframes spin {
-  to { transform: translateY(-50%) rotate(360deg); }
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
 }
 
 /* 代码块错误状态 */
