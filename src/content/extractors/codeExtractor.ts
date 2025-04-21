@@ -104,7 +104,7 @@ async function loadHighlightJs() {
 }
 
 // 缓存 highlight.js 实例
-let hljsInstance = null;
+let hljsInstance: any = null;
 
 // 获取 highlight.js 实例
 async function getHighlightJs() {
@@ -437,19 +437,6 @@ export class CodeExtractor {
     // 预处理代码，处理特殊字符和空格
     const processedCode = this.preprocessCode(codeInfo.code);
 
-    // 创建左侧行号区域
-    const lineNumbers = document.createElement('div');
-    lineNumbers.className = 'line-numbers';
-
-    // 添加行号
-    const lines = processedCode.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const lineNumber = document.createElement('span');
-      lineNumber.className = 'line-number';
-      lineNumber.textContent = String(i + 1);
-      lineNumbers.appendChild(lineNumber);
-    }
-
     // 创建代码内容区域
     const pre = document.createElement('pre');
     pre.className = 'code-content';
@@ -457,26 +444,17 @@ export class CodeExtractor {
     // 创建代码元素
     const code = document.createElement('code');
     code.className = `language-${codeInfo.language}`;
+    code.setAttribute('data-code-theme', codeInfo.language);
 
-    // 将代码分行处理，每行包装在一个 span 中
+    // 将代码分行处理，每行创建一个统一的行容器
+    // 注意：这里的初始化代码将在高亮过程中被替换
+    // 所以我们只需要记录行数即可
     const codeLines = processedCode.split('\n');
-    codeLines.forEach((line, index) => {
-      const lineSpan = document.createElement('span');
-      lineSpan.className = 'code-line';
-      lineSpan.textContent = line;
-      code.appendChild(lineSpan);
-
-      // 如果不是最后一行，添加换行符
-      if (index < codeLines.length - 1) {
-        code.appendChild(document.createTextNode('\n'));
-      }
-    });
 
     // 添加代码元素到pre
     pre.appendChild(code);
 
-    // 添加行号和代码区域到包装器
-    contentWrapper.appendChild(lineNumbers);
+    // 添加代码区域到包装器
     contentWrapper.appendChild(pre);
 
     // 添加代码内容包装器到容器
@@ -505,17 +483,42 @@ export class CodeExtractor {
 
           // 将高亮后的代码分行处理
           const highlightedLines = result.value.split('\n');
-          highlightedLines.forEach((line: string, index: number) => {
-            const lineSpan = document.createElement('span');
-            lineSpan.className = 'code-line';
-            lineSpan.innerHTML = line || ' '; // 空行使用空格保持高度
-            code.appendChild(lineSpan);
 
-            // 如果不是最后一行，添加换行符
-            if (index < highlightedLines.length - 1) {
-              code.appendChild(document.createTextNode('\n'));
+          // 创建表格布局
+          const codeTable = document.createElement('table');
+          codeTable.className = 'code-table';
+
+          highlightedLines.forEach((line: string, index: number) => {
+            // 创建行
+            const tr = document.createElement('tr');
+            tr.className = 'code-row';
+
+            // 检测是否为注释行
+            if (line.trim().startsWith('<span class="hljs-comment">') ||
+              line.includes('<span class="hljs-comment">') && line.trim().startsWith('<span')) {
+              tr.classList.add('comment-line');
             }
+
+            // 创建行号单元格
+            const lineNumberCell = document.createElement('td');
+            lineNumberCell.className = 'line-number';
+            lineNumberCell.textContent = String(index + 1);
+
+            // 创建代码单元格
+            const codeCell = document.createElement('td');
+            codeCell.className = 'code-line';
+            codeCell.innerHTML = line || '&nbsp;';
+
+            // 添加单元格到行
+            tr.appendChild(lineNumberCell);
+            tr.appendChild(codeCell);
+
+            // 添加行到表格
+            codeTable.appendChild(tr);
           });
+
+          // 添加表格到代码元素
+          code.appendChild(codeTable);
 
           code.classList.add('hljs');
           container.classList.add(`lang-${codeInfo.language}`);
@@ -527,17 +530,42 @@ export class CodeExtractor {
 
             // 将高亮后的代码分行处理
             const highlightedLines = result.value.split('\n');
-            highlightedLines.forEach((line: string, index: number) => {
-              const lineSpan = document.createElement('span');
-              lineSpan.className = 'code-line';
-              lineSpan.innerHTML = line || ' '; // 空行使用空格保持高度
-              code.appendChild(lineSpan);
 
-              // 如果不是最后一行，添加换行符
-              if (index < highlightedLines.length - 1) {
-                code.appendChild(document.createTextNode('\n'));
+            // 创建表格布局
+            const codeTable = document.createElement('table');
+            codeTable.className = 'code-table';
+
+            highlightedLines.forEach((line: string, index: number) => {
+              // 创建行
+              const tr = document.createElement('tr');
+              tr.className = 'code-row';
+
+              // 检测是否为注释行
+              if (line.trim().startsWith('<span class="hljs-comment">') ||
+                line.includes('<span class="hljs-comment">') && line.trim().startsWith('<span')) {
+                tr.classList.add('comment-line');
               }
+
+              // 创建行号单元格
+              const lineNumberCell = document.createElement('td');
+              lineNumberCell.className = 'line-number';
+              lineNumberCell.textContent = String(index + 1);
+
+              // 创建代码单元格
+              const codeCell = document.createElement('td');
+              codeCell.className = 'code-line';
+              codeCell.innerHTML = line || '&nbsp;';
+
+              // 添加单元格到行
+              tr.appendChild(lineNumberCell);
+              tr.appendChild(codeCell);
+
+              // 添加行到表格
+              codeTable.appendChild(tr);
             });
+
+            // 添加表格到代码元素
+            code.appendChild(codeTable);
 
             code.classList.add('hljs');
             // 添加检测到的语言类
@@ -560,12 +588,16 @@ export class CodeExtractor {
       }
 
       // 如果代码行数少于2，隐藏行号
-      if (lines.length < 2) {
-        lineNumbers.style.display = 'none';
+      if (codeLines.length < 2) {
+        // 对于单行代码块，隐藏行号
+        const lineNumbers = container.querySelectorAll('.line-number');
+        lineNumbers.forEach(ln => {
+          (ln as HTMLElement).style.display = 'none';
+        });
       }
 
       // 添加代码行数信息
-      container.setAttribute('data-lines', String(lines.length));
+      container.setAttribute('data-lines', String(codeLines.length));
 
     } catch (error) {
       console.warn('代码高亮失败:', error);
@@ -612,20 +644,7 @@ export class CodeExtractor {
       .trim(); // 去除首尾空白
   }
 
-  /**
-   * 应用基本的HTML转义格式化
-   */
-  private applyBasicFormatting(codeElement: HTMLElement, codeText: string): void {
-    codeElement.innerHTML = codeText
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
-      // 保留空格和缩进
-      .replace(/ /g, '&nbsp;')
-      .replace(/\n/g, '<br>');
-  }
+  // 删除未使用的方法
 
   /**
    * 应用基本的HTML转义格式化，并保留行结构
@@ -634,29 +653,65 @@ export class CodeExtractor {
     // 清除现有内容
     codeElement.innerHTML = '';
 
+    // 创建表格布局
+    const codeTable = document.createElement('table');
+    codeTable.className = 'code-table';
+
     // 分行处理
     const lines = codeText.split('\n');
     lines.forEach((line, index) => {
-      const lineSpan = document.createElement('span');
-      lineSpan.className = 'code-line';
+      // 创建行
+      const tr = document.createElement('tr');
+      tr.className = 'code-row';
 
-      // 转义处理
-      const escapedLine = line
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
-        .replace(/ /g, '&nbsp;');
+      // 创建行号单元格
+      const lineNumberCell = document.createElement('td');
+      lineNumberCell.className = 'line-number';
+      lineNumberCell.textContent = String(index + 1);
 
-      lineSpan.innerHTML = escapedLine || ' '; // 空行使用空格保持高度
-      codeElement.appendChild(lineSpan);
+      // 创建代码单元格
+      const codeCell = document.createElement('td');
+      codeCell.className = 'code-line';
 
-      // 如果不是最后一行，添加换行符
-      if (index < lines.length - 1) {
-        codeElement.appendChild(document.createTextNode('\n'));
+      // 检测是否为注释行
+      if (line.trim().startsWith('//') || line.trim().startsWith('/*') || line.trim().startsWith('*') || line.trim().startsWith('#')) {
+        tr.classList.add('comment-line');
+        // 将注释内容包装在span中以便于样式化
+        const commentSpan = document.createElement('span');
+        commentSpan.className = 'hljs-comment';
+
+        // 转义处理
+        const escapedLine = line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+
+        commentSpan.innerHTML = escapedLine || '&nbsp;';
+        codeCell.appendChild(commentSpan);
+      } else {
+        // 转义处理
+        const escapedLine = line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+
+        codeCell.innerHTML = escapedLine || '&nbsp;';
       }
+
+      // 添加单元格到行
+      tr.appendChild(lineNumberCell);
+      tr.appendChild(codeCell);
+
+      // 添加行到表格
+      codeTable.appendChild(tr);
     });
+
+    // 添加表格到代码元素
+    codeElement.appendChild(codeTable);
   }
 
   /**

@@ -19,51 +19,66 @@
   border: 1px solid var(--code-border);
   color: var(--code-text-color);
   box-shadow: var(--code-shadow);
+  max-width: 100%;
+  tab-size: 4;
+  -moz-tab-size: 4;
 }
 
 /* 代码包装器 */
-.code-wrapper {
-  display: flex;
+.code-wrapper,
+.code-content-wrapper {
+  display: block;
   overflow: hidden;
   background-color: var(--code-bg);
+  width: 100%;
 }
 
 /* 代码内容区域 */
 .code-content {
   margin: 0;
-  padding: 0.75em 1em;
+  padding: 0;
   overflow-x: auto;
   background-color: var(--code-bg);
   color: var(--code-text-color);
   position: relative;
-  tab-size: 2;
+  tab-size: 4;
+  -moz-tab-size: 4;
   -webkit-font-smoothing: auto;
   -moz-osx-font-smoothing: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--code-scrollbar-thumb) var(--code-scrollbar-track);
-  flex: 1;
   line-height: var(--code-line-height);
+  display: block;
+  width: 100%;
+  font-family: var(--reading-code-font-family);
+}
+
+/* 代码表格 */
+.code-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-family: var(--reading-code-font-family);
+}
+
+/* 代码行 */
+.code-row {
+  background-color: var(--code-bg);
+  line-height: 1.45;
 }
 
 /* 行号区域 */
 .line-numbers {
-  padding: 0.75em 0;
-  color: var(--code-line-number-color);
-  opacity: 0.5;
-  border-right: 1px solid var(--code-border);
-  user-select: none;
-  font-size: 0.85em;
-  text-align: right;
-  min-width: 2.5em;
-  transition: opacity 0.2s ease;
-  background-color: var(--code-bg);
+  display: none;
+  /* 不再使用单独的行号区域 */
 }
 
 .code-block:hover .line-numbers {
   opacity: 0.7;
 }
 
-/* 行号 */
+/* 行号单元格 */
 .line-number {
   padding: 0 16px 0 12px;
   color: var(--code-line-number-color);
@@ -71,11 +86,21 @@
   text-align: right;
   opacity: 0.6;
   transition: opacity 0.2s ease, color 0.2s ease;
-  line-height: 20px;
+  line-height: 1.45;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  border-right: 1px solid var(--code-border);
+  background-color: var(--code-line-number-bg, var(--code-bg));
+  user-select: none;
+  width: 3em;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  vertical-align: top;
 }
 
 /* 代码块顶部工具栏 */
+.code-header,
 .code-toolbar {
   display: flex;
   justify-content: space-between;
@@ -86,6 +111,7 @@
   font-size: 0.85em;
   color: var(--code-language-color);
   transition: background-color 0.2s ease;
+  user-select: none;
 }
 
 /* 语言标签 */
@@ -94,6 +120,7 @@
   opacity: 0.7;
   transition: opacity 0.2s ease;
   user-select: none;
+  font-weight: 500;
 }
 
 .code-toolbar:hover .code-language {
@@ -112,9 +139,11 @@
 }
 
 /* 代码块工具按钮 */
-.code-toolbar-buttons {
+.code-toolbar-buttons,
+.code-actions {
   display: flex;
   gap: 0.5em;
+  margin-left: auto;
 }
 
 .code-copy-button {
@@ -221,6 +250,61 @@
   background: none;
   font-size: inherit;
   letter-spacing: 0;
+  display: block;
+}
+
+/* 高亮样式 */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-title,
+.hljs-section,
+.hljs-doctag,
+.hljs-name,
+.hljs-strong {
+  font-weight: normal;
+  color: var(--code-keyword);
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-built_in,
+.hljs-literal,
+.hljs-type,
+.hljs-addition,
+.hljs-tag,
+.hljs-quote,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--code-string);
+}
+
+.hljs-comment,
+.hljs-meta,
+.hljs-bullet,
+.hljs-code,
+.hljs-deletion {
+  color: var(--code-comment);
+}
+
+.hljs-number,
+.hljs-regexp,
+.hljs-literal,
+.hljs-link,
+.hljs-meta,
+.hljs-selector-attr,
+.hljs-selector-pseudo {
+  color: var(--code-number);
+}
+
+.hljs-attribute,
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-class .hljs-title,
+.hljs-symbol {
+  color: var(--code-variable);
 }
 
 /* 悬停状态 */
@@ -230,8 +314,14 @@
   color: var(--code-line-number-hover-color);
 }
 
+.code-header:hover .code-language,
+.code-toolbar:hover .code-language {
+  opacity: 1;
+}
+
 /* 代码主题特定样式 - GitHub 风格 */
 .code-block[data-code-theme="github"],
+.code-header[data-code-theme="github"],
 .code-toolbar[data-code-theme="github"],
 .line-numbers[data-code-theme="github"] {
   --code-bg: #f6f8fa;
@@ -239,9 +329,15 @@
   --code-border: #d0d7de;
   --code-toolbar-bg: #f6f8fa;
   --code-line-number-bg: #f6f8fa;
+  --code-keyword: #d73a49;
+  --code-string: #032f62;
+  --code-comment: #6a737d;
+  --code-number: #005cc5;
+  --code-variable: #e36209;
 }
 
 .code-block[data-code-theme="github-dark"],
+.code-header[data-code-theme="github-dark"],
 .code-toolbar[data-code-theme="github-dark"],
 .line-numbers[data-code-theme="github-dark"] {
   --code-bg: #0d1117;
@@ -249,6 +345,11 @@
   --code-border: #30363d;
   --code-toolbar-bg: #161b22;
   --code-line-number-bg: #0d1117;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-comment: #8b949e;
+  --code-number: #79c0ff;
+  --code-variable: #ffa657;
 }
 
 /* 确保深色主题下的代码块有正确的颜色 */
@@ -257,6 +358,7 @@
 }
 
 .dark-theme .code-toolbar,
+.dark-theme .code-header,
 .dark-theme .line-numbers {
   border-color: var(--code-border);
 }
@@ -267,6 +369,7 @@
 }
 
 .light-theme .code-toolbar,
+.light-theme .code-header,
 .light-theme .line-numbers {
   border-color: var(--code-border);
 }
@@ -409,11 +512,17 @@
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 代码行样式 */
-.code-content .line {
-  display: block;
+/* 代码行单元格 */
+.code-line {
   line-height: 1.45;
-  padding-right: 16px;
+  padding: 0 16px 0 8px;
+  white-space: pre;
+  overflow: visible;
+  font-family: var(--reading-code-font-family);
+  tab-size: 4;
+  -moz-tab-size: 4;
+  vertical-align: top;
+  width: 100%;
 }
 
 /* 代码行高亮 */
@@ -421,6 +530,22 @@
   background-color: var(--code-highlight-line-bg);
   border-left: 2px solid var(--code-button-active-color);
   margin-left: -2px;
+}
+
+/* 注释行样式 */
+.code-content .line .hljs-comment,
+.code-content .code-line .hljs-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+/* 注释行背景 */
+.code-row.comment-line {
+  background-color: var(--code-comment-line-bg, rgba(0, 0, 0, 0.02));
+}
+
+.dark-theme .code-row.comment-line {
+  background-color: var(--code-comment-line-bg, rgba(255, 255, 255, 0.02));
 }
 
 /* 代码行号高亮 */
@@ -435,7 +560,8 @@
   opacity: 0.5;
 }
 
-.code-block.loading .code-toolbar::after {
+.code-block.loading .code-toolbar::after,
+.code-block.loading .code-header::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -456,7 +582,8 @@
 }
 
 /* 代码块错误状态 */
-.code-block.error .code-toolbar {
+.code-block.error .code-toolbar,
+.code-block.error .code-header {
   border-bottom-color: #f85149;
 }
 
@@ -465,7 +592,8 @@
 }
 
 /* 代码块成功状态 */
-.code-block.success .code-toolbar {
+.code-block.success .code-toolbar,
+.code-block.success .code-header {
   border-bottom-color: #2ea043;
 }
 
