@@ -3,87 +3,116 @@
  * 用于增强代码块的提取和显示
  */
 
-// 导入 highlight.js 及其语言模块
-import hljs from 'highlight.js';
-// 导入常用语言
-import javascript from 'highlight.js/lib/languages/javascript';
-import typescript from 'highlight.js/lib/languages/typescript';
-import python from 'highlight.js/lib/languages/python';
-import java from 'highlight.js/lib/languages/java';
-import css from 'highlight.js/lib/languages/css';
-import xml from 'highlight.js/lib/languages/xml';
-import json from 'highlight.js/lib/languages/json';
-import bash from 'highlight.js/lib/languages/bash';
-import markdown from 'highlight.js/lib/languages/markdown';
+// 不再直接导入 highlight.js，改为动态导入
+// import hljs from 'highlight.js';
+// import javascript from 'highlight.js/lib/languages/javascript';
+// import typescript from 'highlight.js/lib/languages/typescript';
+// 等等...
 
-// 注册语言
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('python', python);
-hljs.registerLanguage('java', java);
-hljs.registerLanguage('css', css);
-hljs.registerLanguage('xml', xml);
-hljs.registerLanguage('html', xml); // HTML 使用 XML 高亮器
-hljs.registerLanguage('json', json);
-hljs.registerLanguage('bash', bash);
-hljs.registerLanguage('markdown', markdown);
+// 定义一个异步函数来加载和配置 highlight.js
+async function loadHighlightJs() {
+  try {
+    // 动态导入 highlight.js
+    const hljs = await import(/* webpackChunkName: "highlight" */ 'highlight.js');
 
-// 自定义语言处理
-// 为 npm 创建一个简单的语法高亮器 - 基于 JSON
-hljs.registerLanguage('npm', function () {
-  return {
-    name: 'NPM',
-    aliases: ['package.json'],
-    subLanguage: 'json',  // 使用 JSON 高亮器作为基础
-    contains: [
-      {
-        className: 'comment',
-        begin: /\/\//,
-        end: /$/
-      }
-    ]
-  };
-});
+    // 动态导入常用语言
+    const [javascript, typescript, python, java, css, xml, json, bash, markdown] = await Promise.all([
+      import(/* webpackChunkName: "hljs-js" */ 'highlight.js/lib/languages/javascript'),
+      import(/* webpackChunkName: "hljs-ts" */ 'highlight.js/lib/languages/typescript'),
+      import(/* webpackChunkName: "hljs-py" */ 'highlight.js/lib/languages/python'),
+      import(/* webpackChunkName: "hljs-java" */ 'highlight.js/lib/languages/java'),
+      import(/* webpackChunkName: "hljs-css" */ 'highlight.js/lib/languages/css'),
+      import(/* webpackChunkName: "hljs-xml" */ 'highlight.js/lib/languages/xml'),
+      import(/* webpackChunkName: "hljs-json" */ 'highlight.js/lib/languages/json'),
+      import(/* webpackChunkName: "hljs-bash" */ 'highlight.js/lib/languages/bash'),
+      import(/* webpackChunkName: "hljs-md" */ 'highlight.js/lib/languages/markdown')
+    ]);
 
-// 为 Vue 创建一个简单的语法高亮器 - 组合 HTML, JS 和 CSS
-hljs.registerLanguage('vue', function () {
-  return {
-    name: 'Vue',
-    aliases: ['vue', 'vuejs'],
-    contains: [
-      // HTML 部分
-      {
-        className: 'tag',
-        begin: /<template[\s>]/, end: /<\/template>/,
-        starts: {
-          subLanguage: 'xml',
-          end: /<\/template>/,
-        }
-      },
-      // JavaScript 部分
-      {
-        className: 'tag',
-        begin: /<script[\s>]/, end: /<\/script>/,
-        starts: {
-          subLanguage: 'javascript',
-          end: /<\/script>/,
-        }
-      },
-      // CSS 部分
-      {
-        className: 'tag',
-        begin: /<style[\s>]/, end: /<\/style>/,
-        starts: {
-          subLanguage: 'css',
-          end: /<\/style>/,
-        }
-      }
-    ]
-  };
-});
+    // 注册语言
+    hljs.default.registerLanguage('javascript', javascript.default);
+    hljs.default.registerLanguage('typescript', typescript.default);
+    hljs.default.registerLanguage('python', python.default);
+    hljs.default.registerLanguage('java', java.default);
+    hljs.default.registerLanguage('css', css.default);
+    hljs.default.registerLanguage('xml', xml.default);
+    hljs.default.registerLanguage('html', xml.default); // HTML 使用 XML 高亮器
+    hljs.default.registerLanguage('json', json.default);
+    hljs.default.registerLanguage('bash', bash.default);
+    hljs.default.registerLanguage('markdown', markdown.default);
 
-// 确保语言模块已注册
-console.log('已注册语言模块:', Object.keys(hljs.listLanguages()));
+    // 自定义语言处理
+    // 为 npm 创建一个简单的语法高亮器 - 基于 JSON
+    hljs.default.registerLanguage('npm', function () {
+      return {
+        name: 'NPM',
+        aliases: ['package.json'],
+        subLanguage: 'json',  // 使用 JSON 高亮器作为基础
+        contains: [
+          {
+            className: 'comment',
+            begin: /\/\//,
+            end: /$/
+          }
+        ]
+      };
+    });
+
+    // 为 Vue 创建一个简单的语法高亮器 - 组合 HTML, JS 和 CSS
+    hljs.default.registerLanguage('vue', function () {
+      return {
+        name: 'Vue',
+        aliases: ['vue', 'vuejs'],
+        contains: [
+          // HTML 部分
+          {
+            className: 'tag',
+            begin: /<template[\s>]/, end: /<\/template>/,
+            starts: {
+              subLanguage: 'xml',
+              end: /<\/template>/,
+            }
+          },
+          // JavaScript 部分
+          {
+            className: 'tag',
+            begin: /<script[\s>]/, end: /<\/script>/,
+            starts: {
+              subLanguage: 'javascript',
+              end: /<\/script>/,
+            }
+          },
+          // CSS 部分
+          {
+            className: 'tag',
+            begin: /<style[\s>]/, end: /<\/style>/,
+            starts: {
+              subLanguage: 'css',
+              end: /<\/style>/,
+            }
+          }
+        ]
+      };
+    });
+
+    console.log('已注册语言模块:', Object.keys(hljs.default.listLanguages()));
+
+    return hljs.default;
+  } catch (error) {
+    console.error('加载 highlight.js 时发生错误:', error);
+    return null;
+  }
+}
+
+// 缓存 highlight.js 实例
+let hljsInstance = null;
+
+// 获取 highlight.js 实例
+async function getHighlightJs() {
+  if (!hljsInstance) {
+    hljsInstance = await loadHighlightJs();
+  }
+  return hljsInstance;
+}
 
 export interface CodeBlockInfo {
   code: string;
@@ -315,7 +344,7 @@ export class CodeExtractor {
   /**
    * 创建优雅的代码块 - 现代设计与顶部工具栏
    */
-  public createEnhancedCodeBlock(codeInfo: CodeBlockInfo): HTMLElement {
+  public async createEnhancedCodeBlock(codeInfo: CodeBlockInfo): Promise<HTMLElement> {
     // 创建主容器
     const container = document.createElement('div');
     container.className = 'code-block';
@@ -458,6 +487,16 @@ export class CodeExtractor {
       // 先清除代码元素的内容，准备重新填充
       code.innerHTML = '';
 
+      // 动态加载 highlight.js
+      const hljs = await getHighlightJs();
+
+      // 如果加载失败，使用纯文本模式
+      if (!hljs) {
+        console.warn('加载 highlight.js 失败，使用纯文本模式');
+        this.applyBasicFormattingWithLines(code, processedCode);
+        return container;
+      }
+
       // 使用 highlight.js 进行高亮
       if (codeInfo.language && codeInfo.language !== 'plaintext') {
         try {
@@ -466,7 +505,7 @@ export class CodeExtractor {
 
           // 将高亮后的代码分行处理
           const highlightedLines = result.value.split('\n');
-          highlightedLines.forEach((line, index) => {
+          highlightedLines.forEach((line: string, index: number) => {
             const lineSpan = document.createElement('span');
             lineSpan.className = 'code-line';
             lineSpan.innerHTML = line || ' '; // 空行使用空格保持高度
@@ -488,7 +527,7 @@ export class CodeExtractor {
 
             // 将高亮后的代码分行处理
             const highlightedLines = result.value.split('\n');
-            highlightedLines.forEach((line, index) => {
+            highlightedLines.forEach((line: string, index: number) => {
               const lineSpan = document.createElement('span');
               lineSpan.className = 'code-line';
               lineSpan.innerHTML = line || ' '; // 空行使用空格保持高度
@@ -674,10 +713,11 @@ export class CodeExtractor {
   /**
    * 增强页面中的所有代码块
    */
-  public enhanceAllCodeBlocks(container: HTMLElement): void {
+  public async enhanceAllCodeBlocks(container: HTMLElement): Promise<void> {
     try {
       const preElements = container.querySelectorAll('pre');
-      preElements.forEach(pre => {
+      // 使用 Promise.all 并行处理所有代码块
+      await Promise.all(Array.from(preElements).map(async (pre) => {
         try {
           if (!(pre instanceof HTMLPreElement)) return;
 
@@ -688,7 +728,7 @@ export class CodeExtractor {
           const codeInfo = this.extractCodeBlockInfo(pre);
 
           // 创建增强的代码块
-          const enhancedCodeBlock = this.createEnhancedCodeBlock(codeInfo);
+          const enhancedCodeBlock = await this.createEnhancedCodeBlock(codeInfo);
 
           // 替换原始代码块
           pre.replaceWith(enhancedCodeBlock);
@@ -696,7 +736,7 @@ export class CodeExtractor {
           console.warn('处理代码块时发生错误:', error);
           // 继续处理下一个代码块
         }
-      });
+      }));
     } catch (error) {
       console.error('增强代码块时发生错误:', error);
     }

@@ -1,6 +1,6 @@
 import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
-// 导入 highlight.js
-import hljs from 'highlight.js';
+// 不再直接导入 highlight.js，改为动态导入
+// import hljs from 'highlight.js';
 
 // 先导入自定义样式
 // 注意：直接在代码中定义样式，避免导入文件的问题
@@ -364,14 +364,14 @@ customCodeStyles.textContent = `
 `;
 document.head.appendChild(customCodeStyles);
 
-// 配置 highlight.js
-hljs.configure({
-  languages: [
-    'javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp',
-    'css', 'html', 'xml', 'json', 'markdown', 'bash', 'shell',
-    'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'sql'
-  ]
-});
+// highlight.js 配置将在动态导入时进行
+// hljs.configure({
+//   languages: [
+//     'javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp',
+//     'css', 'html', 'xml', 'json', 'markdown', 'bash', 'shell',
+//     'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'sql'
+//   ]
+// });
 
 // 导入 highlight.js 样式
 // 不通过导入文件的方式，而是直接在代码中定义样式
@@ -555,12 +555,37 @@ function handleMediaElements(container: HTMLElement | null, showImages: boolean)
   });
 }
 
-function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings) {
+async function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings) {
   if (!container) return;
+
+  // 检查页面是否有代码块
+  const preElements = container.querySelectorAll('pre');
+  if (preElements.length === 0) {
+    console.log('页面没有代码块，跳过代码高亮库加载');
+    return;
+  }
+
+  // 动态导入 highlight.js
+  console.log('开始动态加载代码高亮库');
+  try {
+    const hljs = await import(/* webpackChunkName: "highlight" */ 'highlight.js');
+
+    // 配置 highlight.js
+    hljs.default.configure({
+      languages: [
+        'javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp',
+        'css', 'html', 'xml', 'json', 'markdown', 'bash', 'shell',
+        'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'sql'
+      ]
+    });
+
+    console.log('代码高亮库加载成功，开始处理代码块');
+  } catch (error) {
+    console.error('加载代码高亮库时发生错误:', error);
+  }
 
   // 使用代码提取器增强所有代码块
   try {
-    console.log('开始处理代码块');
 
     // 先彻底清除所有已存在的增强代码块容器
     const existingContainers = container.querySelectorAll('.enhanced-code-container, .code-block');
@@ -620,7 +645,7 @@ function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSe
 
     // 使用代码提取器增强所有代码块
     console.log('开始增强代码块');
-    codeExtractor.enhanceAllCodeBlocks(container);
+    await codeExtractor.enhanceAllCodeBlocks(container);
 
     // 设置代码字体大小
     if (settings.codeFontSize) {
@@ -1002,7 +1027,7 @@ function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: Read
   `;
 }
 
-function applyStyles(settings: ReadingModeSettings) {
+async function applyStyles(settings: ReadingModeSettings) {
   const styleId = 'reading-mode-style';
   let style = document.getElementById(styleId);
 
@@ -1135,7 +1160,7 @@ function applyStyles(settings: ReadingModeSettings) {
   handleMediaElements(container, settings.showImages);
 
   // 处理代码块
-  handleCodeBlocks(container, settings);
+  await handleCodeBlocks(container, settings);
 
   // 使用工具模块中的函数更新 CSS 变量
   // 从 utils.ts 导入的 updateReadingModeStyles 函数
@@ -1885,7 +1910,7 @@ async function enableReadingMode() {
 
     // 应用样式
     try {
-      applyStyles(settings);
+      await applyStyles(settings);
     } catch (error) {
       console.warn('应用样式时发生错误:', error);
     }
@@ -2188,11 +2213,12 @@ function handleJuejinContent(content: string): string {
     // 保留一些必要的样式，如图片尺寸
     if (el.tagName === 'IMG') {
       // 对于图片，只保留尺寸相关的样式
-      const width = el.style.width;
-      const height = el.style.height;
+      const imgEl = el as HTMLImageElement;
+      const width = imgEl.style.width;
+      const height = imgEl.style.height;
       el.removeAttribute('style');
-      if (width) el.style.width = width;
-      if (height) el.style.height = height;
+      if (width) imgEl.style.width = width;
+      if (height) imgEl.style.height = height;
     } else {
       // 对于其他元素，完全移除样式
       el.removeAttribute('style');
@@ -2404,12 +2430,12 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
       const container = document.getElementById('reading-mode-container');
 
       // 如果是主题变化，先更新主题样式
-      if (changes[StorageKeys.CODE_THEME]) {
+      if (changes[StorageKeys.CODE_THEME] && container) {
         console.log('代码主题变化为:', settings.codeTheme);
 
         // 更新主题样式
         const styleElement = document.getElementById('reading-mode-style');
-        if (styleElement) {
+        if (styleElement && styleElement.textContent) {
           // 重新生成主题样式
           styleElement.textContent = `
             ${generateCodeThemeStyles(settings.codeTheme, settings)}
@@ -2428,10 +2454,20 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
       }
 
       // 重新处理代码块
-      handleCodeBlocks(container, settings);
+      // 注意：这里不等待异步完成，因为这是事件监听器
+      // 如果需要等待，应该使用异步IIFE
+      if (container) {
+        (async () => {
+          try {
+            await handleCodeBlocks(container, settings);
+          } catch (error) {
+            console.error('在存储变化监听器中处理代码块时发生错误:', error);
+          }
+        })();
+      }
 
       // 如果是字体大小变化，更新工具栏字体大小
-      if (changes[StorageKeys.CODE_FONT_SIZE]) {
+      if (changes[StorageKeys.CODE_FONT_SIZE] && container) {
         // 更新所有代码块工具栏的字体大小
         const toolbars = container.querySelectorAll('.code-toolbar');
         toolbars.forEach(toolbar => {
