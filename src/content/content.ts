@@ -400,8 +400,8 @@ import {
 
 // 导入提取器样式
 import './extractors/extractors.css';
-// 导入 GitHub 风格代码块样式
-import './styles/github-code.css';
+// 导入优雅的代码块样式
+import './styles/elegant-code.css';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -1761,6 +1761,14 @@ async function enableReadingMode() {
 
     // 添加文章内容
     const contentDiv = document.createElement('div');
+
+    // 特殊站点处理
+    if (window.location.href.includes('juejin.cn')) {
+      console.log('检测到掘金网站，应用特殊处理');
+      // 处理掘金网站的内容
+      extractedContent.content = handleJuejinContent(extractedContent.content);
+    }
+
     contentDiv.innerHTML = extractedContent.content;
     contentDiv.className = 'reading-mode-content';
 
@@ -2079,6 +2087,243 @@ function disableReadingMode() {
     console.error('禁用阅读模式时发生错误:', error);
     throw error;
   }
+}
+
+// 处理掘金网站的内容
+function handleJuejinContent(content: string): string {
+  console.log('开始处理掘金网站内容');
+
+  // 创建一个临时元素来处理内容
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = content;
+
+  // 移除标题下的大空白
+  const emptyParagraphs = tempDiv.querySelectorAll('p:empty, p:only-child:not(:has(*)):not([style]):not([class])');
+  emptyParagraphs.forEach(p => {
+    if (p.textContent?.trim() === '') {
+      p.remove();
+    }
+  });
+
+  // 处理代码块
+  const codeBlocks = tempDiv.querySelectorAll('pre[data-lang]');
+  codeBlocks.forEach(pre => {
+    // 移除掘金的代码块头部
+    const codeBlockHeader = pre.previousElementSibling;
+    if (codeBlockHeader && codeBlockHeader.classList.contains('code-block-header')) {
+      codeBlockHeader.remove();
+    }
+
+    // 移除复制按钮
+    const copyButton = pre.nextElementSibling;
+    if (copyButton && copyButton.classList.contains('copy-code-btn')) {
+      copyButton.remove();
+    }
+
+    // 确保代码块有正确的语言标记
+    const lang = pre.getAttribute('data-lang');
+    if (lang) {
+      pre.classList.add(`language-${lang}`);
+      const code = pre.querySelector('code');
+      if (code) {
+        code.classList.add(`language-${lang}`);
+      }
+    }
+  });
+
+  // 移除广告和干扰元素
+  const selectors = [
+    '.article-suspended-panel', // 悬浮面板
+    '.recommend-box', // 推荐框
+    '.comment-box', // 评论框
+    '.author-info-block', // 作者信息
+    '.article-banner', // 文章横幅
+    '.article-end', // 文章结尾
+    '.column-container', // 专栏容器
+    '.markdown-body > .copy-code-btn', // 复制代码按钮
+    '.markdown-body > .code-block-header' // 代码块头部
+  ];
+
+  selectors.forEach(selector => {
+    const elements = tempDiv.querySelectorAll(selector);
+    elements.forEach(el => el.remove());
+  });
+
+  // 移除所有内联事件处理程序，避免 CSP 错误
+  const allElements = tempDiv.querySelectorAll('*');
+  allElements.forEach(el => {
+    // 移除所有以 'on' 开头的属性（如 onclick、onmouseover 等）
+    Array.from(el.attributes).forEach(attr => {
+      if (attr.name.startsWith('on')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+
+    // 移除所有内联脚本
+    if (el.tagName === 'SCRIPT') {
+      el.remove();
+    }
+
+    // 处理所有链接，确保 URL 有效
+    if (el.tagName === 'A' && el.hasAttribute('href')) {
+      const href = el.getAttribute('href');
+      if (href) {
+        // 只处理明显无效的 URL
+        if (href.includes('${') && href.includes('}')) {
+          // 包含模板字符串的 URL，可能是未处理的模板
+          el.removeAttribute('href');
+        } else if (href.startsWith('javascript:')) {
+          // 移除 JavaScript 协议的 URL
+          el.removeAttribute('href');
+        }
+      }
+    }
+  });
+
+  // 移除所有内联样式属性，避免样式冲突
+  const elementsWithStyle = tempDiv.querySelectorAll('[style]');
+  elementsWithStyle.forEach(el => {
+    // 保留一些必要的样式，如图片尺寸
+    if (el.tagName === 'IMG') {
+      // 对于图片，只保留尺寸相关的样式
+      const width = el.style.width;
+      const height = el.style.height;
+      el.removeAttribute('style');
+      if (width) el.style.width = width;
+      if (height) el.style.height = height;
+    } else {
+      // 对于其他元素，完全移除样式
+      el.removeAttribute('style');
+    }
+  });
+
+  // 只移除特定的包含模板字符串的内容
+  // 定位包含特定模式的元素，这些元素可能导致 URL 解析错误
+  const problematicDivs = tempDiv.querySelectorAll('div[class*="comment"]');
+  problematicDivs.forEach(div => {
+    const text = div.textContent || '';
+    // 只移除包含特定模式的内容，这些内容可能导致 URL 解析错误
+    if (text.includes('${') && text.includes('}') &&
+      (text.includes('return') || text.includes('this.url.match'))) {
+      // 尝试保留内容，但移除可能导致错误的部分
+      const problematicText = text.match(/\$\{.*?\}/g) || [];
+      if (problematicText.length > 0) {
+        // 如果有多个模板字符串或包含特定关键字，可能是代码片段，移除整个元素
+        if (problematicText.length > 1 ||
+          text.includes('url.match') ||
+          text.includes('getPostId') ||
+          text.includes('?return')) {
+          div.remove();
+        }
+      }
+    }
+  });
+
+  // 特别处理掘金网站的评论区域，这里常包含导致错误的代码
+  const commentBlocks = tempDiv.querySelectorAll('.comment-content, .comment-block');
+  commentBlocks.forEach(block => {
+    const blockquotes = block.querySelectorAll('blockquote');
+    blockquotes.forEach(quote => {
+      const text = quote.textContent || '';
+      if (text.includes('${') && text.includes('return')) {
+        quote.remove();
+      }
+    });
+  });
+
+  // 处理特定的导致 URL 解析错误的元素
+  const specificErrorDiv = tempDiv.querySelector('div[t-N]');
+  if (specificErrorDiv && specificErrorDiv.getAttribute('t-N')?.includes('for(;h.length>0;)s+=')) {
+    // 这是掘金网站上导致 URL 解析错误的特定元素
+    specificErrorDiv.remove();
+    console.log('移除了导致 URL 解析错误的特定元素');
+  }
+
+  // 处理包含特定模式的 div 元素
+  const allDivs = tempDiv.querySelectorAll('div');
+  allDivs.forEach(div => {
+    // 检查是否包含特定属性模式
+    if (div.hasAttribute('t-N') || div.hasAttribute('t-n')) {
+      const tNValue = div.getAttribute('t-N') || div.getAttribute('t-n') || '';
+      // 检查属性值是否包含特定模式
+      if (tNValue.includes('for(') && tNValue.includes('blockquote') && tNValue.includes('return')) {
+        div.remove();
+        console.log('移除了包含特定模式的 div 元素');
+      }
+    }
+
+    // 特别处理错误信息中显示的问题元素
+    if (div.textContent) {
+      // 检查多种可能导致错误的模式
+      if ((div.textContent.includes('return $') && div.textContent.includes('getPostId')) ||
+        (div.textContent.includes('</div>') && div.textContent.includes('T-N]for') && div.textContent.includes('blockquote'))) {
+        // 这是错误信息中显示的元素，包含了特定的代码片段
+        div.remove();
+        console.log('移除了错误信息中显示的问题元素');
+      }
+
+      // 检查错误截图中显示的特定元素
+      if (div.textContent.includes('/div>,T-N]for(;h.length>0;)s+=')) {
+        div.remove();
+        console.log('移除了错误截图中的特定元素');
+      }
+    }
+  });
+
+  // 直接定位并处理错误信息中的元素
+  // 使用属性选择器可能会导致错误，所以我们使用更安全的方法
+  const divElements = tempDiv.querySelectorAll('div[t-N]');
+  divElements.forEach(div => {
+    const attrValue = div.getAttribute('t-N');
+    if (attrValue && attrValue.includes('for(;h.length>0;)s+=') &&
+      attrValue.includes('</blockquote>') &&
+      attrValue.includes('return $getPostId()')) {
+      div.remove();
+      console.log('移除了特定的错误元素');
+    }
+  });
+
+  // 处理包含特定内容的元素
+  // 为了避免遍历所有元素带来的性能问题，我们只检查可能包含问题代码的元素
+  const potentialProblemElements = tempDiv.querySelectorAll('div, blockquote, pre, code');
+  potentialProblemElements.forEach(el => {
+    if (el.textContent) {
+      // 检查多种可能导致错误的模式
+      if (el.textContent.includes('url.match') && el.textContent.includes('return')) {
+        // 如果是代码块内的内容，不要移除，因为这可能是正常的代码示例
+        if (el.tagName !== 'PRE' && el.tagName !== 'CODE' && !el.closest('pre') && !el.closest('code')) {
+          // 只移除不在代码块内的内容
+          el.remove();
+          console.log('移除了包含特定内容的元素');
+        }
+      }
+
+      // 检查错误信息中的特定模式
+      if (el.textContent.includes('getPostId') && el.textContent.includes('d=this.url.match')) {
+        if (el.tagName !== 'PRE' && el.tagName !== 'CODE' && !el.closest('pre') && !el.closest('code')) {
+          el.remove();
+          console.log('移除了包含 getPostId 的元素');
+        }
+      }
+    }
+  });
+
+  // 最后的安全检查，处理可能遗漏的问题元素
+  try {
+    // 尝试找到并处理错误截图中的元素
+    const htmlContent = tempDiv.innerHTML;
+    if (htmlContent.includes('getPostId') && htmlContent.includes('url.match')) {
+      // 如果还有未处理的问题元素，尝试使用正则表达式删除
+      const cleanedHtml = htmlContent.replace(/<div[^>]*t-N[^>]*>.*?getPostId\(\).*?<\/div>/g, '');
+      tempDiv.innerHTML = cleanedHtml;
+      console.log('执行了最终安全检查，清理了可能的问题元素');
+    }
+  } catch (e) {
+    console.error('最终安全检查时出错：', e);
+    // 出错时不影响原始内容返回
+  }
+
+  return tempDiv.innerHTML;
 }
 
 // 事件处理函数（空实现，仅用于移除事件监听器）

@@ -313,12 +313,18 @@ export class CodeExtractor {
   }
 
   /**
-   * 创建增强的代码块 - 极简设计与顶部工具栏
+   * 创建优雅的代码块 - 现代设计与顶部工具栏
    */
   public createEnhancedCodeBlock(codeInfo: CodeBlockInfo): HTMLElement {
     // 创建主容器
     const container = document.createElement('div');
     container.className = 'code-block';
+
+    // 添加行数属性
+    container.setAttribute('data-lines', String(codeInfo.lineCount));
+
+    // 添加语言类
+    container.classList.add(`lang-${codeInfo.language}`);
 
     // 从父容器继承主题类
     const parentContainer = document.getElementById('reading-mode-container');
@@ -326,62 +332,78 @@ export class CodeExtractor {
       // 继承主题类
       const themeClass = parentContainer.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
       container.classList.add(themeClass);
-
-      // 继承代码主题属性
-      const codeTheme = parentContainer.getAttribute('data-code-theme') ||
-        document.documentElement.style.getPropertyValue('--code-theme') ||
-        'github';
-      if (codeTheme) {
-        container.setAttribute('data-code-theme', codeTheme);
-        // 确保代码块也有正确的 CSS 变量
-        container.style.setProperty('--code-theme', codeTheme);
-      }
     }
 
-    // 创建工具栏
-    const toolbar = document.createElement('div');
-    toolbar.className = 'code-toolbar';
-
-    // 继承代码主题属性
-    if (parentContainer) {
-      const codeTheme = parentContainer.getAttribute('data-code-theme');
-      if (codeTheme) {
-        toolbar.setAttribute('data-code-theme', codeTheme);
-      }
-
-      // 继承主题类
-      const themeClass = parentContainer.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
-      toolbar.classList.add(themeClass);
-    }
+    // 创建代码块头部
+    const header = document.createElement('div');
+    header.className = 'code-header';
 
     // 添加语言标签
     const languageLabel = document.createElement('span');
     languageLabel.className = 'code-language';
     languageLabel.textContent = this.getDisplayLanguageName(codeInfo.language);
-    toolbar.appendChild(languageLabel);
+    header.appendChild(languageLabel);
 
     // 添加标题（如果有）
     if (codeInfo.caption) {
       const caption = document.createElement('span');
       caption.className = 'code-caption';
       caption.textContent = codeInfo.caption;
-      toolbar.appendChild(caption);
+      caption.style.marginLeft = '8px';
+      header.appendChild(caption);
     }
+
+    // 创建操作按钮容器
+    const actions = document.createElement('div');
+    actions.className = 'code-actions';
+    header.appendChild(actions);
 
     // 添加复制按钮
     const copyButton = document.createElement('button');
     copyButton.className = 'code-copy-button';
     copyButton.title = '复制代码';
-    copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
-    copyButton.setAttribute('data-clipboard-text', codeInfo.code);
-    toolbar.appendChild(copyButton);
 
-    // 添加工具栏到容器
-    container.appendChild(toolbar);
+    // 创建 SVG 元素，避免使用 innerHTML 以防止 CSP 错误
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '12');
+    svg.setAttribute('height', '12');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+
+    // 创建 SVG 内部元素
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', '9');
+    rect.setAttribute('y', '9');
+    rect.setAttribute('width', '13');
+    rect.setAttribute('height', '13');
+    rect.setAttribute('rx', '2');
+    rect.setAttribute('ry', '2');
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
+
+    // 添加 SVG 元素
+    svg.appendChild(rect);
+    svg.appendChild(path);
+    copyButton.appendChild(svg);
+
+    // 添加文本节点
+    const textNode = document.createTextNode('复制');
+    copyButton.appendChild(textNode);
+
+    copyButton.setAttribute('data-clipboard-text', codeInfo.code);
+    actions.appendChild(copyButton);
+
+    // 添加头部到容器
+    container.appendChild(header);
 
     // 创建代码内容区域包装器
-    const codeWrapper = document.createElement('div');
-    codeWrapper.className = 'code-wrapper';
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'code-content-wrapper';
 
     // 预处理代码，处理特殊字符和空格
     const processedCode = this.preprocessCode(codeInfo.code);
@@ -389,18 +411,6 @@ export class CodeExtractor {
     // 创建左侧行号区域
     const lineNumbers = document.createElement('div');
     lineNumbers.className = 'line-numbers';
-
-    // 继承代码主题属性
-    if (parentContainer) {
-      const codeTheme = parentContainer.getAttribute('data-code-theme');
-      if (codeTheme) {
-        lineNumbers.setAttribute('data-code-theme', codeTheme);
-      }
-
-      // 继承主题类
-      const themeClass = parentContainer.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
-      lineNumbers.classList.add(themeClass);
-    }
 
     // 添加行号
     const lines = processedCode.split('\n');
@@ -418,26 +428,56 @@ export class CodeExtractor {
     // 创建代码元素
     const code = document.createElement('code');
     code.className = `language-${codeInfo.language}`;
-    code.textContent = processedCode;
+
+    // 将代码分行处理，每行包装在一个 span 中
+    const codeLines = processedCode.split('\n');
+    codeLines.forEach((line, index) => {
+      const lineSpan = document.createElement('span');
+      lineSpan.className = 'code-line';
+      lineSpan.textContent = line;
+      code.appendChild(lineSpan);
+
+      // 如果不是最后一行，添加换行符
+      if (index < codeLines.length - 1) {
+        code.appendChild(document.createTextNode('\n'));
+      }
+    });
 
     // 添加代码元素到pre
     pre.appendChild(code);
 
     // 添加行号和代码区域到包装器
-    codeWrapper.appendChild(lineNumbers);
-    codeWrapper.appendChild(pre);
+    contentWrapper.appendChild(lineNumbers);
+    contentWrapper.appendChild(pre);
 
-    // 添加代码包装器到容器
-    container.appendChild(codeWrapper);
+    // 添加代码内容包装器到容器
+    container.appendChild(contentWrapper);
 
     // 使用 highlight.js 进行代码高亮
     try {
+      // 先清除代码元素的内容，准备重新填充
+      code.innerHTML = '';
+
       // 使用 highlight.js 进行高亮
       if (codeInfo.language && codeInfo.language !== 'plaintext') {
         try {
           // 尝试使用指定语言高亮
           const result = hljs.highlight(processedCode, { language: codeInfo.language, ignoreIllegals: true });
-          code.innerHTML = result.value;
+
+          // 将高亮后的代码分行处理
+          const highlightedLines = result.value.split('\n');
+          highlightedLines.forEach((line, index) => {
+            const lineSpan = document.createElement('span');
+            lineSpan.className = 'code-line';
+            lineSpan.innerHTML = line || ' '; // 空行使用空格保持高度
+            code.appendChild(lineSpan);
+
+            // 如果不是最后一行，添加换行符
+            if (index < highlightedLines.length - 1) {
+              code.appendChild(document.createTextNode('\n'));
+            }
+          });
+
           code.classList.add('hljs');
           container.classList.add(`lang-${codeInfo.language}`);
         } catch (e) {
@@ -445,7 +485,21 @@ export class CodeExtractor {
           console.warn(`使用语言 ${codeInfo.language} 高亮失败，尝试自动检测`);
           try {
             const result = hljs.highlightAuto(processedCode);
-            code.innerHTML = result.value;
+
+            // 将高亮后的代码分行处理
+            const highlightedLines = result.value.split('\n');
+            highlightedLines.forEach((line, index) => {
+              const lineSpan = document.createElement('span');
+              lineSpan.className = 'code-line';
+              lineSpan.innerHTML = line || ' '; // 空行使用空格保持高度
+              code.appendChild(lineSpan);
+
+              // 如果不是最后一行，添加换行符
+              if (index < highlightedLines.length - 1) {
+                code.appendChild(document.createTextNode('\n'));
+              }
+            });
+
             code.classList.add('hljs');
             // 添加检测到的语言类
             if (result.language) {
@@ -455,13 +509,13 @@ export class CodeExtractor {
             }
           } catch (autoError) {
             // 如果自动检测也失败，回退到基本的 HTML 转义
-            this.applyBasicFormatting(code, processedCode);
+            this.applyBasicFormattingWithLines(code, processedCode);
             container.classList.add('lang-plaintext');
           }
         }
       } else {
         // 如果是纯文本，仅进行 HTML 转义
-        this.applyBasicFormatting(code, processedCode);
+        this.applyBasicFormattingWithLines(code, processedCode);
         code.classList.add('plaintext');
         container.classList.add('lang-plaintext');
       }
@@ -477,8 +531,29 @@ export class CodeExtractor {
     } catch (error) {
       console.warn('代码高亮失败:', error);
       // 如果高亮失败，回退到基本的 HTML 转义
-      this.applyBasicFormatting(code, processedCode);
+      this.applyBasicFormattingWithLines(code, processedCode);
       container.classList.add('lang-plaintext');
+      container.classList.add('error');
+
+      // 更新语言标签以显示错误状态
+      if (languageLabel) {
+        languageLabel.textContent = 'Error: ' + this.getDisplayLanguageName(codeInfo.language);
+      }
+
+      // 添加错误提示
+      const toast = document.createElement('div');
+      toast.className = 'code-toast';
+      toast.textContent = '代码高亮失败，已使用基本格式化';
+      container.appendChild(toast);
+
+      // 短暂显示错误提示
+      setTimeout(() => {
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 300);
+        }, 2000);
+      }, 100);
     }
 
     return container;
@@ -511,6 +586,38 @@ export class CodeExtractor {
       // 保留空格和缩进
       .replace(/ /g, '&nbsp;')
       .replace(/\n/g, '<br>');
+  }
+
+  /**
+   * 应用基本的HTML转义格式化，并保留行结构
+   */
+  private applyBasicFormattingWithLines(codeElement: HTMLElement, codeText: string): void {
+    // 清除现有内容
+    codeElement.innerHTML = '';
+
+    // 分行处理
+    const lines = codeText.split('\n');
+    lines.forEach((line, index) => {
+      const lineSpan = document.createElement('span');
+      lineSpan.className = 'code-line';
+
+      // 转义处理
+      const escapedLine = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/ /g, '&nbsp;');
+
+      lineSpan.innerHTML = escapedLine || ' '; // 空行使用空格保持高度
+      codeElement.appendChild(lineSpan);
+
+      // 如果不是最后一行，添加换行符
+      if (index < lines.length - 1) {
+        codeElement.appendChild(document.createTextNode('\n'));
+      }
+    });
   }
 
   /**
@@ -601,7 +708,7 @@ export class CodeExtractor {
   public enhanceInlineCode(container: HTMLElement): void {
     const inlineCodeElements = container.querySelectorAll('code:not(pre code)');
     inlineCodeElements.forEach(code => {
-      code.classList.add('enhanced-inline-code');
+      code.classList.add('elegant-inline-code');
     });
   }
 
@@ -618,7 +725,30 @@ export class CodeExtractor {
           navigator.clipboard.writeText(code).then(() => {
             // 显示复制成功提示
             button.classList.add('copied');
-            button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
+
+            // 清除按钮内容
+            while (button.firstChild) {
+              button.removeChild(button.firstChild);
+            }
+
+            // 创建新的 SVG 元素，避免使用 innerHTML
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '14');
+            svg.setAttribute('height', '14');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '2');
+            svg.setAttribute('stroke-linecap', 'round');
+            svg.setAttribute('stroke-linejoin', 'round');
+
+            // 创建对勾 SVG 元素
+            const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            polyline.setAttribute('points', '20 6 9 17 4 12');
+            svg.appendChild(polyline);
+
+            button.appendChild(svg);
+            button.appendChild(document.createTextNode(' 已复制'));
 
             // 显示成功提示
             const codeBlock = button.closest('.code-block');
@@ -633,19 +763,51 @@ export class CodeExtractor {
                 toast.classList.add('show');
               }, 10);
 
-              // 2秒后移除提示
+              // 1.5秒后移除提示
               setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
                   toast.remove();
                 }, 300); // 等待消失动画完成
-              }, 2000);
+              }, 1500);
             }
 
             // 2秒后恢复原样
             setTimeout(() => {
               button.classList.remove('copied');
-              button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+
+              // 清除按钮内容
+              while (button.firstChild) {
+                button.removeChild(button.firstChild);
+              }
+
+              // 创建原始 SVG 元素
+              const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+              svg.setAttribute('width', '14');
+              svg.setAttribute('height', '14');
+              svg.setAttribute('viewBox', '0 0 24 24');
+              svg.setAttribute('fill', 'none');
+              svg.setAttribute('stroke', 'currentColor');
+              svg.setAttribute('stroke-width', '2');
+              svg.setAttribute('stroke-linecap', 'round');
+              svg.setAttribute('stroke-linejoin', 'round');
+
+              // 创建复制图标元素
+              const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              rect.setAttribute('x', '9');
+              rect.setAttribute('y', '9');
+              rect.setAttribute('width', '13');
+              rect.setAttribute('height', '13');
+              rect.setAttribute('rx', '2');
+              rect.setAttribute('ry', '2');
+
+              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              path.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
+
+              svg.appendChild(rect);
+              svg.appendChild(path);
+              button.appendChild(svg);
+              button.appendChild(document.createTextNode(' 复制'));
             }, 2000);
           }).catch(err => {
             console.error('复制失败:', err);
