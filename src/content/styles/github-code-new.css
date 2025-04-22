@@ -1,0 +1,701 @@
+/*
+ * GitHub-style Code Block Implementation
+ * A clean, modern, and user-friendly code block design
+ * Optimized for readability and aesthetics
+ */
+
+/* Code Block Container */
+.github-code-block {
+  position: relative;
+  margin: 1.5em 0;
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: var(--code-font-size, 14px);
+  line-height: 1.6;
+  background-color: var(--code-bg);
+  border: 1px solid var(--code-border);
+  color: var(--code-text-color);
+  box-shadow: var(--code-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
+  transition: all 0.25s ease;
+}
+
+.github-code-block:hover {
+  box-shadow: var(--code-shadow-hover, 0 3px 10px rgba(0, 0, 0, 0.15));
+  transform: translateY(-1px);
+}
+
+/* Focus state for keyboard navigation */
+.github-code-block:focus-within {
+  outline: 2px solid var(--code-focus-outline, #58a6ff);
+  outline-offset: 1px;
+}
+
+/* Code Block Header */
+.github-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background-color: var(--code-header-bg, var(--code-bg));
+  border-bottom: 1px solid var(--code-border);
+  height: 44px;
+  box-sizing: border-box;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+/* Language Badge */
+.github-code-language {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--code-language-color, #57606a);
+  background-color: var(--code-language-bg, rgba(175, 184, 193, 0.2));
+  padding: 3px 8px;
+  border-radius: 4px;
+  user-select: none;
+  letter-spacing: 0.3px;
+  text-transform: capitalize;
+}
+
+/* Code Actions Container */
+.github-code-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Toolbar Groups */
+.github-code-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--code-border);
+}
+
+.github-code-toolbar-group:first-child {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: none;
+}
+
+/* Button Base Styles */
+.github-code-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: var(--code-button-color, #57606a);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.github-code-btn:hover {
+  background-color: var(--code-button-hover-bg, rgba(175, 184, 193, 0.2));
+  color: var(--code-button-hover-color, #24292f);
+  border-color: var(--code-border);
+}
+
+.github-code-btn:focus {
+  outline: 2px solid var(--code-focus-outline, #58a6ff);
+  outline-offset: 1px;
+}
+
+.github-code-btn.active {
+  background-color: var(--code-button-active-bg, rgba(175, 184, 193, 0.3));
+  color: var(--code-button-active-color, #24292f);
+  border-color: var(--code-border);
+}
+
+.github-code-btn svg {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+/* Copy Button */
+.github-code-copy-btn {
+  composes: github-code-btn;
+}
+
+.github-code-copy-btn.copied {
+  color: var(--code-button-success-color, #1a7f37);
+}
+
+/* Wrap Button */
+.github-code-wrap-btn {
+  composes: github-code-btn;
+}
+
+/* Theme Button */
+.github-code-theme-btn {
+  composes: github-code-btn;
+}
+
+/* Code Content Wrapper */
+.github-code-content-wrapper {
+  display: flex;
+  overflow: auto;
+  max-height: 650px; /* Limit max height for very long code blocks */
+  position: relative; /* For absolute positioning of overlays */
+  scrollbar-width: thin;
+  scrollbar-color: var(--code-scrollbar-thumb) var(--code-scrollbar-track);
+}
+
+/* Wrapped content mode */
+.github-code-content-wrapper.wrapped .github-code-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Overlay for code block actions */
+.github-code-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  /* Allow clicks to pass through to content */
+  z-index: 10;
+}
+
+.github-code-overlay * {
+  pointer-events: auto;
+  /* Re-enable pointer events for overlay children */
+}
+
+/* Line Numbers */
+.github-code-line-numbers {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0;
+  background-color: var(--code-line-number-bg, var(--code-bg));
+  border-right: 1px solid var(--code-border);
+  user-select: none;
+  text-align: right;
+  min-width: 44px;
+}
+
+.github-code-line-number {
+  padding: 0 12px 0 16px;
+  color: var(--code-line-number-color, #6e7781);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.github-code-line-number:hover {
+  color: var(--code-line-number-hover-color, #24292f);
+  background-color: var(--code-line-hover-bg, rgba(175, 184, 193, 0.1));
+}
+
+/* Code Content */
+.github-code-content {
+  flex: 1;
+  padding: 16px;
+  overflow: visible;
+  white-space: pre;
+  tab-size: 4;
+  -moz-tab-size: 4;
+  font-feature-settings: "calt" 1, "ss01" 1, "ss02" 1;
+}
+
+.github-code-content code {
+  font-family: inherit;
+  background: transparent;
+  padding: 0;
+  border: none;
+  color: inherit;
+  display: block;
+}
+
+/* Code Lines */
+.github-code-line {
+  display: block;
+  line-height: 1.6;
+  transition: all 0.15s ease;
+  border-left: 2px solid transparent;
+  padding-left: 4px;
+  min-height: 1.6em;
+}
+
+/* Highlighted line */
+.github-code-line.highlighted {
+  background-color: var(--code-line-highlight-bg, rgba(255, 233, 109, 0.2));
+  border-left: 2px solid var(--code-line-highlight-border, #f1e05a);
+}
+
+/* Hover effect on lines */
+.github-code-line:hover {
+  background-color: var(--code-line-hover-bg, rgba(175, 184, 193, 0.1));
+}
+
+/* Theme Variables - Light Theme (GitHub) */
+:root {
+  --code-bg: #f6f8fa;
+  --code-text-color: #24292f;
+  --code-border: #d0d7de;
+  --code-header-bg: #f6f8fa;
+  --code-line-number-bg: #f6f8fa;
+  --code-line-number-color: #6e7781;
+  --code-line-number-hover-color: #24292f;
+  --code-language-color: #57606a;
+  --code-language-bg: rgba(175, 184, 193, 0.2);
+  --code-button-color: #57606a;
+  --code-button-hover-color: #24292f;
+  --code-button-hover-bg: rgba(175, 184, 193, 0.2);
+  --code-button-active-color: #24292f;
+  --code-button-active-bg: rgba(175, 184, 193, 0.3);
+  --code-button-success-color: #1a7f37;
+  --code-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --code-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.15);
+  --code-focus-outline: #58a6ff;
+  --code-line-hover-bg: rgba(175, 184, 193, 0.1);
+  --code-line-highlight-bg: rgba(255, 233, 109, 0.2);
+  --code-line-highlight-border: #f1e05a;
+  --code-tooltip-bg: rgba(0, 0, 0, 0.8);
+  --code-tooltip-color: #ffffff;
+  --code-scrollbar-thumb: #d0d7de;
+  --code-scrollbar-track: #f6f8fa;
+
+  /* Syntax Highlighting - Light Theme */
+  --syntax-keyword: #cf222e;
+  --syntax-string: #0a3069;
+  --syntax-comment: #6a737d;
+  --syntax-function: #6f42c1;
+  --syntax-number: #0550ae;
+  --syntax-class: #953800;
+  --syntax-tag: #116329;
+  --syntax-operator: #24292f;
+  --syntax-variable: #953800;
+}
+
+/* Theme Variables - Dark Theme (GitHub Dark) */
+.dark-theme {
+  --code-bg: #0d1117;
+  --code-text-color: #c9d1d9;
+  --code-border: #30363d;
+  --code-header-bg: #161b22;
+  --code-line-number-bg: #0d1117;
+  --code-line-number-color: #6e7681;
+  --code-line-number-hover-color: #c9d1d9;
+  --code-language-color: #8b949e;
+  --code-language-bg: rgba(110, 118, 129, 0.4);
+  --code-button-color: #8b949e;
+  --code-button-hover-color: #c9d1d9;
+  --code-button-hover-bg: rgba(110, 118, 129, 0.4);
+  --code-button-active-color: #c9d1d9;
+  --code-button-active-bg: rgba(110, 118, 129, 0.5);
+  --code-button-success-color: #7ee787;
+  --code-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --code-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.3);
+  --code-focus-outline: #1f6feb;
+  --code-line-hover-bg: rgba(110, 118, 129, 0.1);
+  --code-line-highlight-bg: rgba(187, 128, 9, 0.15);
+  --code-line-highlight-border: #bb8009;
+  --code-tooltip-bg: rgba(255, 255, 255, 0.1);
+  --code-tooltip-color: #c9d1d9;
+  --code-scrollbar-thumb: #30363d;
+  --code-scrollbar-track: #0d1117;
+
+  /* Syntax Highlighting - Dark Theme */
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-comment: #8b949e;
+  --syntax-function: #d2a8ff;
+  --syntax-number: #79c0ff;
+  --syntax-class: #ffa657;
+  --syntax-tag: #7ee787;
+  --syntax-operator: #c9d1d9;
+  --syntax-variable: #ffa657;
+}
+
+/* Syntax Highlighting */
+.github-code-block .hljs-keyword,
+.github-code-block .hljs-selector-tag,
+.github-code-block .hljs-addition {
+  color: var(--syntax-keyword);
+}
+
+.github-code-block .hljs-string,
+.github-code-block .hljs-regexp,
+.github-code-block .hljs-meta-string {
+  color: var(--syntax-string);
+}
+
+.github-code-block .hljs-comment,
+.github-code-block .hljs-quote {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+
+.github-code-block .hljs-function,
+.github-code-block .hljs-title,
+.github-code-block .hljs-attribute {
+  color: var(--syntax-function);
+}
+
+.github-code-block .hljs-number,
+.github-code-block .hljs-literal {
+  color: var(--syntax-number);
+}
+
+.github-code-block .hljs-type,
+.github-code-block .hljs-class {
+  color: var(--syntax-class);
+}
+
+.github-code-block .hljs-tag,
+.github-code-block .hljs-name,
+.github-code-block .hljs-selector-id,
+.github-code-block .hljs-selector-class {
+  color: var(--syntax-tag);
+}
+
+.github-code-block .hljs-operator,
+.github-code-block .hljs-punctuation {
+  color: var(--syntax-operator);
+}
+
+.github-code-block .hljs-variable,
+.github-code-block .hljs-attr {
+  color: var(--syntax-variable);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .github-code-block {
+    margin: 1em 0;
+    border-radius: 6px;
+  }
+
+  .github-code-header {
+    padding: 8px 12px;
+    height: 40px;
+  }
+
+  .github-code-language {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+
+  .github-code-copy-btn {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .github-code-line-numbers {
+    min-width: 36px;
+    padding: 12px 0;
+  }
+
+  .github-code-line-number {
+    padding: 0 8px 0 12px;
+    font-size: 11px;
+  }
+
+  .github-code-content {
+    padding: 12px;
+    font-size: calc(var(--code-font-size) - 1px);
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+.github-code-content-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.github-code-content-wrapper::-webkit-scrollbar-track {
+  background: var(--code-scrollbar-track);
+  border-radius: 5px;
+}
+
+.github-code-content-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--code-scrollbar-thumb);
+  border-radius: 5px;
+  border: 3px solid var(--code-scrollbar-track);
+  transition: all 0.2s ease;
+}
+
+.github-code-content-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: var(--code-button-hover-color);
+  border-width: 2px;
+}
+
+.github-code-content-wrapper::-webkit-scrollbar-corner {
+  background: var(--code-scrollbar-track);
+}
+
+/* Single Line Code Block */
+.github-code-block.single-line .github-code-content-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.github-code-block.single-line .github-code-line-numbers {
+  display: none;
+}
+
+.github-code-block.single-line .github-code-content {
+  padding: 8px 16px;
+}
+
+/* Inline Code */
+.github-inline-code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 85%;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  background-color: var(--code-bg);
+  color: var(--syntax-keyword);
+  border: 1px solid var(--code-border);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  font-feature-settings: "calt" 1;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.github-inline-code:hover {
+  border-color: var(--code-button-hover-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Language-specific styling */
+.github-code-block.lang-javascript .github-code-language,
+.github-code-block.lang-js .github-code-language {
+  color: #f7df1e;
+  background-color: rgba(247, 223, 30, 0.15);
+}
+
+.github-code-block.lang-typescript .github-code-language,
+.github-code-block.lang-ts .github-code-language {
+  color: #3178c6;
+  background-color: rgba(49, 120, 198, 0.15);
+}
+
+.github-code-block.lang-html .github-code-language {
+  color: #e34c26;
+  background-color: rgba(227, 76, 38, 0.15);
+}
+
+.github-code-block.lang-css .github-code-language {
+  color: #264de4;
+  background-color: rgba(38, 77, 228, 0.15);
+}
+
+.github-code-block.lang-python .github-code-language,
+.github-code-block.lang-py .github-code-language {
+  color: #3776ab;
+  background-color: rgba(55, 118, 171, 0.15);
+}
+
+.github-code-block.lang-java .github-code-language {
+  color: #b07219;
+  background-color: rgba(176, 114, 25, 0.15);
+}
+
+.github-code-block.lang-go .github-code-language {
+  color: #00ADD8;
+  background-color: rgba(0, 173, 216, 0.15);
+}
+
+.github-code-block.lang-rust .github-code-language {
+  color: #DEA584;
+  background-color: rgba(222, 165, 132, 0.15);
+}
+
+.github-code-block.lang-bash .github-code-language,
+.github-code-block.lang-sh .github-code-language {
+  color: #4EAA25;
+  background-color: rgba(78, 170, 37, 0.15);
+}
+
+.github-code-block.lang-json .github-code-language {
+  color: #292929;
+  background-color: rgba(41, 41, 41, 0.15);
+}
+
+.github-code-block.lang-markdown .github-code-language,
+.github-code-block.lang-md .github-code-language {
+  color: #083fa1;
+  background-color: rgba(8, 63, 161, 0.15);
+}
+
+.github-inline-code.lang-javascript,
+.github-inline-code.lang-js {
+  color: #f7df1e;
+  background-color: rgba(247, 223, 30, 0.1);
+}
+
+.github-inline-code.lang-typescript,
+.github-inline-code.lang-ts {
+  color: #3178c6;
+  background-color: rgba(49, 120, 198, 0.1);
+}
+
+.github-inline-code.lang-html {
+  color: #e34c26;
+  background-color: rgba(227, 76, 38, 0.1);
+}
+
+.github-inline-code.lang-css {
+  color: #264de4;
+  background-color: rgba(38, 77, 228, 0.1);
+}
+
+.github-inline-code.lang-python,
+.github-inline-code.lang-py {
+  color: #3776ab;
+  background-color: rgba(55, 118, 171, 0.1);
+}
+
+/* Code Block Themes */
+.github-code-block[data-theme="github-light"] {
+  /* Light theme is default */
+}
+
+.github-code-block[data-theme="github-dark"] {
+  --code-bg: #0d1117;
+  --code-text-color: #c9d1d9;
+  --code-border: #30363d;
+  --code-header-bg: #161b22;
+  --code-line-number-bg: #0d1117;
+  --code-line-number-color: #6e7681;
+  --code-language-color: #8b949e;
+  --code-language-bg: rgba(110, 118, 129, 0.4);
+  --code-button-color: #8b949e;
+  --code-button-hover-color: #c9d1d9;
+  --code-button-hover-bg: rgba(110, 118, 129, 0.4);
+  --code-button-success-color: #7ee787;
+
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-comment: #8b949e;
+  --syntax-function: #d2a8ff;
+  --syntax-number: #79c0ff;
+  --syntax-class: #ffa657;
+  --syntax-tag: #7ee787;
+  --syntax-operator: #c9d1d9;
+  --syntax-variable: #ffa657;
+}
+
+.github-code-block[data-theme="one-dark"] {
+  --code-bg: #282c34;
+  --code-text-color: #abb2bf;
+  --code-border: #3e4451;
+  --code-header-bg: #21252b;
+  --code-line-number-bg: #282c34;
+  --code-line-number-color: #636d83;
+  --code-language-color: #abb2bf;
+  --code-language-bg: rgba(92, 99, 112, 0.4);
+  --code-button-color: #abb2bf;
+  --code-button-hover-color: #d7dae0;
+  --code-button-hover-bg: rgba(92, 99, 112, 0.4);
+  --code-button-success-color: #98c379;
+
+  --syntax-keyword: #c678dd;
+  --syntax-string: #98c379;
+  --syntax-comment: #5c6370;
+  --syntax-function: #61afef;
+  --syntax-number: #d19a66;
+  --syntax-class: #e5c07b;
+  --syntax-tag: #e06c75;
+  --syntax-operator: #abb2bf;
+  --syntax-variable: #e06c75;
+}
+
+.github-code-block[data-theme="dracula"] {
+  --code-bg: #282a36;
+  --code-text-color: #f8f8f2;
+  --code-border: #44475a;
+  --code-header-bg: #1e1f29;
+  --code-line-number-bg: #282a36;
+  --code-line-number-color: #6272a4;
+  --code-language-color: #f8f8f2;
+  --code-language-bg: rgba(98, 114, 164, 0.4);
+  --code-button-color: #f8f8f2;
+  --code-button-hover-color: #ffffff;
+  --code-button-hover-bg: rgba(98, 114, 164, 0.4);
+  --code-button-success-color: #50fa7b;
+
+  --syntax-keyword: #ff79c6;
+  --syntax-string: #f1fa8c;
+  --syntax-comment: #6272a4;
+  --syntax-function: #8be9fd;
+  --syntax-number: #bd93f9;
+  --syntax-class: #ffb86c;
+  --syntax-tag: #ff79c6;
+  --syntax-operator: #f8f8f2;
+  --syntax-variable: #ffb86c;
+}
+
+/* Toast Notification for Copy */
+.github-code-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background-color: var(--code-header-bg);
+  color: var(--code-text-color);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  border: 1px solid var(--code-border);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+.github-code-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Tooltip */
+.github-code-tooltip {
+  position: absolute;
+  background-color: var(--code-tooltip-bg);
+  color: var(--code-tooltip-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.github-code-tooltip.visible {
+  opacity: 1;
+}
+
+/* Keyboard shortcuts hint */
+.github-code-kbd-hint {
+  display: inline-block;
+  padding: 2px 4px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--code-text-color);
+  background-color: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  margin-left: 4px;
+}

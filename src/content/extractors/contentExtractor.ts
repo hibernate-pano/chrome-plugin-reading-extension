@@ -643,9 +643,6 @@ export class ContentExtractor {
     // 查找所有预格式化文本块
     const preElements = container.querySelectorAll('pre');
     preElements.forEach(pre => {
-      // 添加行号类
-      pre.classList.add('line-numbers');
-
       // 确保有 code 元素
       let code = pre.querySelector('code');
       if (!code) {
@@ -671,8 +668,11 @@ export class ContentExtractor {
     // 处理内联代码
     const inlineCodeElements = container.querySelectorAll('code:not(pre code)');
     inlineCodeElements.forEach(code => {
-      code.classList.add('inline-code');
+      code.classList.add('github-inline-code');
     });
+
+    // 注意：实际的代码块增强将由 githubCodeExtractor 处理
+    // 这里只进行基本的准备工作
   }
 
   /**

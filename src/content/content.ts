@@ -398,12 +398,15 @@ import {
   listExtractor
 } from './extractors';
 
+// 导入 GitHub 风格代码块提取器
+import { githubCodeExtractor } from './extractors/githubCodeExtractor';
+
 // 导入基础变量系统
 import './styles/variables.css';
 // 导入提取器样式
 import './extractors/extractors.css';
-// 导入优雅的代码块样式
-import './styles/elegant-code.css';
+// 导入 GitHub 风格代码块样式
+import './styles/github-code-new.css';
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -565,30 +568,10 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
     return;
   }
 
-  // 动态导入 highlight.js
-  console.log('开始动态加载代码高亮库');
+  console.log('开始处理代码块');
   try {
-    const hljs = await import(/* webpackChunkName: "highlight" */ 'highlight.js');
-
-    // 配置 highlight.js
-    hljs.default.configure({
-      languages: [
-        'javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp',
-        'css', 'html', 'xml', 'json', 'markdown', 'bash', 'shell',
-        'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'sql'
-      ]
-    });
-
-    console.log('代码高亮库加载成功，开始处理代码块');
-  } catch (error) {
-    console.error('加载代码高亮库时发生错误:', error);
-  }
-
-  // 使用代码提取器增强所有代码块
-  try {
-
-    // 先彻底清除所有已存在的增强代码块容器
-    const existingContainers = container.querySelectorAll('.enhanced-code-container, .code-block');
+    // 先清除所有已存在的代码块容器
+    const existingContainers = container.querySelectorAll('.github-code-block, .code-block, .enhanced-code-container');
     console.log(`找到 ${existingContainers.length} 个现有代码块容器`);
 
     existingContainers.forEach((codeContainer, index) => {
@@ -616,136 +599,63 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
     });
 
     // 清除可能存在的其他代码相关元素
-    const codeHeaders = container.querySelectorAll('.code-header, .code-top-bar, .code-toolbar');
-    codeHeaders.forEach(header => header.remove());
+    const codeElements = container.querySelectorAll(
+      '.github-code-header, .github-code-actions, .github-code-content-wrapper, ' +
+      '.code-header, .code-top-bar, .code-toolbar, .code-copy-button, ' +
+      '.code-content-wrapper, .code-content, .code-wrapper, .line-numbers, .code-toast'
+    );
+    codeElements.forEach(element => element.remove());
 
-    const copyButtons = container.querySelectorAll('.code-copy-button');
-    copyButtons.forEach(button => button.remove());
-
-    const contentWrappers = container.querySelectorAll('.code-content-wrapper, .code-content, .code-wrapper');
-    contentWrappers.forEach(wrapper => wrapper.remove());
-
-    const lineNumbers = container.querySelectorAll('.line-numbers');
-    lineNumbers.forEach(lineNumber => lineNumber.remove());
-
-    const codeToasts = container.querySelectorAll('.code-toast');
-    codeToasts.forEach(toast => toast.remove());
-
-    // 设置代码块主题类
+    // 设置代码块主题
     const themeClass = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
-    const codeTheme = settings.codeTheme || 'github';
     container.classList.remove('dark-theme', 'light-theme');
     container.classList.add(themeClass);
-    container.setAttribute('data-code-theme', codeTheme);
-    console.log(`应用代码块主题类: ${themeClass}, 代码主题: ${codeTheme}`);
 
-    // 强制设置代码块主题变量
-    document.documentElement.style.setProperty('--code-theme', codeTheme);
-    document.documentElement.style.setProperty('--code-theme-class', themeClass);
+    // 确定代码主题
+    let codeTheme: string;
+    switch (settings.codeTheme) {
+      case 'github':
+        codeTheme = settings.theme === 'dark' ? 'github-dark' : 'github-light';
+        break;
+      case 'one-dark':
+        codeTheme = 'one-dark';
+        break;
+      case 'dracula':
+        codeTheme = 'dracula';
+        break;
+      default:
+        codeTheme = settings.theme === 'dark' ? 'github-dark' : 'github-light';
+    }
 
-    // 使用代码提取器增强所有代码块
+    console.log(`应用代码块主题: ${codeTheme}`);
+
+    // 使用 GitHub 风格代码块提取器增强所有代码块
     console.log('开始增强代码块');
-    await codeExtractor.enhanceAllCodeBlocks(container);
+    await githubCodeExtractor.enhanceAllCodeBlocks(container, codeTheme);
+
+    // 增强内联代码
+    githubCodeExtractor.enhanceInlineCode(container);
 
     // 设置代码字体大小
     if (settings.codeFontSize) {
-      const codeElements = container.querySelectorAll('pre, code, .code-toolbar, .line-number');
-      codeElements.forEach(element => {
-        (element as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
-      });
+      const codeElements = container.querySelectorAll(
+        '.github-code-block, .github-code-block code, .github-code-language, ' +
+        '.github-code-copy-btn, .github-code-line-number, .github-inline-code'
+      );
 
-      // 特别调整行号字体大小
-      const lineNumbers = container.querySelectorAll('.line-number');
-      lineNumbers.forEach(element => {
-        (element as HTMLElement).style.fontSize = `${Math.max(settings.codeFontSize - 2, 10)}px`;
+      codeElements.forEach(element => {
+        if (element.classList.contains('github-code-line-number')) {
+          // 行号字体稍小
+          (element as HTMLElement).style.fontSize = `${Math.max(settings.codeFontSize - 2, 10)}px`;
+        } else if (element.classList.contains('github-code-language') ||
+          element.classList.contains('github-code-copy-btn')) {
+          // 工具栏元素字体稍小
+          (element as HTMLElement).style.fontSize = `${Math.max(settings.codeFontSize - 1, 11)}px`;
+        } else {
+          (element as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
+        }
       });
     }
-
-    // 设置代码块容器最大宽度
-    const codeBlockContainers = container.querySelectorAll('.code-block');
-    codeBlockContainers.forEach(block => {
-      (block as HTMLElement).style.maxWidth = '100%';
-
-      // 确保代码块容器也有正确的主题类
-      block.classList.remove('dark-theme', 'light-theme');
-      block.classList.add(themeClass);
-
-      // 传递代码主题属性
-      block.setAttribute('data-code-theme', settings.codeTheme || 'github');
-
-      // 确保代码块内的所有元素都有正确的主题类
-      const codeElements = block.querySelectorAll('code');
-      codeElements.forEach(code => {
-        code.classList.remove('dark-theme', 'light-theme');
-        code.classList.add(themeClass);
-      });
-
-      // 确保工具栏和行号区域也有正确的主题类
-      const toolbar = block.querySelector('.code-toolbar');
-      if (toolbar) {
-        toolbar.classList.remove('dark-theme', 'light-theme');
-        toolbar.classList.add(themeClass);
-        toolbar.setAttribute('data-code-theme', settings.codeTheme || 'github');
-      }
-
-      const lineNumbers = block.querySelector('.line-numbers');
-      if (lineNumbers) {
-        lineNumbers.classList.remove('dark-theme', 'light-theme');
-        lineNumbers.classList.add(themeClass);
-        lineNumbers.setAttribute('data-code-theme', settings.codeTheme || 'github');
-      }
-    });
-
-    // 处理代码块内容的溢出方式
-    const codeContents = container.querySelectorAll('.code-content');
-    codeContents.forEach(content => {
-      // 默认使用水平滚动模式
-      (content as HTMLElement).style.overflowX = 'auto';
-      (content as HTMLElement).style.whiteSpace = 'pre';
-
-      // 添加切换按钮
-      const toolbar = (content as HTMLElement).closest('.code-block')?.querySelector('.code-toolbar');
-      if (toolbar) {
-        // 确保工具栏也有正确的主题类
-        toolbar.classList.remove('dark-theme', 'light-theme');
-        toolbar.classList.add(themeClass);
-        toolbar.setAttribute('data-code-theme', settings.codeTheme || 'github');
-
-        const wrapButton = document.createElement('button');
-        wrapButton.className = 'code-wrap-button';
-        wrapButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>';
-        wrapButton.title = '切换换行模式';
-
-        wrapButton.addEventListener('click', () => {
-          const codeContent = (content as HTMLElement);
-          const isWrapped = codeContent.style.whiteSpace === 'pre-wrap';
-
-          if (isWrapped) {
-            // 切换到滚动模式
-            codeContent.style.whiteSpace = 'pre';
-            codeContent.style.wordBreak = 'normal';
-            codeContent.style.overflowWrap = 'normal';
-            wrapButton.title = '切换换行模式';
-            wrapButton.classList.remove('active');
-          } else {
-            // 切换到换行模式
-            codeContent.style.whiteSpace = 'pre-wrap';
-            codeContent.style.wordBreak = 'break-word';
-            codeContent.style.overflowWrap = 'break-word';
-            wrapButton.title = '切换滚动模式';
-            wrapButton.classList.add('active');
-          }
-        });
-
-        // 将按钮添加到工具栏中
-        const rightGroup = toolbar.querySelector('.code-right-group') || toolbar;
-        rightGroup.insertBefore(wrapButton, rightGroup.firstChild);
-      }
-    });
-
-    // 添加代码块交互功能
-    console.log('添加代码块交互功能');
-    codeExtractor.addCodeBlockInteractions(container);
 
     console.log('代码块处理完成');
   } catch (error) {

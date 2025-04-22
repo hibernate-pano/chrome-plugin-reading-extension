@@ -6,6 +6,7 @@ export * from './mediaExtractor';
 export * from './enhancedMediaExtractor';
 export * from './codeExtractor';
 export * from './listExtractor';
+export * from './githubCodeExtractor';
 
 // 导出默认实例
 import { contentExtractor } from './contentExtractor';
@@ -15,6 +16,7 @@ import { mediaExtractor } from './mediaExtractor';
 import { enhancedMediaExtractor } from './enhancedMediaExtractor';
 import { codeExtractor } from './codeExtractor';
 import { listExtractor } from './listExtractor';
+import { githubCodeExtractor } from './githubCodeExtractor';
 
 export {
   contentExtractor,
@@ -23,5 +25,6 @@ export {
   mediaExtractor,
   enhancedMediaExtractor,
   codeExtractor,
-  listExtractor
+  listExtractor,
+  githubCodeExtractor
 };

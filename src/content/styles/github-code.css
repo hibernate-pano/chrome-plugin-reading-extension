@@ -51,6 +51,7 @@
   display: block;
   width: 100%;
   font-family: var(--reading-code-font-family);
+  max-height: none;
 }
 
 /* 代码表格 */
@@ -64,6 +65,8 @@
   padding: 0;
   background-color: var(--code-bg);
   color: var(--code-text-color);
+  display: table;
+  overflow: visible;
 }
 
 /* 代码行 */
@@ -71,6 +74,7 @@
   background-color: var(--code-bg);
   line-height: 1.45;
   border: none;
+  display: table-row;
 }
 
 /* 行号区域 */
@@ -102,6 +106,7 @@
   left: 0;
   z-index: 1;
   vertical-align: top;
+  display: table-cell;
 }
 
 /* 代码块顶部工具栏 */
@@ -530,6 +535,8 @@
   -moz-tab-size: 4;
   vertical-align: top;
   width: 100%;
+  display: block;
+  text-align: left;
 }
 
 /* 代码行高亮 */
