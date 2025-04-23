@@ -53,6 +53,14 @@
   flex: 1;
   line-height: 1.5;
   padding-left: 16px;
+  display: block;
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  white-space: pre;
+  word-break: break-all;
+  word-wrap: break-word;
+  box-sizing: border-box;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* 行号区域 */
@@ -77,6 +85,11 @@
   transition: opacity 0.2s ease, color 0.2s ease;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
+}
+
+/* 修复多行代码块被主题切换影响 display 问题 */
+.code-block:not([data-lines="1"]) .line {
+  display: block !important;
 }
 
 /* 工具栏 */

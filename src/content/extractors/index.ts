@@ -7,6 +7,9 @@ export * from './enhancedMediaExtractor';
 export * from './codeExtractor';
 export * from './listExtractor';
 export * from './githubCodeExtractor';
+export * from './BaseExtractor';
+export * from './DefaultExtractor';
+export * from './ExtractorFactory';
 
 // 导出默认实例
 import { contentExtractor } from './contentExtractor';

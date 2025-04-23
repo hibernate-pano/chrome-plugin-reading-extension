@@ -21,6 +21,8 @@ export function updateReadingModeStyles(settings: ReadingModeSettings, isReading
   root.style.setProperty('--reading-page-width', `${settings.pageWidth}px`);
   root.style.setProperty('--reading-line-spacing', `${settings.lineSpacing}rem`);
   root.style.setProperty('--reading-paragraph-spacing', `${settings.paragraphSpacing}rem`);
+  root.style.setProperty('--reading-code-font-size', `${settings.codeFontSize || 14}px`);
+  // 保持与代码块样式的兼容性
   root.style.setProperty('--code-font-size', `${settings.codeFontSize || 14}px`);
   root.style.setProperty('--list-font-size', `${settings.fontSize - 1}px`);
   root.style.setProperty('--list-line-height', `${settings.lineHeight + 0.1}`);
@@ -33,7 +35,13 @@ export function updateReadingModeStyles(settings: ReadingModeSettings, isReading
 
   // 设置滚动条颜色
   if (settings.theme === 'dark') {
-    // 添加深色主题类
+    // 添加深色主题类，但只应用于阅读模式容器，而不是整个 body
+    const readingContainer = document.getElementById('reading-mode-container');
+    if (readingContainer) {
+      readingContainer.classList.add('dark-theme');
+      readingContainer.classList.remove('light-theme');
+    }
+    // 保留 body 类以兼容现有代码
     document.body.classList.add('dark-theme');
     document.body.classList.remove('light-theme');
 
@@ -54,7 +62,13 @@ export function updateReadingModeStyles(settings: ReadingModeSettings, isReading
     root.style.setProperty('--reading-blockquote-border', 'rgba(255, 255, 255, 0.1)');
     root.style.setProperty('--reading-blockquote-text', 'rgba(255, 255, 255, 0.7)');
   } else {
-    // 添加浅色主题类
+    // 添加浅色主题类，但只应用于阅读模式容器，而不是整个 body
+    const readingContainer = document.getElementById('reading-mode-container');
+    if (readingContainer) {
+      readingContainer.classList.add('light-theme');
+      readingContainer.classList.remove('dark-theme');
+    }
+    // 保留 body 类以兼容现有代码
     document.body.classList.add('light-theme');
     document.body.classList.remove('dark-theme');
 

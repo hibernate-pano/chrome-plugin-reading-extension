@@ -1,0 +1,53 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Chrome阅读插件项目概述
+
+这是一款专注于"简洁易用、本地优先"的Chrome阅读插件，旨在提供极简、优雅的网页阅读体验，同时保护用户隐私。项目正在进行v1.7.0版本的全面重构。
+
+## 核心理念
+
+- **极简主义**：界面元素最小化，去除干扰，聚焦内容
+- **本地优先**：所有数据本地存储，不依赖云服务
+- **内容优先**：智能提取网页主要内容，优化排版
+- **隐私至上**：不收集任何用户数据，保护用户隐私
+
+## 主要功能
+
+- 阅读模式一键开启，自动提取网页主要内容
+- 深色/浅色主题切换，支持自定义主题
+- 字体、字号、行距等排版参数自定义
+- 阅读进度自动保存，记忆阅读位置
+- 支持内容高亮和笔记功能
+- 导出为Markdown、PDF等格式
+
+## 技术栈
+
+- **前端框架**：React 18 + TypeScript 5.0
+- **样式方案**：Tailwind CSS 3.0
+- **状态管理**：Zustand（轻量）
+- **内容提取**：基于改进的Readability.js
+- **存储**：IndexedDB
+- **构建工具**：Vite 5.0 + pnpm
+
+## 项目结构
+
+- [src/background](mdc:src/background): 背景脚本代码
+- [src/content](mdc:src/content): 内容脚本代码
+- [src/popup](mdc:src/popup): 弹窗UI代码
+- [src/storage](mdc:src/storage): 存储相关代码
+- [src/utils](mdc:src/utils): 工具函数
+- [src/presets](mdc:src/presets): 主题和排版预设
+- [docs/v1.7.0](mdc:docs/v1.7.0): 项目规划和设计文档
+
+## 设计文档
+
+关键设计文档位于docs/v1.7.0目录：
+
+- [docs/v1.7.0/vision_and_design.md](mdc:docs/v1.7.0/vision_and_design.md): 产品愿景和设计方案
+- [docs/v1.7.0/technical_architecture.md](mdc:docs/v1.7.0/technical_architecture.md): 技术架构设计
+- [docs/v1.7.0/feature_design.md](mdc:docs/v1.7.0/feature_design.md): 功能设计详情
+- [docs/v1.7.0/roadmap.md](mdc:docs/v1.7.0/roadmap.md): 产品路线图
+- [docs/v1.7.0/implementation_steps.md](mdc:docs/v1.7.0/implementation_steps.md): 实现步骤

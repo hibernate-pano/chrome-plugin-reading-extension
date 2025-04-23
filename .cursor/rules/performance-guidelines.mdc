@@ -1,0 +1,419 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 性能优化指南
+
+Chrome阅读插件对性能要求高，既需要快速启动，又需要流畅处理大量内容。本指南提供性能优化的关键策略。
+
+## 总体性能目标
+
+- 阅读模式切换时间 < 300ms
+- 滚动时保持60fps的平滑体验
+- 内存占用 < 50MB
+- 冷启动时间 < 1秒
+
+## 渲染性能优化
+
+### 虚拟滚动列表
+
+对于长文档，使用虚拟滚动技术仅渲染可视区域内容：
+
+```typescript
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+function VirtualContent({ content }: { content: ContentBlock[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const virtualizer = useVirtualizer({
+    count: content.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 100, // 预估每块内容高度
+  });
+  
+  return (
+    <div ref={containerRef} className="h-full overflow-auto">
+      <div 
+        style={{ 
+          height: `${virtualizer.getTotalSize()}px`,
+          position: 'relative'
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => (
+          <div
+            key={virtualRow.index}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${virtualRow.size}px`,
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
+          >
+            {renderContentBlock(content[virtualRow.index])}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### React性能优化
+
+使用以下React优化技术：
+
+1. 使用`React.memo`包装组件，防止不必要的重渲染：
+
+```typescript
+const ThemeSelector = React.memo(({ themes, currentTheme, onSelect }: ThemeSelectorProps) => {
+  // 组件实现...
+});
+```
+
+2. 使用`useMemo`缓存计算结果：
+
+```typescript
+const processedContent = useMemo(() => {
+  return heavyProcessing(content);
+}, [content]);
+```
+
+3. 使用`useCallback`稳定回调引用：
+
+```typescript
+const handleThemeChange = useCallback((theme: Theme) => {
+  setTheme(theme);
+  saveThemeToStorage(theme);
+}, []);
+```
+
+### DOM操作优化
+
+1. 使用批量DOM更新：
+
+```typescript
+// 不好的做法 - 多次更新DOM
+elements.forEach(el => {
+  el.style.color = theme.textColor;
+  el.style.fontSize = theme.fontSize;
+});
+
+// 好的做法 - 批量更新
+requestAnimationFrame(() => {
+  elements.forEach(el => {
+    el.classList.add(`theme-${themeName}`);
+  });
+});
+```
+
+2. 使用DocumentFragment进行批量DOM操作：
+
+```typescript
+const fragment = document.createDocumentFragment();
+parsedElements.forEach(el => fragment.appendChild(el));
+container.appendChild(fragment);
+```
+
+## 异步处理策略
+
+### Web Workers
+
+将耗时的内容处理逻辑放入Web Worker中执行：
+
+```typescript
+// content-worker.ts
+self.addEventListener('message', async (event) => {
+  const { html, url } = event.data;
+  const extractedContent = await extractContent(html, url);
+  self.postMessage({ type: 'EXTRACTION_COMPLETE', content: extractedContent });
+});
+
+// main thread
+const worker = new Worker('content-worker.js');
+worker.postMessage({ html: document.documentElement.outerHTML, url: window.location.href });
+worker.addEventListener('message', (event) => {
+  if (event.data.type === 'EXTRACTION_COMPLETE') {
+    renderContent(event.data.content);
+  }
+});
+```
+
+### 事件去抖与节流
+
+对频繁触发的事件进行去抖和节流处理：
+
+```typescript
+// 节流函数 - 限制函数执行频率
+function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let lastCall = 0;
+  return (...args: Parameters<T>) => {
+    const now = Date.now();
+    if (now - lastCall >= wait) {
+      func(...args);
+      lastCall = now;
+    }
+  };
+}
+
+// 去抖函数 - 延迟执行直到停止触发
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: number | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = window.setTimeout(() => func(...args), wait);
+  };
+}
+
+// 使用示例
+const debouncedSaveSettings = debounce(saveSettings, 500);
+const throttledScroll = throttle(handleScroll, 100);
+```
+
+## 资源加载优化
+
+### 代码分割与懒加载
+
+使用代码分割和懒加载减小初始加载体积：
+
+```typescript
+// 懒加载组件
+const SettingsPanel = React.lazy(() => import('./SettingsPanel'));
+
+function App() {
+  return (
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        {showSettings && <SettingsPanel />}
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### 资源预加载
+
+预加载可能即将使用的资源：
+
+```typescript
+// 当用户悬停在按钮上时预加载设置面板
+function ReaderControls() {
+  const prefetchSettings = () => {
+    import('./SettingsPanel');
+  };
+  
+  return (
+    <button 
+      onMouseEnter={prefetchSettings}
+      onClick={openSettings}
+    >
+      Settings
+    </button>
+  );
+}
+```
+
+## 数据管理优化
+
+### IndexedDB优化
+
+优化IndexedDB操作以提高性能：
+
+1. 使用批量操作：
+
+```typescript
+// 低效方式
+articles.forEach(async article => {
+  await db.articles.put(article);
+});
+
+// 高效方式
+await db.articles.bulkPut(articles);
+```
+
+2. 使用索引加速查询：
+
+```typescript
+// 在数据库初始化时创建索引
+db.version(1).stores({
+  articles: '++id, url, readDate, [tags+readDate]'
+});
+
+// 使用索引查询
+const recentArticles = await db.articles
+  .where('readDate')
+  .above(lastWeek)
+  .toArray();
+```
+
+3. 实现LRU缓存机制：
+
+```typescript
+class LRUCache<K, V> {
+  private cache = new Map<K, V>();
+  private readonly maxSize: number;
+  
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
+  }
+  
+  get(key: K): V | undefined {
+    if (!this.cache.has(key)) return undefined;
+    
+    // 访问时将项移到最近使用位置
+    const value = this.cache.get(key)!;
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    
+    return value;
+  }
+  
+  set(key: K, value: V): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // 删除最不常使用的项(第一个)
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    
+    this.cache.set(key, value);
+  }
+}
+
+// 使用LRU缓存存储最近的文章
+const articlesCache = new LRUCache<string, Article>(50);
+```
+
+## 内存管理
+
+### 内存泄漏预防
+
+防止内存泄漏的关键实践：
+
+1. 清理事件监听器：
+
+```typescript
+function setupReaderMode() {
+  const handleKeyPress = (e: KeyboardEvent) => {
+    // 处理键盘事件
+  };
+  
+  document.addEventListener('keydown', handleKeyPress);
+  
+  // 返回清理函数
+  return () => {
+    document.removeEventListener('keydown', handleKeyPress);
+  };
+}
+
+// React组件中使用
+useEffect(() => {
+  const cleanup = setupReaderMode();
+  return cleanup;
+}, []);
+```
+
+2. 避免闭包引用大对象：
+
+```typescript
+// 不好的做法 - 整个文档被引用
+const extractedContent = extractContent(document);
+setInterval(() => {
+  checkReadingProgress(document, extractedContent);
+}, 5000);
+
+// 好的做法 - 只引用必要的数据
+const contentMetadata = {
+  totalParagraphs: document.querySelectorAll('p').length,
+  contentLength: extractedContent.textContent.length
+};
+setInterval(() => {
+  checkReadingProgress(contentMetadata);
+}, 5000);
+```
+
+3. 使用WeakMap/WeakSet存储DOM引用：
+
+```typescript
+// 使用WeakMap存储DOM元素相关数据
+const elementData = new WeakMap<Element, ElementMetadata>();
+
+document.querySelectorAll('p').forEach(p => {
+  elementData.set(p, { 
+    originalStyle: p.style.cssText,
+    processed: false
+  });
+});
+```
+
+## 监控与分析
+
+### 性能指标监控
+
+监控关键性能指标：
+
+```typescript
+// 监控内容提取性能
+function measureContentExtraction() {
+  const start = performance.now();
+  const content = extractContent(document);
+  const duration = performance.now() - start;
+  
+  console.log(`Content extraction took ${duration}ms`);
+  
+  // 如果超过阈值，记录性能问题
+  if (duration > 500) {
+    recordPerformanceIssue('SLOW_EXTRACTION', { 
+      url: window.location.href,
+      duration,
+      contentSize: content.length
+    });
+  }
+  
+  return content;
+}
+```
+
+### 性能调试工具
+
+使用Chrome DevTools分析性能问题：
+
+1. Performance面板录制页面活动
+2. Memory面板分析内存使用
+3. 使用Lighthouse进行性能审计
+
+## 渐进式增强
+
+实现功能的渐进增强，确保基本功能在所有环境下可用，而高级功能在支持的浏览器中启用：
+
+```typescript
+// 检查是否支持某项功能
+function supportsIndexedDB() {
+  return 'indexedDB' in window;
+}
+
+// 基于功能支持提供不同实现
+const storage = supportsIndexedDB() 
+  ? new IndexedDBStorage() 
+  : new LocalStorageFallback();
+```
+
+## 性能预算
+
+设定并遵循性能预算：
+
+- 内容脚本大小 < 100KB（压缩后）
+- 主题CSS < 20KB
+- DOM操作时间 < 16ms（保持60fps）
+- 存储操作响应时间 < 50ms

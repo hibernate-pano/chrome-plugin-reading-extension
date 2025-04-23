@@ -1,0 +1,108 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 编码规范与约定
+
+本项目遵循一系列命名、组织和编码约定，以保持代码的一致性和可维护性。
+
+## 文件命名约定
+
+- React组件文件使用**PascalCase**: `ReaderView.tsx`, `ThemeSelector.tsx`
+- 工具函数和钩子使用**camelCase**: `useStorage.ts`, `extractContent.ts`
+- 样式文件与组件同名，使用**.module.css**后缀: `ReaderView.module.css`
+- 测试文件与被测文件同名，添加**.test**或**.spec**: `extractContent.test.ts`
+- 常量文件使用**全大写下划线**: `THEME_CONSTANTS.ts`
+
+## 变量命名约定
+
+- 组件使用**PascalCase**: `<ReaderView />`, `<ThemeSelector />`
+- 变量和函数使用**camelCase**: `extractContent`, `themeColor`
+- 布尔类型变量使用**is/has/should前缀**: `isReaderMode`, `hasHistory`
+- 常量使用**全大写下划线**: `DEFAULT_FONT_SIZE`, `STORAGE_KEYS`
+- 类型和接口使用**PascalCase**，接口不使用I前缀: `ThemeConfig`, `ExtractedContent`
+
+## 目录结构
+
+```
+src/
+  background/      # 背景脚本
+    index.ts       # 入口文件
+    listeners/     # 事件监听器
+    services/      # 后台服务
+  content/         # 内容脚本及阅读模式渲染
+    components/    # 阅读模式UI组件
+    extractors/    # 内容提取器
+    renderers/     # 内容渲染器
+  popup/           # 弹窗UI
+    components/    # 弹窗组件
+  options/         # 设置页面
+    panels/        # 设置面板
+  storage/         # 本地存储封装
+    models/        # 数据模型
+    migrations/    # 数据库迁移
+  presets/         # 主题与排版预设
+    themes/        # 主题配置
+    typography/    # 排版配置
+  utils/           # 工具函数
+  styles/          # 全局样式
+  types/           # 类型定义
+  ui/              # 通用UI组件
+  constants/       # 常量定义
+  hooks/           # 自定义钩子
+```
+
+## 组件结构
+
+每个组件使用自己的目录，包含组件文件、样式文件、测试文件和类型定义：
+
+```
+/src/content/components/ReaderView/
+  ReaderView.tsx
+  ReaderView.module.css
+  ReaderView.test.tsx
+  types.ts
+  index.ts
+```
+
+## TypeScript 约定
+
+- 使用严格模式: `"strict": true`
+- 明确声明所有类型，减少any使用
+- 使用type而非interface定义普通对象
+- 使用interface定义组件props: `interface ReaderViewProps {}`
+- 使用函数组件和hooks，不使用类组件
+
+## React 约定
+
+- 使用函数组件和React Hooks
+- 使用React.memo优化渲染性能
+- 组件props使用解构: `function Component({ prop1, prop2 }: Props)`
+- 状态管理使用Zustand，避免复杂的Redux配置
+
+## CSS 约定
+
+- 使用Tailwind CSS原子类
+- 复杂样式使用CSS Modules避免命名冲突
+- 使用CSS变量定义主题和排版变量
+- 遵循移动优先的响应式设计原则
+
+## 提交规范
+
+- 使用语义化提交消息:
+  - `feat:` 新功能
+  - `fix:` 修复错误
+  - `docs:` 文档更改
+  - `style:` 代码风格调整
+  - `refactor:` 代码重构
+  - `perf:` 性能优化
+  - `test:` 测试相关
+  - `chore:` 构建过程或辅助工具变更
+
+## 文档要求
+
+- 所有公共API添加JSDoc注释
+- 复杂逻辑添加内联注释
+- 更新README保持与代码同步
+- 重要决策记录在文档中
