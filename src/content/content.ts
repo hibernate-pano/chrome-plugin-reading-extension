@@ -558,20 +558,77 @@ function handleMediaElements(container: HTMLElement | null, showImages: boolean)
   });
 }
 
-async function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings) {
+async function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings, forceReprocess: boolean = false) {
   if (!container) return;
 
   // 检查页面是否有代码块
   const preElements = container.querySelectorAll('pre');
-  if (preElements.length === 0) {
+  const existingContainers = container.querySelectorAll('.github-code-block, .code-block, .enhanced-code-container');
+  const hasExistingCodeBlocks = existingContainers.length > 0;
+
+  if (preElements.length === 0 && !hasExistingCodeBlocks) {
     console.log('页面没有代码块，跳过代码高亮库加载');
     return;
   }
 
+  // 确定代码主题
+  let codeTheme: string;
+  switch (settings.codeTheme) {
+    case 'github':
+      codeTheme = settings.theme === 'dark' ? 'github-dark' : 'github-light';
+      break;
+    case 'one-dark':
+      codeTheme = 'one-dark';
+      break;
+    case 'dracula':
+      codeTheme = 'dracula';
+      break;
+    default:
+      codeTheme = settings.theme === 'dark' ? 'github-dark' : 'github-light';
+  }
+
+  // 设置代码块主题类
+  const themeClass = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
+  container.classList.remove('dark-theme', 'light-theme');
+  container.classList.add(themeClass);
+
+  // 如果已有代码块且不需要强制重新处理，只更新样式
+  if (hasExistingCodeBlocks && !forceReprocess) {
+    console.log('更新现有代码块样式');
+    // 更新代码块主题属性和主题类
+    existingContainers.forEach(block => {
+      block.setAttribute('data-code-theme', codeTheme);
+      block.classList.remove('dark-theme', 'light-theme');
+      block.classList.add(themeClass);
+    });
+
+    // 更新代码字体大小
+    if (settings.codeFontSize) {
+      const codeElements = container.querySelectorAll(
+        '.github-code-block, .github-code-block code, .github-code-language, ' +
+        '.github-code-copy-btn, .github-code-line-number, .github-inline-code'
+      );
+
+      codeElements.forEach(element => {
+        if (element.classList.contains('github-code-line-number')) {
+          // 行号字体稍小
+          (element as HTMLElement).style.fontSize = `${Math.max(settings.codeFontSize - 2, 10)}px`;
+        } else if (element.classList.contains('github-code-language') ||
+          element.classList.contains('github-code-copy-btn')) {
+          // 工具栏元素字体稍小
+          (element as HTMLElement).style.fontSize = `${Math.max(settings.codeFontSize - 1, 11)}px`;
+        } else {
+          (element as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
+        }
+      });
+    }
+    return;
+  }
+
+  // 需要完全重新处理代码块
   console.log('开始处理代码块');
   try {
     // 先清除所有已存在的代码块容器
-    const existingContainers = container.querySelectorAll('.github-code-block, .code-block, .enhanced-code-container');
     console.log(`找到 ${existingContainers.length} 个现有代码块容器`);
 
     existingContainers.forEach((codeContainer, index) => {
@@ -605,27 +662,6 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
       '.code-content-wrapper, .code-content, .code-wrapper, .line-numbers, .code-toast'
     );
     codeElements.forEach(element => element.remove());
-
-    // 设置代码块主题
-    const themeClass = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
-    container.classList.remove('dark-theme', 'light-theme');
-    container.classList.add(themeClass);
-
-    // 确定代码主题
-    let codeTheme: string;
-    switch (settings.codeTheme) {
-      case 'github':
-        codeTheme = settings.theme === 'dark' ? 'github-dark' : 'github-light';
-        break;
-      case 'one-dark':
-        codeTheme = 'one-dark';
-        break;
-      case 'dracula':
-        codeTheme = 'dracula';
-        break;
-      default:
-        codeTheme = settings.theme === 'dark' ? 'github-dark' : 'github-light';
-    }
 
     console.log(`应用代码块主题: ${codeTheme}`);
 
@@ -1069,8 +1105,8 @@ async function applyStyles(settings: ReadingModeSettings) {
   // 处理媒体元素
   handleMediaElements(container, settings.showImages);
 
-  // 处理代码块
-  await handleCodeBlocks(container, settings);
+  // 处理代码块 - 初始化时需要完全处理
+  await handleCodeBlocks(container, settings, true);
 
   // 使用工具模块中的函数更新 CSS 变量
   // 从 utils.ts 导入的 updateReadingModeStyles 函数
@@ -1631,6 +1667,192 @@ async function enableReadingMode() {
     // 开始性能监控
     performanceMonitor.start('enableReadingMode');
 
+    // 保存原始内容
+    if (!originalContent) {
+      originalContent = document.documentElement.innerHTML;
+    }
+
+    const settings = await fetchSettings();
+
+    // 导入内容处理管道
+    const { ContentPipeline } = await import('./pipeline/contentPipeline');
+
+    // 创建文档克隆以避免修改原始DOM
+    const docClone = document.implementation.createHTMLDocument();
+    docClone.documentElement.innerHTML = originalContent;
+
+    console.log('开始使用内容处理管道处理页面...');
+
+    // 创建新的内容处理管道实例，以便传入自定义选项
+    const pipeline = new ContentPipeline({
+      extractorOptions: {
+        defuddleOptions: {
+          debug: settings.debug || false,
+          url: window.location.href
+        }
+      },
+      converterOptions: {
+        headingStyle: "atx",
+        codeBlockStyle: "fenced",
+        emDelimiter: "*",
+        bulletListMarker: "-"
+      },
+      rendererOptions: {
+        html: true,
+        linkify: true,
+        typographer: true,
+        breaks: false,
+        plugins: {
+          anchor: true,
+          toc: settings.showDirectory,
+          highlightjs: true,
+          taskLists: true
+        }
+      }
+    });
+
+    // 使用内容处理管道
+    const result = await pipeline.process(docClone);
+
+    console.log('内容处理完成');
+    console.log('标题:', result.title);
+    console.log('元数据:', result.metadata);
+
+    // 创建阅读模式容器
+    const container = document.createElement('div');
+    container.id = 'reading-mode-container';
+    container.className = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
+
+    // 添加文章标题
+    const titleElement = document.createElement('h1');
+    titleElement.id = 'reading-mode-title';
+    titleElement.textContent = result.title || document.title;
+    container.appendChild(titleElement);
+
+    // 添加文章内容
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'reading-mode-content';
+    contentDiv.innerHTML = result.html;
+
+    // 将处理后的内容添加到容器
+    container.appendChild(contentDiv);
+
+    // 清空并重建页面
+    document.body.innerHTML = '';
+    document.body.appendChild(container);
+
+    // 应用样式
+    try {
+      await applyStyles(settings);
+    } catch (error) {
+      console.warn('应用样式时发生错误:', error);
+    }
+
+    // 生成目录（如果启用）
+    if (settings.showDirectory) {
+      try {
+        generateTableOfContents(container, result.title || document.title);
+      } catch (error) {
+        console.warn('生成目录时发生错误:', error);
+      }
+    }
+
+    // 创建退出按钮
+    try {
+      createFloatingButton();
+    } catch (error) {
+      console.warn('创建退出按钮时发生错误:', error);
+    }
+
+    // 处理媒体元素
+    try {
+      handleMediaElements(container, settings.showImages);
+    } catch (error) {
+      console.warn('处理媒体元素时发生错误:', error);
+    }
+
+    // 处理代码块
+    try {
+      await handleCodeBlocks(container, settings, true);
+    } catch (error) {
+      console.warn('处理代码块时发生错误:', error);
+    }
+
+    // 应用自动间距
+    try {
+      await applyAutoSpacing();
+    } catch (error) {
+      console.warn('应用自动间距时发生错误:', error);
+    }
+
+    // 初始化文本选择工具栏
+    try {
+      if (!textSelectionToolbar) {
+        textSelectionToolbar = new TextSelectionToolbar({
+          options: defaultToolbarOptions,
+          position: 'top',
+          theme: settings.theme,
+          delay: 300
+        });
+      }
+    } catch (error) {
+      console.warn('初始化文本选择工具栏时发生错误:', error);
+    }
+
+    isReadingMode = true;
+
+    // 结束性能监控
+    const perfRecord = performanceMonitor.end('enableReadingMode');
+    console.info(`阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
+
+    // 关闭加载提示并显示成功提示
+    if (loadingToast) loadingToast.close();
+    Toast.success('阅读模式已启用', {
+      position: 'top',
+      duration: 2000
+    });
+
+  } catch (error) {
+    // 显示错误提示
+    if (loadingToast) loadingToast.close();
+    Toast.error(`启用阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+      position: 'top',
+      duration: 3000
+    });
+    console.error('启用阅读模式时发生错误:', error);
+
+    // 如果新的内容处理管道失败，回退到旧的处理方式
+    try {
+      console.warn('新的内容处理管道失败，尝试回退到旧的处理方式');
+      await enableReadingModeLegacy();
+    } catch (fallbackError) {
+      console.error('回退到旧的处理方式也失败:', fallbackError);
+      throw error; // 抛出原始错误
+    }
+  }
+}
+
+// 旧版本的阅读模式启用函数，作为回退方案
+async function enableReadingModeLegacy() {
+  console.log('使用旧版本的阅读模式处理方式');
+
+  if (!document.body) {
+    console.error('文档体不存在，无法启用阅读模式');
+    return;
+  }
+
+  let loadingToast;
+
+  try {
+    // 显示加载提示
+    loadingToast = Toast.info('正在准备阅读模式(旧版)...', {
+      duration: 0,
+      showProgress: true
+    });
+
+    // 开始性能监控
+    performanceMonitor.start('enableReadingModeLegacy');
+
     // 预加载工作线程
     try {
       await getWorkerManager().initialize();
@@ -1638,8 +1860,6 @@ async function enableReadingMode() {
     } catch (error) {
       console.warn('初始化工作线程失败，将在主线程中处理:', error);
     }
-
-    // 不再使用资源加载器预加载样式，改为内联样式
 
     // 保存原始内容
     if (!originalContent) {
@@ -1747,58 +1967,10 @@ async function enableReadingMode() {
     }
 
     try {
-      // 先彻底清除所有已存在的增强代码块容器
-      const existingContainers = contentDiv.querySelectorAll('.enhanced-code-container');
-      console.log(`内容处理中找到 ${existingContainers.length} 个现有代码块容器`);
-
-      existingContainers.forEach((codeContainer, index) => {
-        try {
-          // 找到原始的pre元素，如果有的话
-          const originalPre = document.createElement('pre');
-          const code = (codeContainer as HTMLElement).querySelector('code');
-          if (code) {
-            originalPre.appendChild(code.cloneNode(true));
-            codeContainer.replaceWith(originalPre);
-            console.log(`成功替换内容中的代码块容器 ${index + 1}`);
-          } else {
-            codeContainer.remove();
-            console.log(`移除内容中没有代码元素的容器 ${index + 1}`);
-          }
-        } catch (containerError) {
-          console.error(`处理内容中的代码块容器 ${index + 1} 时出错:`, containerError);
-          // 尝试直接移除容器
-          try {
-            codeContainer.remove();
-          } catch (removeError) {
-            console.error('移除容器失败:', removeError);
-          }
-        }
-      });
-
-      // 清除可能存在的其他代码相关元素
-      const codeHeaders = contentDiv.querySelectorAll('.code-header');
-      codeHeaders.forEach(header => header.remove());
-
-      const copyButtons = contentDiv.querySelectorAll('.code-copy-button');
-      copyButtons.forEach(button => button.remove());
-
       // 增强代码块
       console.log('开始增强内容中的代码块');
       codeExtractor.enhanceAllCodeBlocks(contentDiv);
       codeExtractor.enhanceInlineCode(contentDiv);
-
-      // 确保代码块内容不会溢出
-      const codeBlocks = contentDiv.querySelectorAll('.enhanced-code-container code');
-      codeBlocks.forEach(code => {
-        const codeElement = code as HTMLElement;
-        codeElement.style.whiteSpace = 'pre-wrap';
-        codeElement.style.wordBreak = 'break-word';
-        codeElement.style.overflowWrap = 'break-word';
-        codeElement.style.maxWidth = '100%';
-        codeElement.style.display = 'block';
-      });
-
-      console.log('内容中的代码块处理完成');
     } catch (error) {
       console.warn('增强代码块时发生错误:', error);
     }
@@ -1841,21 +2013,6 @@ async function enableReadingMode() {
       console.warn('创建退出按钮时发生错误:', error);
     }
 
-    // 应用自动间距
-    try {
-      await applyAutoSpacing();
-    } catch (error) {
-      console.warn('应用自动间距时发生错误:', error);
-    }
-
-    // 添加交互功能
-    try {
-      codeExtractor.addCodeBlockInteractions(container);
-      listExtractor.addListInteractions(container);
-    } catch (error) {
-      console.warn('添加交互功能时发生错误:', error);
-    }
-
     // 初始化文本选择工具栏
     try {
       if (!textSelectionToolbar) {
@@ -1873,12 +2030,12 @@ async function enableReadingMode() {
     isReadingMode = true;
 
     // 结束性能监控
-    const perfRecord = performanceMonitor.end('enableReadingMode');
-    console.info(`阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
+    const perfRecord = performanceMonitor.end('enableReadingModeLegacy');
+    console.info(`旧版阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
 
     // 关闭加载提示并显示成功提示
     if (loadingToast) loadingToast.close();
-    Toast.success('阅读模式已启用', {
+    Toast.success('阅读模式已启用(旧版)', {
       position: 'top',
       duration: 2000
     });
@@ -1886,11 +2043,11 @@ async function enableReadingMode() {
   } catch (error) {
     // 显示错误提示
     if (loadingToast) loadingToast.close();
-    Toast.error(`启用阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
+    Toast.error(`启用旧版阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
       position: 'top',
       duration: 3000
     });
-    console.error('启用阅读模式时发生错误:', error);
+    console.error('启用旧版阅读模式时发生错误:', error);
     throw error;
   } finally {
     // 释放工作线程资源
@@ -2369,13 +2526,16 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
         });
       }
 
-      // 重新处理代码块
+      // 处理代码块
       // 注意：这里不等待异步完成，因为这是事件监听器
       // 如果需要等待，应该使用异步IIFE
       if (container) {
         (async () => {
           try {
-            await handleCodeBlocks(container, settings);
+            // 只有在代码主题变化时才强制重新处理代码块
+            const forceReprocess = !!changes[StorageKeys.CODE_THEME];
+            await handleCodeBlocks(container, settings, forceReprocess);
+            console.log(`代码块处理完成，${forceReprocess ? '已重新处理' : '仅更新样式'}`);
           } catch (error) {
             console.error('在存储变化监听器中处理代码块时发生错误:', error);
           }

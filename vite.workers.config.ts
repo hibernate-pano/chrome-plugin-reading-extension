@@ -11,6 +11,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         extractorWorker: resolve(__dirname, 'src/workers/extractorWorker.ts'),
+        contentPipelineWorker: resolve(__dirname, 'src/workers/contentPipelineWorker.ts'),
       },
       output: {
         entryFileNames: '[name].js',

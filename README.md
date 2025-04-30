@@ -23,10 +23,14 @@ AI Reading Extension 是一个 Chrome 浏览器扩展，它能够优化网页的
 - **状态管理**: Zustand
 - **样式方案**: Tailwind CSS
 - **UI 组件**: Headless UI
+- **内容提取**: defuddle, Mozilla Readability
+- **Markdown 转换**: turndown
+- **Markdown 渲染**: markdown-it
 - **代码高亮**: highlight.js
 - **其他工具**:
   - Pangu.js (中英文间距处理)
-  - Mozilla Readability (阅读模式实现)
+  - DOMPurify (HTML 净化)
+  - dayjs (日期处理)
 
 ## 项目结构
 
@@ -39,18 +43,38 @@ src/
 │   ├── utils.ts       # 工具函数
 │   ├── extractors/    # 内容提取器模块
 │   │   ├── contentExtractor.ts
+│   │   ├── defuddleExtractor.ts
 │   │   ├── tableExtractor.ts
 │   │   ├── mediaExtractor.ts
 │   │   ├── codeExtractor.ts
 │   │   ├── listExtractor.ts
 │   │   ├── index.ts
 │   │   └── extractors.css
-│   └── content.css
+│   ├── converters/    # Markdown 转换器模块
+│   │   └── turndownConverter.ts
+│   ├── renderers/     # Markdown 渲染器模块
+│   │   └── markdownRenderer.ts
+│   ├── pipeline/      # 内容处理管道
+│   │   └── contentPipeline.ts
+│   ├── components/    # UI 组件
+│   │   ├── ReadingModeSettings.ts
+│   │   ├── ReadingModeToolbar.ts
+│   │   ├── TextSelectionToolbar.ts
+│   │   └── ReadingProgress.ts
+│   └── styles/        # 样式文件
+│       ├── variables.css
+│       ├── themes.css
+│       └── components.css
+├── workers/         # Web Workers
+│   ├── extractorWorker.ts
+│   ├── contentPipelineWorker.ts
+│   └── pipelineWorkerManager.ts
 ├── popup/          # 扩展弹出窗口
 │   ├── components/
 │   └── Popup.tsx
 ├── options/        # 扩展配置页面
 ├── storage/        # 数据存储相关
+├── ui/             # 通用 UI 组件
 └── store.ts        # 全局状态管理
 
 public/            # 静态资源
@@ -78,9 +102,17 @@ tests/            # 测试文件
 - 处理段落间距和排版
 - 实现代码块高亮
 
+#### 内容处理管道
+
+- **contentPipeline**: 整合内容提取、Markdown 转换和渲染的完整流程
+- **defuddleExtractor**: 使用 defuddle 库智能识别和提取网页的主要内容
+- **turndownConverter**: 使用 turndown 将提取的 HTML 内容转换为标准 Markdown 格式
+- **markdownRenderer**: 使用 markdown-it 将 Markdown 内容渲染为美观的 HTML
+
 #### 内容提取器模块
 
-- **contentExtractor**: 增强的内容提取核心
+- **contentExtractor**: 增强的内容提取核心（基于 Readability）
+- **defuddleExtractor**: 基于 defuddle 的智能内容提取器
 - **tableExtractor**: 专门处理表格的提取和增强
 - **mediaExtractor**: 专门处理图片和其他媒体元素
 - **codeExtractor**: 专门处理代码块的识别和高亮
@@ -151,6 +183,19 @@ pnpm lint
 - 其他基于 Chromium 的浏览器 (版本要求同上)
 
 ## 版本历史
+
+### v1.8.0 (2024-05-15)
+
+- 采用全新的内容处理流程，提供更一致、干净的阅读体验
+- 使用 defuddle 提取内容、turndown 转换为 Markdown、markdown-it 渲染
+- 添加智能内容提取功能，自动识别文章主体
+- 增强 Markdown 转换和渲染能力，支持代码高亮、数学公式等
+- 重新设计阅读设置面板，提供更多自定义选项
+- 添加阅读工具栏，包含常用阅读工具和功能
+- 添加文本选择工具，支持复制、高亮、注释等功能
+- 添加阅读进度显示，记住上次阅读位置
+- 优化性能，提高页面加载和渲染速度
+- 增强可访问性，支持键盘导航和屏幕阅读器
 
 ### v1.4.3 (2024-01-15)
 
