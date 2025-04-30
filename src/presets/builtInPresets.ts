@@ -21,7 +21,7 @@ export const builtInPresets: ReadingPreset[] = [
       textAlign: 'left',
       firstLineIndent: true,
       showImages: true,
-      showDirectory: true,
+      showDirectory: false, // 默认不显示目录
       fontFamily: 'songti',
       backgroundColor: 'cool',
       paragraphSpacing: 1.5,
@@ -44,7 +44,7 @@ export const builtInPresets: ReadingPreset[] = [
       textAlign: 'left',
       firstLineIndent: true,
       showImages: true,
-      showDirectory: true,
+      showDirectory: false, // 默认不显示目录
       fontFamily: 'default',
       backgroundColor: 'white',
       paragraphSpacing: 1.2,
@@ -108,7 +108,7 @@ export const builtInPresets: ReadingPreset[] = [
       backgroundColor: 'cool', // 在暗色主题中背景色由主题控制
       paragraphSpacing: 1.4,
       showImages: true,
-      showDirectory: true,
+      showDirectory: false, // 默认不显示目录
     }
   },
   {

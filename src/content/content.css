@@ -17,7 +17,22 @@
   padding: max(4rem, 4vh) max(2rem, 5vw);
 
   /* 平滑过渡效果 */
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* 添加进入动画 */
+  animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 标题系统优化 */
@@ -32,24 +47,68 @@
 }
 
 #reading-mode-container h1 {
-  @apply text-5xl border-b-0 pb-6 mb-8 text-center relative;
+  @apply text-5xl pb-6 mb-10 text-center relative;
+  background: linear-gradient(to right, transparent, var(--reading-accent-color, #3b82f6) 20%, var(--reading-accent-color, #3b82f6) 80%, transparent);
+  background-size: 100% 1px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+  padding-bottom: 1.5rem;
+
+  /* 添加微妙的文字阴影 */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  /* 添加动画 */
+  animation: slideInDown 0.8s ease forwards;
 }
 
-#reading-mode-container h1::after {
-  @apply absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-0.5 bg-brand-500;
-  content: "";
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 #reading-mode-container h2 {
-  @apply text-3xl pl-4 border-l-4 border-brand-500 ml-[-1.25em] mb-6;
+  @apply text-3xl pl-4 border-l-4 border-brand-500 ml-[-1.25em] mb-8 mt-12;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+#reading-mode-container h2:hover {
+  @apply border-brand-600;
+  transform: translateX(5px);
 }
 
 #reading-mode-container h3 {
-  @apply text-2xl text-brand-700 mb-5;
+  @apply text-2xl text-brand-700 mb-6 mt-10;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+#reading-mode-container h3::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 3rem;
+  height: 2px;
+  background-color: var(--reading-accent-color, #3b82f6);
+  opacity: 0.5;
+  transition: width 0.3s ease;
+}
+
+#reading-mode-container h3:hover::after {
+  width: 5rem;
 }
 
 #reading-mode-container h4 {
-  @apply text-xl text-gray-800 mb-4;
+  @apply text-xl text-gray-800 mb-5 mt-8;
+  font-weight: 600;
 }
 
 /* 段落和内容块优化 */
@@ -380,6 +439,29 @@ body.dark-theme #reading-mode-container pre::-webkit-scrollbar-thumb:hover {
   @apply fixed top-32 right-8 w-56 bg-white/90 backdrop-blur-sm rounded-xl shadow-card p-4 border border-gray-200/30 max-h-[70vh] overflow-y-auto transition-all duration-300;
   opacity: 0.7;
   transform: translateX(0);
+  display: none;
+  /* 默认隐藏 */
+}
+
+/* 目录切换按钮 */
+#toc-toggle-button {
+  @apply fixed top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-md flex items-center justify-center cursor-pointer z-50 transition-all duration-300;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  opacity: 0.7;
+}
+
+#toc-toggle-button:hover {
+  @apply bg-white shadow-lg;
+  opacity: 1;
+}
+
+body.dark-theme #toc-toggle-button {
+  @apply bg-gray-800/90;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme #toc-toggle-button:hover {
+  @apply bg-gray-700;
 }
 
 #reading-mode-toc:hover {
@@ -502,9 +584,30 @@ body.dark-theme #reading-mode-toc a.active {
   margin: 0 auto;
   padding: var(--reading-content-padding);
   background-color: var(--reading-content-bg-color);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: var(--reading-content-shadow);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+
+  /* 添加微妙的边框 */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+
+  /* 添加进入动画，稍微延迟以产生层叠效果 */
+  animation: contentFadeIn 0.6s ease 0.1s forwards;
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+@keyframes contentFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 深色主题下的边框 */
+body.dark-theme .reading-mode-content {
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* 自定义滚动条样式 */
@@ -520,6 +623,23 @@ body.dark-theme #reading-mode-toc a.active {
   background-color: var(--reading-scrollbar-thumb);
   border-radius: 4px;
   transition: background-color 0.2s ease;
+}
+
+/* 退出动画 */
+#reading-mode-container.exit-animation {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 #reading-mode-container::-webkit-scrollbar-thumb:hover {

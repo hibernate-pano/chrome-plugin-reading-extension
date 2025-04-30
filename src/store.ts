@@ -58,7 +58,7 @@ const useAppStore = create<AppState>((set) => ({
   textAlign: 'left',
   firstLineIndent: true,
   showImages: true,
-  showDirectory: true,
+  showDirectory: false, // 默认不显示目录
   paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
   activePreset: null,
   presets: [],
@@ -230,7 +230,7 @@ export const initializeStore = async () => {
     textAlign: textAlign ?? 'left',
     firstLineIndent: firstLineIndent ?? true,
     showImages: showImages ?? true,
-    showDirectory: showDirectory ?? true,
+    showDirectory: showDirectory ?? false, // 默认不显示目录
     paragraphSpacing: paragraphSpacing ?? DEFAULT_PARAGRAPH_SPACING,
   });
 };

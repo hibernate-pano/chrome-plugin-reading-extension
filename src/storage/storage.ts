@@ -99,7 +99,7 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.TEXT_ALIGN, 'justify');
   await setStorage(StorageKeys.FIRST_LINE_INDENT, false);
   await setStorage(StorageKeys.SHOW_IMAGES, true);
-  await setStorage(StorageKeys.SHOW_DIRECTORY, true);
+  await setStorage(StorageKeys.SHOW_DIRECTORY, false); // 默认不显示目录
   await setStorage(StorageKeys.FONT_FAMILY, 'default');
   await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
   await setStorage(StorageKeys.PARAGRAPH_SPACING, 1.0);

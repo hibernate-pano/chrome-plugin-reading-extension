@@ -446,7 +446,7 @@ async function fetchSettings(): Promise<ReadingModeSettings> {
     showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? true,
     fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? 'default',
     backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? 'white',
-    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? true,
+    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? false, // 默认不显示目录
     paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? 1.0,
     debug: await getStorage<boolean>(StorageKeys.DEBUG) ?? false,
   };
@@ -1581,40 +1581,77 @@ async function applyStyles(settings: ReadingModeSettings) {
 }
 
 function createFloatingButton() {
+  // 创建退出按钮
   const button = document.createElement('button');
   button.id = 'reading-mode-exit-button';
-  button.textContent = '退出阅读模式';
+  button.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6L6 18"></path>
+      <path d="M6 6l12 12"></path>
+    </svg>
+    <span>退出阅读模式</span>
+  `;
   button.style.cssText = `
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 9999;
-    padding: 8px 16px;
-    background-color: #1a73e8;
+    padding: 10px 20px;
+    background-color: var(--reading-accent-color, #3b82f6);
     color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: 30px;
     cursor: pointer;
     font-size: 14px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-    opacity: 0.8;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0.85;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(4px);
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
   `;
 
+  // 添加动画样式
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+      }
+      to {
+        opacity: 0.85;
+        transform: translate(-50%, 0);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // 添加事件监听器
   button.addEventListener('mouseover', () => {
     button.style.opacity = '1';
-    button.style.transform = 'translateY(-2px)';
-    button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+    button.style.transform = 'translateX(-50%) scale(1.05)';
+    button.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
   });
 
   button.addEventListener('mouseout', () => {
-    button.style.opacity = '0.8';
-    button.style.transform = 'translateY(0)';
-    button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+    button.style.opacity = '0.85';
+    button.style.transform = 'translateX(-50%) scale(1)';
+    button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
   });
 
   button.addEventListener('click', () => {
-    disableReadingMode();
+    // 添加退出动画
+    document.getElementById('reading-mode-container')?.classList.add('exit-animation');
+
+    // 延迟退出，以便显示动画
+    setTimeout(() => {
+      disableReadingMode();
+    }, 300);
   });
 
   document.body.appendChild(button);
@@ -2586,6 +2623,12 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
     existingToc.remove();
   }
 
+  // 如果已经存在目录切换按钮，则移除
+  const existingToggleButton = document.getElementById('toc-toggle-button');
+  if (existingToggleButton) {
+    existingToggleButton.remove();
+  }
+
   // 创建目录容器
   const tocContainer = document.createElement('div');
   tocContainer.id = 'reading-mode-toc';
@@ -2594,6 +2637,22 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
   getStorage<boolean>(StorageKeys.SHOW_DIRECTORY).then(showDirectory => {
     tocContainer.style.display = showDirectory ? 'block' : 'none';
   });
+
+  // 创建目录切换按钮
+  const tocToggleButton = document.createElement('div');
+  tocToggleButton.id = 'toc-toggle-button';
+  tocToggleButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+  tocToggleButton.title = '显示/隐藏目录';
+
+  // 添加点击事件
+  tocToggleButton.addEventListener('click', () => {
+    const isVisible = tocContainer.style.display === 'block';
+    tocContainer.style.display = isVisible ? 'none' : 'block';
+    // 保存设置
+    setStorage(StorageKeys.SHOW_DIRECTORY, !isVisible);
+  });
+
+  document.body.appendChild(tocToggleButton);
 
   // 添加文章标题
   const tocArticleTitle = document.createElement('div');
