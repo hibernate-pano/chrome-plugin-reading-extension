@@ -96,6 +96,12 @@ export function updateReadingModeStyles(settings: ReadingModeSettings, isReading
     container.style.textAlign = settings.textAlign || 'left';
   }
 
+  // 根据目录显示状态调整容器位置
+  const readingContainer = document.getElementById('reading-mode-container');
+  if (readingContainer) {
+    readingContainer.style.margin = settings.showDirectory ? '0 0 0 250px' : '0 auto';
+  }
+
   // 设置首行缩进
   root.style.setProperty('--reading-first-line-indent', settings.firstLineIndent ? '2em' : '0');
 }

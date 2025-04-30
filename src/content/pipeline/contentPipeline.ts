@@ -76,10 +76,15 @@ export class ContentPipeline {
     const title = extractionResult.metadata?.title || document.title;
     const metadata = extractionResult.metadata || {};
 
+    // 检查提取结果是否有效
+    if (!extractionResult.success || !extractionResult.content) {
+      throw new Error('内容提取失败或结果为空');
+    }
+
     // 2. Markdown转换
     const conversionStart = performance.now();
     const markdown = turndownConverter.convertToMarkdown(
-      extractionResult.html,
+      extractionResult.content || '',
       this.options.converterOptions
     );
     performanceMonitor.record('Markdown转换', performance.now() - conversionStart);

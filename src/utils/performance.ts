@@ -78,9 +78,8 @@ export class PerformanceMonitor {
 
     this.records.set(name, updatedRecord);
 
-    console.debug(`[性能监控] ${name}: ${duration.toFixed(2)}ms${
-      memoryUsageDiff ? `, 内存变化: ${this.formatBytes(memoryUsageDiff)}` : ''
-    }`);
+    console.debug(`[性能监控] ${name}: ${duration.toFixed(2)}ms${memoryUsageDiff ? `, 内存变化: ${this.formatBytes(memoryUsageDiff)}` : ''
+      }`);
 
     return updatedRecord;
   }
@@ -111,11 +110,11 @@ export class PerformanceMonitor {
    */
   private formatBytes(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
@@ -146,6 +145,27 @@ export class PerformanceMonitor {
   }
 
   /**
+   * 记录性能数据
+   * @param name 操作名称
+   * @param duration 持续时间（毫秒）
+   */
+  public record(name: string, duration: number): void {
+    if (!this.enabled) return;
+
+    const timestamp = performance.now();
+    const record: PerformanceRecord = {
+      name,
+      startTime: timestamp - duration,
+      endTime: timestamp,
+      duration
+    };
+
+    this.records.set(name, record);
+
+    console.debug(`[性能监控] ${name}: ${duration.toFixed(2)}ms`);
+  }
+
+  /**
    * 生成性能报告
    */
   public generateReport(): string {
@@ -158,7 +178,7 @@ export class PerformanceMonitor {
 
     let report = '性能监控报告:\n';
     report += '=================\n\n';
-    
+
     report += '操作耗时排序 (从高到低):\n';
     records.forEach((record, index) => {
       report += `${index + 1}. ${record.name}: ${record.duration.toFixed(2)}ms\n`;

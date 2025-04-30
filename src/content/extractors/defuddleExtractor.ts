@@ -153,29 +153,53 @@ export class DefuddleExtractor {
   }
 
   /**
-   * 从当前页面提取内容
+   * 从当前页面或指定文档提取内容
+   * @param document 可选的文档对象
+   * @param options 可选的提取选项
    */
-  public extract(): Promise<ExtractedContent> {
+  public extract(): Promise<ExtractedContent>;
+  public extract(document: Document, options?: Partial<DefuddleExtractorOptions>): Promise<ExtractedContent>;
+  public extract(document?: Document, options?: Partial<DefuddleExtractorOptions>): Promise<ExtractedContent> {
     // 使用性能监控器测量提取性能
     return performanceMonitor.measure('extract', async () => {
-      // 尝试从缓存获取
-      const cacheKey = `page_${document.location.href}`;
-      const cachedContent = extractionCache.get(cacheKey);
+      // 如果没有传入文档，则从当前页面提取
+      if (!document) {
+        // 尝试从缓存获取
+        const cacheKey = `page_${window.location.href}`;
+        const cachedContent = extractionCache.get(cacheKey);
 
-      if (cachedContent) {
-        console.debug('从缓存获取内容');
-        return cachedContent;
+        if (cachedContent) {
+          console.debug('从缓存获取内容');
+          return cachedContent;
+        }
+
+        // 从页面提取内容
+        const result = await this.extractFromHTML(document.documentElement.outerHTML, window.location.href);
+
+        // 缓存结果
+        if (result.success) {
+          extractionCache.set(cacheKey, result);
+        }
+
+        return result;
       }
 
-      // 从页面提取内容
-      const result = await this.extractFromHTML(document.documentElement.outerHTML, document.location.href);
+      // 如果传入了文档，则从指定文档提取
+      try {
+        // 合并选项
+        if (options) {
+          this.options = this.mergeOptions(this.options, options);
+        }
 
-      // 缓存结果
-      if (result.success) {
-        extractionCache.set(cacheKey, result);
+        // 获取文档的HTML
+        const html = document.documentElement.outerHTML;
+        const url = document.URL || window.location.href;
+
+        // 使用现有的HTML提取方法
+        return await this.extractFromHTML(html, url);
+      } catch (error) {
+        return this.createErrorResult(error instanceof Error ? error.message : '未知错误');
       }
-
-      return result;
     });
   }
 
@@ -285,6 +309,12 @@ export class DefuddleExtractor {
         return 'juejin.cn';
       }
 
+      // 特殊处理 about:blank 和其他无效 URL
+      if (url === 'about:blank' || url.startsWith('about:') || url.startsWith('chrome:') || url.startsWith('data:')) {
+        console.warn('跳过特殊 URL:', url);
+        return '';
+      }
+
       // 确保 URL 有协议前缀
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         // 尝试修复 URL
@@ -293,6 +323,12 @@ export class DefuddleExtractor {
         } else if (!url.includes('://')) {
           url = 'https://' + url;
         }
+      }
+
+      // 验证 URL 格式
+      if (!url.match(/^https?:\/\/[^/]+/)) {
+        console.warn('URL 格式无效:', url);
+        return '';
       }
 
       const urlObj = new URL(url);

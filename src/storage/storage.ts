@@ -89,7 +89,7 @@ export async function clearStorage(
 // 初始化默认设置
 export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.THEME, 'light');
-  await setStorage(StorageKeys.FONT_SIZE, 18);
+  await setStorage(StorageKeys.FONT_SIZE, 17);
   await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
   await setStorage(StorageKeys.CODE_THEME, 'github');
   await setStorage(StorageKeys.LINE_HEIGHT, 1.3);
@@ -99,7 +99,7 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.TEXT_ALIGN, 'justify');
   await setStorage(StorageKeys.FIRST_LINE_INDENT, false);
   await setStorage(StorageKeys.SHOW_IMAGES, true);
-  await setStorage(StorageKeys.SHOW_DIRECTORY, false); // 默认不显示目录
+  await setStorage(StorageKeys.SHOW_DIRECTORY, true); // 默认不显示目录
   await setStorage(StorageKeys.FONT_FAMILY, 'default');
   await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
   await setStorage(StorageKeys.PARAGRAPH_SPACING, 1.0);

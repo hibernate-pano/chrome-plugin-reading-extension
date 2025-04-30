@@ -36,6 +36,10 @@
 - 修复了字体大小设置不生效的问题
 - 修复了主题切换不完全的问题
 - 修复了多次进入阅读模式导致的样式问题
+- 修复了启用阅读模式时出现 "TypeError: _e.record is not a function" 错误的问题
+- 修复了启用阅读模式时出现 "TypeError: undefined is not a string, or an element/document/fragment node" 错误的问题
+- 修复了处理特殊 URL（如 about:blank）时出现的 "Failed to construct 'URL': Invalid URL" 错误
+- 修复了 DefuddleExtractor 类中的方法重载问题
 
 ## v1.5.1 (2024-03-20)
 

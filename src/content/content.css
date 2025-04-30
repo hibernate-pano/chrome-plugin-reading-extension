@@ -582,6 +582,7 @@ body.dark-theme #reading-mode-toc a.active {
 .reading-mode-content {
   max-width: var(--reading-page-width);
   margin: 0 auto;
+  /* 确保内容居中 */
   padding: var(--reading-content-padding);
   background-color: var(--reading-content-bg-color);
   border-radius: 12px;
@@ -596,6 +597,10 @@ body.dark-theme #reading-mode-toc a.active {
   animation: contentFadeIn 0.6s ease 0.1s forwards;
   opacity: 0;
   transform: translateY(15px);
+
+  /* 确保内容在容器中居中 */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @keyframes contentFadeIn {

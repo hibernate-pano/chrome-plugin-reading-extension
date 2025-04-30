@@ -1129,6 +1129,7 @@ async function applyStyles(settings: ReadingModeSettings) {
       min-height: 100vh;
       display: flex;
       justify-content: center;
+      align-items: flex-start; /* 确保内容从顶部开始 */
       font-size: var(--reading-font-size) !important;
     }
 
@@ -1137,7 +1138,7 @@ async function applyStyles(settings: ReadingModeSettings) {
       box-sizing: border-box;
       width: var(--reading-page-width);
       padding: 2rem;
-      margin-left: 250px;
+      margin: ${settings.showDirectory ? '0 0 0 250px' : '0 auto'};
       font-size: var(--reading-font-size) !important;
       line-height: var(--reading-line-height);
       letter-spacing: var(--reading-letter-spacing);
@@ -1168,7 +1169,7 @@ async function applyStyles(settings: ReadingModeSettings) {
 
       #reading-mode-container {
         width: min(${settings.pageWidth}px, 100vw - 4rem);
-        margin: 0 auto;
+        margin: 0 auto !important; /* 强制居中，覆盖之前的设置 */
         padding: 2rem;
       }
     }
@@ -2600,7 +2601,10 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
       const container = document.getElementById('reading-mode-container');
       if (!container) return;
 
-      if (changes[StorageKeys.SHOW_DIRECTORY].newValue) {
+      const showDirectory = changes[StorageKeys.SHOW_DIRECTORY].newValue;
+
+      // 调整目录显示
+      if (showDirectory) {
         if (!tocElement) {
           generateTableOfContents(container, document.querySelector('#reading-mode-title')?.textContent || document.title);
         } else {
@@ -2611,6 +2615,10 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
           tocElement.style.display = 'none';
         }
       }
+
+      // 调整容器位置
+      container.style.margin = showDirectory ? '0 0 0 250px' : '0 auto';
+      container.style.transition = 'margin 0.3s ease';
     }
   }
 });
@@ -2648,6 +2656,15 @@ function generateTableOfContents(container: HTMLElement, articleTitle: string) {
   tocToggleButton.addEventListener('click', () => {
     const isVisible = tocContainer.style.display === 'block';
     tocContainer.style.display = isVisible ? 'none' : 'block';
+
+    // 调整容器位置
+    const readingContainer = document.getElementById('reading-mode-container');
+    if (readingContainer) {
+      readingContainer.style.margin = isVisible ? '0 auto' : '0 0 0 250px';
+      // 添加过渡效果
+      readingContainer.style.transition = 'margin 0.3s ease';
+    }
+
     // 保存设置
     setStorage(StorageKeys.SHOW_DIRECTORY, !isVisible);
   });
