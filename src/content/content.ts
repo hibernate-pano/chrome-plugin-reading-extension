@@ -1,4 +1,4 @@
-import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
+import { StorageKeys, getStorage, setStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 // 不再直接导入 highlight.js，改为动态导入
 // import hljs from 'highlight.js';
 
@@ -431,24 +431,26 @@ let originalContent: string | null = null;
 let isReadingMode = false;
 let textSelectionToolbar: TextSelectionToolbar | null = null;
 
+import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
+
 async function fetchSettings(): Promise<ReadingModeSettings> {
   return {
-    theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? 'light',
-    fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? 16,
-    codeFontSize: await getStorage<number>(StorageKeys.CODE_FONT_SIZE) ?? 14,
-    codeTheme: await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME) ?? 'github',
-    lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? 1.5,
-    letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? 0,
-    lineSpacing: await getStorage<number>(StorageKeys.LINE_SPACING) ?? 0.5,
-    pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? 800,
-    textAlign: await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN) ?? 'left',
-    firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? true,
-    showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? true,
-    fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? 'default',
-    backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? 'white',
-    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? false, // 默认不显示目录
-    paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? 1.0,
-    debug: await getStorage<boolean>(StorageKeys.DEBUG) ?? false,
+    theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? DEFAULT_SETTINGS.theme,
+    fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? DEFAULT_SETTINGS.fontSize,
+    codeFontSize: await getStorage<number>(StorageKeys.CODE_FONT_SIZE) ?? DEFAULT_SETTINGS.codeFontSize,
+    codeTheme: await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME) ?? DEFAULT_SETTINGS.codeTheme,
+    lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? DEFAULT_SETTINGS.lineHeight,
+    letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? DEFAULT_SETTINGS.letterSpacing,
+    lineSpacing: await getStorage<number>(StorageKeys.LINE_SPACING) ?? DEFAULT_SETTINGS.lineSpacing,
+    pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? DEFAULT_SETTINGS.pageWidth,
+    textAlign: await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN) ?? DEFAULT_SETTINGS.textAlign,
+    firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? DEFAULT_SETTINGS.firstLineIndent,
+    showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? DEFAULT_SETTINGS.showImages,
+    fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? DEFAULT_SETTINGS.fontFamily,
+    backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? DEFAULT_SETTINGS.backgroundColor,
+    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? DEFAULT_SETTINGS.showDirectory,
+    paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? DEFAULT_SETTINGS.paragraphSpacing,
+    debug: await getStorage<boolean>(StorageKeys.DEBUG) ?? DEFAULT_SETTINGS.debug,
   };
 }
 

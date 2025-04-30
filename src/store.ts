@@ -45,21 +45,25 @@ interface AppState {
 // 初始化预设管理器
 const presetManager = PresetManager.getInstance();
 
+// 导入统一的默认设置
+import { DEFAULT_SETTINGS } from './constants/defaultSettings';
+
 const useAppStore = create<AppState>((set) => ({
-  theme: 'light',
-  fontSize: 16,
-  codeFontSize: 14,
-  codeTheme: 'github',
-  readingMode: false,
-  lineHeight: DEFAULT_LINE_HEIGHT,
-  lineSpacing: DEFAULT_LINE_SPACING,
-  letterSpacing: 0,
-  pageWidth: 1200,
-  textAlign: 'left',
-  firstLineIndent: true,
-  showImages: true,
-  showDirectory: false, // 默认不显示目录
-  paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
+  // 使用统一的默认设置
+  theme: DEFAULT_SETTINGS.theme,
+  fontSize: DEFAULT_SETTINGS.fontSize,
+  codeFontSize: DEFAULT_SETTINGS.codeFontSize,
+  codeTheme: DEFAULT_SETTINGS.codeTheme,
+  readingMode: false, // 这个不是持久化设置，始终默认为 false
+  lineHeight: DEFAULT_SETTINGS.lineHeight,
+  lineSpacing: DEFAULT_SETTINGS.lineSpacing,
+  letterSpacing: DEFAULT_SETTINGS.letterSpacing,
+  pageWidth: DEFAULT_SETTINGS.pageWidth,
+  textAlign: DEFAULT_SETTINGS.textAlign,
+  firstLineIndent: DEFAULT_SETTINGS.firstLineIndent,
+  showImages: DEFAULT_SETTINGS.showImages,
+  showDirectory: DEFAULT_SETTINGS.showDirectory,
+  paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
   activePreset: null,
   presets: [],
   customPresets: [],
@@ -219,19 +223,19 @@ export const initializeStore = async () => {
     presets: allPresets,
     customPresets,
     activePreset,
-    theme: theme ?? 'light',
-    fontSize: fontSize ?? 16,
-    codeFontSize: codeFontSize ?? 14,
-    codeTheme: codeTheme ?? 'github',
+    theme: theme ?? DEFAULT_SETTINGS.theme,
+    fontSize: fontSize ?? DEFAULT_SETTINGS.fontSize,
+    codeFontSize: codeFontSize ?? DEFAULT_SETTINGS.codeFontSize,
+    codeTheme: codeTheme ?? DEFAULT_SETTINGS.codeTheme,
     readingMode: false,
-    lineHeight: lineHeight ?? DEFAULT_LINE_HEIGHT,
-    letterSpacing: letterSpacing ?? 0,
-    pageWidth: pageWidth ?? 1200,
-    textAlign: textAlign ?? 'left',
-    firstLineIndent: firstLineIndent ?? true,
-    showImages: showImages ?? true,
-    showDirectory: showDirectory ?? false, // 默认不显示目录
-    paragraphSpacing: paragraphSpacing ?? DEFAULT_PARAGRAPH_SPACING,
+    lineHeight: lineHeight ?? DEFAULT_SETTINGS.lineHeight,
+    letterSpacing: letterSpacing ?? DEFAULT_SETTINGS.letterSpacing,
+    pageWidth: pageWidth ?? DEFAULT_SETTINGS.pageWidth,
+    textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
+    firstLineIndent: firstLineIndent ?? DEFAULT_SETTINGS.firstLineIndent,
+    showImages: showImages ?? DEFAULT_SETTINGS.showImages,
+    showDirectory: showDirectory ?? DEFAULT_SETTINGS.showDirectory,
+    paragraphSpacing: paragraphSpacing ?? DEFAULT_SETTINGS.paragraphSpacing,
   });
 };
 

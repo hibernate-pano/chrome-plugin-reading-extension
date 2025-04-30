@@ -14,18 +14,20 @@ interface AppState {
   paragraphSpacing: number;
 }
 
+import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
+
 const initialState: AppState = {
-  theme: 'light',
-  fontSize: 16,
-  codeFontSize: 14,
-  readingMode: false,
-  lineHeight: 1.6,
-  lineSpacing: 0.05,
-  letterSpacing: 0.5,
-  pageWidth: 800, // 默认宽度为 800px
-  textAlign: 'left',
-  firstLineIndent: true,
-  showImages: true,
-  showDirectory: true,
-  paragraphSpacing: 1.0,
-}; 
+  theme: DEFAULT_SETTINGS.theme,
+  fontSize: DEFAULT_SETTINGS.fontSize,
+  codeFontSize: DEFAULT_SETTINGS.codeFontSize,
+  readingMode: false, // 这个不是持久化设置，始终默认为 false
+  lineHeight: DEFAULT_SETTINGS.lineHeight,
+  lineSpacing: DEFAULT_SETTINGS.lineSpacing,
+  letterSpacing: DEFAULT_SETTINGS.letterSpacing,
+  pageWidth: DEFAULT_SETTINGS.pageWidth,
+  textAlign: DEFAULT_SETTINGS.textAlign,
+  firstLineIndent: DEFAULT_SETTINGS.firstLineIndent,
+  showImages: DEFAULT_SETTINGS.showImages,
+  showDirectory: DEFAULT_SETTINGS.showDirectory,
+  paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
+};

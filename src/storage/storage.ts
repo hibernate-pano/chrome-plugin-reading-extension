@@ -87,23 +87,26 @@ export async function clearStorage(
 }
 
 // 初始化默认设置
+import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
+
 export async function initializeDefaultSettings(): Promise<void> {
-  await setStorage(StorageKeys.THEME, 'light');
-  await setStorage(StorageKeys.FONT_SIZE, 17);
-  await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
-  await setStorage(StorageKeys.CODE_THEME, 'github');
-  await setStorage(StorageKeys.LINE_HEIGHT, 1.3);
-  await setStorage(StorageKeys.LINE_SPACING, 1.7);
-  await setStorage(StorageKeys.LETTER_SPACING, 0);
-  await setStorage(StorageKeys.PAGE_WIDTH, 1200);
-  await setStorage(StorageKeys.TEXT_ALIGN, 'justify');
-  await setStorage(StorageKeys.FIRST_LINE_INDENT, false);
-  await setStorage(StorageKeys.SHOW_IMAGES, true);
-  await setStorage(StorageKeys.SHOW_DIRECTORY, true); // 默认不显示目录
-  await setStorage(StorageKeys.FONT_FAMILY, 'default');
-  await setStorage(StorageKeys.BACKGROUND_COLOR, 'white');
-  await setStorage(StorageKeys.PARAGRAPH_SPACING, 1.0);
-  await setStorage(StorageKeys.DEBUG, false);
+  // 使用统一的默认设置对象
+  await setStorage(StorageKeys.THEME, DEFAULT_SETTINGS.theme);
+  await setStorage(StorageKeys.FONT_SIZE, DEFAULT_SETTINGS.fontSize);
+  await setStorage(StorageKeys.CODE_FONT_SIZE, DEFAULT_SETTINGS.codeFontSize);
+  await setStorage(StorageKeys.CODE_THEME, DEFAULT_SETTINGS.codeTheme);
+  await setStorage(StorageKeys.LINE_HEIGHT, DEFAULT_SETTINGS.lineHeight);
+  await setStorage(StorageKeys.LINE_SPACING, DEFAULT_SETTINGS.lineSpacing);
+  await setStorage(StorageKeys.LETTER_SPACING, DEFAULT_SETTINGS.letterSpacing);
+  await setStorage(StorageKeys.PAGE_WIDTH, DEFAULT_SETTINGS.pageWidth);
+  await setStorage(StorageKeys.TEXT_ALIGN, DEFAULT_SETTINGS.textAlign);
+  await setStorage(StorageKeys.FIRST_LINE_INDENT, DEFAULT_SETTINGS.firstLineIndent);
+  await setStorage(StorageKeys.SHOW_IMAGES, DEFAULT_SETTINGS.showImages);
+  await setStorage(StorageKeys.SHOW_DIRECTORY, DEFAULT_SETTINGS.showDirectory);
+  await setStorage(StorageKeys.FONT_FAMILY, DEFAULT_SETTINGS.fontFamily);
+  await setStorage(StorageKeys.BACKGROUND_COLOR, DEFAULT_SETTINGS.backgroundColor);
+  await setStorage(StorageKeys.PARAGRAPH_SPACING, DEFAULT_SETTINGS.paragraphSpacing);
+  await setStorage(StorageKeys.DEBUG, DEFAULT_SETTINGS.debug);
 }
 
 export interface ReadingPreset {

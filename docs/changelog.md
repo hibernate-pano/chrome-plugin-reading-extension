@@ -40,6 +40,7 @@
 - 修复了启用阅读模式时出现 "TypeError: undefined is not a string, or an element/document/fragment node" 错误的问题
 - 修复了处理特殊 URL（如 about:blank）时出现的 "Failed to construct 'URL': Invalid URL" 错误
 - 修复了 DefuddleExtractor 类中的方法重载问题
+- 统一了所有默认设置，解决了设置值不一致的问题
 
 ## v1.5.1 (2024-03-20)
 

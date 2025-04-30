@@ -20,11 +20,11 @@ export const MESSAGE_TYPES = {
   SAVE_ANNOTATIONS: 'SAVE_ANNOTATIONS',
   LOAD_ANNOTATIONS: 'LOAD_ANNOTATIONS',
   SAVE_READING_PROGRESS: 'SAVE_READING_PROGRESS',
-  
+
   // 后台消息
   SETTINGS_UPDATED: 'SETTINGS_UPDATED',
   THEME_UPDATED: 'THEME_UPDATED',
-  
+
   // 弹出窗口消息
   GET_PAGE_STATUS: 'GET_PAGE_STATUS',
   GET_SETTINGS: 'GET_SETTINGS',
@@ -32,29 +32,9 @@ export const MESSAGE_TYPES = {
 };
 
 /**
- * 默认设置
+ * 默认设置已移至 constants/defaultSettings.ts
  */
-export const DEFAULT_SETTINGS = {
-  fontSize: 18,
-  lineHeight: 1.6,
-  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  theme: 'light',
-  margin: 32,
-  maxWidth: 720,
-  paragraphSpacing: 1.2,
-  
-  automaticTheme: true,
-  rememberReadingProgress: true,
-  enableImageZoom: true,
-  hideAnnotations: false,
-  
-  keyboardShortcuts: {
-    toggleReader: 'Alt+R',
-    toggleTheme: 'Alt+T',
-    increaseFontSize: 'Alt+Plus',
-    decreaseFontSize: 'Alt+Minus',
-  },
-};
+import { DEFAULT_SETTINGS } from './defaultSettings';
 
 /**
  * 内置主题
@@ -76,7 +56,7 @@ export const BUILT_IN_THEMES = {
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       headingFontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       codeFontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
-      baseFontSize: 18,
+      baseFontSize: DEFAULT_SETTINGS.fontSize,
       baseLineHeight: 1.6,
     },
   },
@@ -96,7 +76,7 @@ export const BUILT_IN_THEMES = {
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       headingFontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       codeFontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
-      baseFontSize: 18,
+      baseFontSize: DEFAULT_SETTINGS.fontSize,
       baseLineHeight: 1.6,
     },
   },
@@ -151,4 +131,4 @@ export const MAX_HISTORY_ITEMS = 100;
 /**
  * 最大错误日志数
  */
-export const MAX_ERROR_LOGS = 50; 
+export const MAX_ERROR_LOGS = 50;

@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from '../../constants';
+import { DEFAULT_SETTINGS } from '../../constants/defaultSettings';
 import { UserSettings } from '../../types';
 import { StorageError } from '../../types/errors';
 import { storage } from '../index';
@@ -21,7 +21,7 @@ export class SettingsModel {
       }
 
       const storedSettings = await this.loadSettings();
-      
+
       // 合并默认设置和存储的设置
       this.settingsCache = {
         ...DEFAULT_SETTINGS,
@@ -43,20 +43,20 @@ export class SettingsModel {
     try {
       // 遍历设置存储中的所有键值对
       const allSettings = await storage.getAll(STORAGE_KEYS.SETTINGS);
-      
+
       // 转换为设置对象
       const settings: Partial<UserSettings> = {};
-      
+
       for (const item of allSettings) {
         const key = item.key;
         const value = item.value;
-        
+
         if (key in DEFAULT_SETTINGS) {
           // 使用索引签名赋值
           (settings as any)[key] = value;
         }
       }
-      
+
       return settings;
     } catch (error) {
       throw new StorageError('加载设置失败', error);
@@ -70,23 +70,23 @@ export class SettingsModel {
     try {
       // 获取当前设置
       const currentSettings = await this.getSettings();
-      
+
       // 合并设置
       const mergedSettings = {
         ...currentSettings,
         ...newSettings
       };
-      
+
       // 保存到存储
-      const savePromises = Object.entries(newSettings).map(([key, value]) => 
+      const savePromises = Object.entries(newSettings).map(([key, value]) =>
         storage.set(STORAGE_KEYS.SETTINGS, key, value)
       );
-      
+
       await Promise.all(savePromises);
-      
+
       // 更新缓存
       this.settingsCache = mergedSettings;
-      
+
       return mergedSettings;
     } catch (error) {
       throw new StorageError('更新设置失败', {
@@ -103,10 +103,10 @@ export class SettingsModel {
     try {
       // 清空设置存储
       await storage.clear(STORAGE_KEYS.SETTINGS);
-      
+
       // 重置缓存
       this.settingsCache = { ...DEFAULT_SETTINGS };
-      
+
       return this.settingsCache;
     } catch (error) {
       throw new StorageError('重置设置失败', error);
@@ -127,7 +127,7 @@ export class SettingsModel {
   public async setSetting<K extends keyof UserSettings>(key: K, value: UserSettings[K]): Promise<void> {
     try {
       await storage.set(STORAGE_KEYS.SETTINGS, key as string, value);
-      
+
       // 更新缓存（如果存在）
       if (this.settingsCache) {
         this.settingsCache[key] = value;
@@ -143,4 +143,4 @@ export class SettingsModel {
 }
 
 // 创建并导出单例
-export const settingsModel = new SettingsModel(); 
+export const settingsModel = new SettingsModel();
