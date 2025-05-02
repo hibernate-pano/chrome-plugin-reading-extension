@@ -3,7 +3,7 @@ import useAppStore, { initializeStore } from '../simplifiedStore';
 import Button from '../ui/components/Button';
 import Switch from '../ui/components/Switch';
 import { Card, CardHeader, CardContent } from '../ui/components/Card';
-import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
+import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES, ReadingPreset } from '../storage/storage';
 import simplifiedPresets from '../presets/simplifiedPresets';
 
 /**
@@ -16,9 +16,11 @@ export const NewPopup = () => {
     readingMode,
     activePreset,
     presets,
+    pageWidth,
     applyPreset,
     setTheme,
     setReadingMode,
+    setPageWidth,
     resetToDefaultSettings,
   } = useAppStore();
 
@@ -163,18 +165,18 @@ export const NewPopup = () => {
   };
 
   // 渲染预设卡片
-  const renderPresetCard = (preset) => {
+  const renderPresetCard = (preset: ReadingPreset) => {
     const isActive = activePreset === preset.id;
 
     // 为每个预设定义特定的图标和颜色
-    const presetIcons = {
+    const presetIcons: Record<string, string> = {
       'paper': '📚',
       'night-reading': '🌙',
       'tech-doc': '💻',
       'focus': '🎯'
     };
 
-    const presetColors = {
+    const presetColors: Record<string, string> = {
       'paper': 'from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20',
       'night-reading': 'from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-800/20',
       'tech-doc': 'from-emerald-50 to-teal-100 dark:from-emerald-900/30 dark:to-teal-800/20',
@@ -304,17 +306,60 @@ export const NewPopup = () => {
                     字体样式
                   </label>
                 </div>
-                <select
-                  value={fontFamily}
-                  onChange={(e) => setFontFamily(e.target.value as keyof typeof FONT_FAMILIES)}
-                  className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:text-gray-200 text-sm"
-                >
-                  {Object.entries(FONT_FAMILIES).map(([key, value]) => (
-                    <option key={key} value={key}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.keys(FONT_FAMILIES).map(key => {
+                    // 使用更友好的字体名称标签
+                    const fontLabels: Record<string, string> = {
+                      'default': '系统默认',
+                      'songti': '宋体',
+                      'heiti': '黑体',
+                      'kaiti': '楷体',
+                      'pingfang': '苹方',
+                      'microsoft': '微软雅黑',
+                    };
+
+                    const displayName = fontLabels[key] || key;
+
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setFontFamily(key as keyof typeof FONT_FAMILIES)}
+                        className={`
+                          p-3 text-sm rounded transition-all flex items-center justify-between
+                          ${fontFamily === key
+                            ? 'bg-brand-100 text-brand-700 border-brand-300 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-700/50 font-medium ring-1 ring-brand-500'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'}
+                          border
+                        `}
+                        style={{
+                          fontFamily: key === 'default' ? 'system-ui, sans-serif' :
+                            key === 'songti' ? 'SimSun, serif' :
+                              key === 'heiti' ? 'SimHei, sans-serif' :
+                                key === 'kaiti' ? 'KaiTi, serif' :
+                                  key === 'pingfang' ? 'PingFang SC, sans-serif' :
+                                    key === 'microsoft' ? 'Microsoft YaHei, sans-serif' : 'inherit'
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <span className="mr-2 text-lg font-medium">
+                            {key === 'default' ? 'Aa' :
+                              key === 'songti' ? '宋' :
+                                key === 'heiti' ? '黑' :
+                                  key === 'kaiti' ? '楷' :
+                                    key === 'pingfang' ? '苹' :
+                                      key === 'microsoft' ? '雅' : 'Aa'}
+                          </span>
+                          <span>{displayName}</span>
+                        </div>
+                        {fontFamily === key && (
+                          <span className="text-xs bg-brand-500 text-white px-1.5 py-0.5 rounded-full">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* 背景颜色 */}
@@ -325,19 +370,89 @@ export const NewPopup = () => {
                     背景颜色
                   </label>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(BACKGROUND_COLORS).map(([key, color]) => (
-                    <button
-                      key={key}
-                      onClick={() => setBackgroundColor(key as keyof typeof BACKGROUND_COLORS)}
-                      className={`w-8 h-8 rounded-full transition-all ${backgroundColor === key
-                        ? 'ring-2 ring-brand-500 dark:ring-brand-400 scale-110 shadow-md'
-                        : 'hover:scale-105 hover:shadow-sm'
-                        }`}
-                      style={{ backgroundColor: color }}
-                      aria-label={`背景颜色: ${key}`}
-                    />
-                  ))}
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(BACKGROUND_COLORS).map(([key, color]) => {
+                    // 使用更友好的背景颜色标签
+                    const colorLabels: Record<string, string> = {
+                      'white': '纯白',
+                      'warm': '暖色',
+                      'cool': '冷色',
+                      'sepia': '复古',
+                      'cream': '奶油',
+                      'mint': '薄荷',
+                      'gray': '灰色',
+                    };
+
+                    const colorName = colorLabels[key] || key;
+
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setBackgroundColor(key as keyof typeof BACKGROUND_COLORS)}
+                        className={`
+                          w-full h-10 rounded transition-all flex items-center justify-center
+                          ${backgroundColor === key
+                            ? 'ring-2 ring-brand-500 dark:ring-brand-400 scale-105 shadow-md'
+                            : 'ring-1 ring-gray-200 dark:ring-gray-700 hover:scale-102 hover:shadow-sm'
+                          }
+                        `}
+                        style={{ backgroundColor: color }}
+                        aria-label={`背景颜色: ${colorName}`}
+                        title={colorName}
+                      >
+                        {backgroundColor === key && (
+                          <span className="text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full shadow-sm">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 页面宽度调整 */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <span className="mr-2">📏</span>
+                    页面宽度
+                  </label>
+                  <span className="text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded">
+                    {pageWidth}px
+                  </span>
+                </div>
+                <div className="px-1">
+                  <input
+                    type="range"
+                    min="600"
+                    max="1800"
+                    step="50"
+                    value={pageWidth}
+                    onChange={(e) => setPageWidth(parseInt(e.target.value))}
+                    className="w-full cursor-pointer"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1 px-1">
+                    <span>窄</span>
+                    <span>宽</span>
+                  </div>
+                  <div className="flex justify-center gap-2 mt-3">
+                    {[800, 1000, 1200, 1500].map(width => (
+                      <button
+                        key={width}
+                        onClick={() => setPageWidth(width)}
+                        className={`
+                          text-xs px-2 py-1 rounded transition-all
+                          ${pageWidth === width
+                            ? 'bg-brand-100 text-brand-700 border-brand-300 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-700/50 font-medium'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'}
+                          border
+                        `}
+                      >
+                        {width}px
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
