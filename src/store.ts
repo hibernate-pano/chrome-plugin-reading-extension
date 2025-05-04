@@ -199,44 +199,79 @@ const useAppStore = create<AppState>((set) => ({
 
 // 初始化 store 的状态
 export const initializeStore = async () => {
-  // 初始化预设管理器
-  await presetManager.initialize();
+  console.log('初始化 store 状态...');
 
-  // 获取所有预设
-  const allPresets = presetManager.getAllPresets();
-  const customPresets = presetManager.getCustomPresets();
-  const activePreset = presetManager.getActivePreset()?.id || null;
-  const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
-  const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
-  const codeFontSize = await getStorage<number>(StorageKeys.CODE_FONT_SIZE);
-  const codeTheme = await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME);
-  const lineHeight = await getStorage<number>(StorageKeys.LINE_HEIGHT);
-  const letterSpacing = await getStorage<number>(StorageKeys.LETTER_SPACING);
-  const pageWidth = await getStorage<number>(StorageKeys.PAGE_WIDTH);
-  const textAlign = await getStorage<'left' | 'center' | 'right'>(StorageKeys.TEXT_ALIGN);
-  const firstLineIndent = await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT);
-  const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES);
-  const showDirectory = await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY);
-  const paragraphSpacing = await getStorage<number>(StorageKeys.PARAGRAPH_SPACING);
+  try {
+    // 确保设置完整
+    const { ensureCompleteSettings } = await import('./storage/storage');
+    await ensureCompleteSettings();
 
-  useAppStore.setState({
-    presets: allPresets,
-    customPresets,
-    activePreset,
-    theme: theme ?? DEFAULT_SETTINGS.theme,
-    fontSize: fontSize ?? DEFAULT_SETTINGS.fontSize,
-    codeFontSize: codeFontSize ?? DEFAULT_SETTINGS.codeFontSize,
-    codeTheme: codeTheme ?? DEFAULT_SETTINGS.codeTheme,
-    readingMode: false,
-    lineHeight: lineHeight ?? DEFAULT_SETTINGS.lineHeight,
-    letterSpacing: letterSpacing ?? DEFAULT_SETTINGS.letterSpacing,
-    pageWidth: pageWidth ?? DEFAULT_SETTINGS.pageWidth,
-    textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
-    firstLineIndent: firstLineIndent ?? DEFAULT_SETTINGS.firstLineIndent,
-    showImages: showImages ?? DEFAULT_SETTINGS.showImages,
-    showDirectory: showDirectory ?? DEFAULT_SETTINGS.showDirectory,
-    paragraphSpacing: paragraphSpacing ?? DEFAULT_SETTINGS.paragraphSpacing,
-  });
+    // 初始化预设管理器
+    await presetManager.initialize();
+
+    // 检查是否有激活的预设
+    const activePresetId = await getStorage<string>(StorageKeys.ACTIVE_PRESET);
+    console.log('当前激活的预设ID:', activePresetId);
+
+    // 如果没有激活的预设，尝试应用默认预设
+    if (!activePresetId) {
+      console.log('没有激活的预设，尝试应用默认预设...');
+      try {
+        // 应用默认预设
+        const defaultPresetId = 'default';
+        console.log('应用默认预设:', defaultPresetId);
+        await presetManager.setActivePreset(defaultPresetId);
+        console.log('默认预设应用成功');
+      } catch (presetError) {
+        console.error('应用默认预设时发生错误:', presetError);
+      }
+    }
+
+    // 获取所有预设
+    const allPresets = presetManager.getAllPresets();
+    const customPresets = presetManager.getCustomPresets();
+    const activePreset = presetManager.getActivePreset()?.id || null;
+    const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
+    const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
+    const codeFontSize = await getStorage<number>(StorageKeys.CODE_FONT_SIZE);
+    const codeTheme = await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME);
+    const lineHeight = await getStorage<number>(StorageKeys.LINE_HEIGHT);
+    const letterSpacing = await getStorage<number>(StorageKeys.LETTER_SPACING);
+    const pageWidth = await getStorage<number>(StorageKeys.PAGE_WIDTH);
+    const textAlign = await getStorage<'left' | 'center' | 'right'>(StorageKeys.TEXT_ALIGN);
+    const firstLineIndent = await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT);
+    const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES);
+    const showDirectory = await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY);
+    const paragraphSpacing = await getStorage<number>(StorageKeys.PARAGRAPH_SPACING);
+
+    console.log('从存储中获取的设置:');
+    console.log('theme:', theme);
+    console.log('fontSize:', fontSize);
+    console.log('activePreset:', activePreset);
+
+    useAppStore.setState({
+      presets: allPresets,
+      customPresets,
+      activePreset,
+      theme: theme ?? DEFAULT_SETTINGS.theme,
+      fontSize: fontSize ?? DEFAULT_SETTINGS.fontSize,
+      codeFontSize: codeFontSize ?? DEFAULT_SETTINGS.codeFontSize,
+      codeTheme: codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+      readingMode: false,
+      lineHeight: lineHeight ?? DEFAULT_SETTINGS.lineHeight,
+      letterSpacing: letterSpacing ?? DEFAULT_SETTINGS.letterSpacing,
+      pageWidth: pageWidth ?? DEFAULT_SETTINGS.pageWidth,
+      textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
+      firstLineIndent: firstLineIndent ?? DEFAULT_SETTINGS.firstLineIndent,
+      showImages: showImages ?? DEFAULT_SETTINGS.showImages,
+      showDirectory: showDirectory ?? DEFAULT_SETTINGS.showDirectory,
+      paragraphSpacing: paragraphSpacing ?? DEFAULT_SETTINGS.paragraphSpacing,
+    });
+
+    console.log('store 状态初始化完成');
+  } catch (error) {
+    console.error('初始化 store 状态时发生错误:', error);
+  }
 };
 
 export default useAppStore;

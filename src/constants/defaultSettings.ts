@@ -1,8 +1,8 @@
 import { StorageKeys, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
-import { 
-  DEFAULT_LINE_HEIGHT, 
-  DEFAULT_LINE_SPACING, 
-  DEFAULT_PARAGRAPH_SPACING 
+import {
+  DEFAULT_LINE_HEIGHT,
+  DEFAULT_LINE_SPACING,
+  DEFAULT_PARAGRAPH_SPACING
 } from './options';
 
 /**
@@ -11,19 +11,19 @@ import {
  */
 export const DEFAULT_SETTINGS = {
   theme: 'light' as 'light' | 'dark',
-  fontSize: 17,
+  fontSize: 18,
   codeFontSize: 14,
   codeTheme: 'github' as keyof typeof CODE_THEMES,
   lineHeight: DEFAULT_LINE_HEIGHT,
   lineSpacing: DEFAULT_LINE_SPACING,
   letterSpacing: 0,
   pageWidth: 1200,
-  textAlign: 'left' as 'left' | 'center' | 'right' | 'justify',
+  textAlign: 'justify' as 'left' | 'center' | 'right' | 'justify',
   firstLineIndent: false,
   showImages: true,
-  showDirectory: false,
-  fontFamily: 'default' as keyof typeof FONT_FAMILIES,
-  backgroundColor: 'white' as keyof typeof BACKGROUND_COLORS,
+  showDirectory: true,
+  fontFamily: 'songti' as keyof typeof FONT_FAMILIES,
+  backgroundColor: 'warm' as keyof typeof BACKGROUND_COLORS,
   paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
   debug: false
 };

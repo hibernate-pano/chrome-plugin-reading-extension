@@ -90,7 +90,19 @@ export async function clearStorage(
 import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
 
 export async function initializeDefaultSettings(): Promise<void> {
+  // 检查是否已经初始化过
+  const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
+  const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
+
+  // 如果已经有设置，则不再初始化
+  if (theme !== null && fontSize !== null) {
+    console.log('设置已存在，无需初始化');
+    return;
+  }
+
   // 使用统一的默认设置对象
+  console.log('初始化默认设置...');
+
   await setStorage(StorageKeys.THEME, DEFAULT_SETTINGS.theme);
   await setStorage(StorageKeys.FONT_SIZE, DEFAULT_SETTINGS.fontSize);
   await setStorage(StorageKeys.CODE_FONT_SIZE, DEFAULT_SETTINGS.codeFontSize);
@@ -107,6 +119,30 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.BACKGROUND_COLOR, DEFAULT_SETTINGS.backgroundColor);
   await setStorage(StorageKeys.PARAGRAPH_SPACING, DEFAULT_SETTINGS.paragraphSpacing);
   await setStorage(StorageKeys.DEBUG, DEFAULT_SETTINGS.debug);
+
+  console.log('默认设置初始化完成');
+}
+
+/**
+ * 检查设置是否完整，如果不完整则应用默认设置
+ */
+export async function ensureCompleteSettings(): Promise<void> {
+  console.log('检查设置是否完整...');
+
+  // 检查关键设置是否存在
+  const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
+  const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
+  const fontFamily = await getStorage<string>(StorageKeys.FONT_FAMILY);
+  const backgroundColor = await getStorage<string>(StorageKeys.BACKGROUND_COLOR);
+
+  // 如果任何一个关键设置不存在，则初始化所有设置
+  if (theme === null || fontSize === null || fontFamily === null || backgroundColor === null) {
+    console.warn('检测到设置不完整，执行初始化...');
+    await initializeDefaultSettings();
+    return;
+  }
+
+  console.log('设置检查完成，设置完整');
 }
 
 export interface ReadingPreset {

@@ -434,24 +434,71 @@ let textSelectionToolbar: TextSelectionToolbar | null = null;
 import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
 
 async function fetchSettings(): Promise<ReadingModeSettings> {
-  return {
-    theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? DEFAULT_SETTINGS.theme,
-    fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? DEFAULT_SETTINGS.fontSize,
-    codeFontSize: await getStorage<number>(StorageKeys.CODE_FONT_SIZE) ?? DEFAULT_SETTINGS.codeFontSize,
-    codeTheme: await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME) ?? DEFAULT_SETTINGS.codeTheme,
-    lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? DEFAULT_SETTINGS.lineHeight,
-    letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? DEFAULT_SETTINGS.letterSpacing,
-    lineSpacing: await getStorage<number>(StorageKeys.LINE_SPACING) ?? DEFAULT_SETTINGS.lineSpacing,
-    pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? DEFAULT_SETTINGS.pageWidth,
-    textAlign: await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN) ?? DEFAULT_SETTINGS.textAlign,
-    firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? DEFAULT_SETTINGS.firstLineIndent,
-    showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? DEFAULT_SETTINGS.showImages,
-    fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? DEFAULT_SETTINGS.fontFamily,
-    backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? DEFAULT_SETTINGS.backgroundColor,
-    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? DEFAULT_SETTINGS.showDirectory,
-    paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? DEFAULT_SETTINGS.paragraphSpacing,
-    debug: await getStorage<boolean>(StorageKeys.DEBUG) ?? DEFAULT_SETTINGS.debug,
+  console.log('开始获取设置...');
+
+  // 获取当前激活的预设
+  const activePresetId = await getStorage<string>(StorageKeys.ACTIVE_PRESET);
+  console.log('当前激活的预设ID:', activePresetId);
+
+  // 获取各个设置项并记录日志
+  const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
+  const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
+  const codeFontSize = await getStorage<number>(StorageKeys.CODE_FONT_SIZE);
+  const codeTheme = await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME);
+  const lineHeight = await getStorage<number>(StorageKeys.LINE_HEIGHT);
+  const letterSpacing = await getStorage<number>(StorageKeys.LETTER_SPACING);
+  const lineSpacing = await getStorage<number>(StorageKeys.LINE_SPACING);
+  const pageWidth = await getStorage<number>(StorageKeys.PAGE_WIDTH);
+  const textAlign = await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN);
+  const firstLineIndent = await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT);
+  const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES);
+  const fontFamily = await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY);
+  const backgroundColor = await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR);
+  const showDirectory = await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY);
+  const paragraphSpacing = await getStorage<number>(StorageKeys.PARAGRAPH_SPACING);
+  const debug = await getStorage<boolean>(StorageKeys.DEBUG);
+
+  // 记录获取到的设置和默认值
+  console.log('从存储中获取的设置:');
+  console.log('theme:', theme, '默认值:', DEFAULT_SETTINGS.theme);
+  console.log('fontSize:', fontSize, '默认值:', DEFAULT_SETTINGS.fontSize);
+  console.log('codeFontSize:', codeFontSize, '默认值:', DEFAULT_SETTINGS.codeFontSize);
+  console.log('codeTheme:', codeTheme, '默认值:', DEFAULT_SETTINGS.codeTheme);
+  console.log('lineHeight:', lineHeight, '默认值:', DEFAULT_SETTINGS.lineHeight);
+  console.log('letterSpacing:', letterSpacing, '默认值:', DEFAULT_SETTINGS.letterSpacing);
+  console.log('lineSpacing:', lineSpacing, '默认值:', DEFAULT_SETTINGS.lineSpacing);
+  console.log('pageWidth:', pageWidth, '默认值:', DEFAULT_SETTINGS.pageWidth);
+  console.log('textAlign:', textAlign, '默认值:', DEFAULT_SETTINGS.textAlign);
+  console.log('firstLineIndent:', firstLineIndent, '默认值:', DEFAULT_SETTINGS.firstLineIndent);
+  console.log('showImages:', showImages, '默认值:', DEFAULT_SETTINGS.showImages);
+  console.log('fontFamily:', fontFamily, '默认值:', DEFAULT_SETTINGS.fontFamily);
+  console.log('backgroundColor:', backgroundColor, '默认值:', DEFAULT_SETTINGS.backgroundColor);
+  console.log('showDirectory:', showDirectory, '默认值:', DEFAULT_SETTINGS.showDirectory);
+  console.log('paragraphSpacing:', paragraphSpacing, '默认值:', DEFAULT_SETTINGS.paragraphSpacing);
+  console.log('debug:', debug, '默认值:', DEFAULT_SETTINGS.debug);
+
+  // 返回合并后的设置
+  const settings = {
+    theme: theme ?? DEFAULT_SETTINGS.theme,
+    fontSize: fontSize ?? DEFAULT_SETTINGS.fontSize,
+    codeFontSize: codeFontSize ?? DEFAULT_SETTINGS.codeFontSize,
+    codeTheme: codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+    lineHeight: lineHeight ?? DEFAULT_SETTINGS.lineHeight,
+    letterSpacing: letterSpacing ?? DEFAULT_SETTINGS.letterSpacing,
+    lineSpacing: lineSpacing ?? DEFAULT_SETTINGS.lineSpacing,
+    pageWidth: pageWidth ?? DEFAULT_SETTINGS.pageWidth,
+    textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
+    firstLineIndent: firstLineIndent ?? DEFAULT_SETTINGS.firstLineIndent,
+    showImages: showImages ?? DEFAULT_SETTINGS.showImages,
+    fontFamily: fontFamily ?? DEFAULT_SETTINGS.fontFamily,
+    backgroundColor: backgroundColor ?? DEFAULT_SETTINGS.backgroundColor,
+    showDirectory: showDirectory ?? DEFAULT_SETTINGS.showDirectory,
+    paragraphSpacing: paragraphSpacing ?? DEFAULT_SETTINGS.paragraphSpacing,
+    debug: debug ?? DEFAULT_SETTINGS.debug,
   };
+
+  console.log('最终使用的设置:', settings);
+  return settings;
 }
 
 function handleMediaElements(container: HTMLElement | null, showImages: boolean) {
@@ -2476,6 +2523,40 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       // 先保存当前状态
       const currentState = isReadingMode;
       console.log('当前阅读模式状态:', currentState);
+
+      // 在切换前检查设置是否存在
+      (async () => {
+        try {
+          console.log('切换前检查设置...');
+          const settings = await fetchSettings();
+          console.log('当前设置:', settings);
+
+          // 检查是否有激活的预设
+          const activePresetId = await getStorage<string>(StorageKeys.ACTIVE_PRESET);
+          console.log('当前激活的预设ID:', activePresetId);
+
+          // 如果没有激活的预设，尝试应用默认预设
+          if (!activePresetId && !currentState) {
+            console.log('没有激活的预设，尝试应用默认预设...');
+            try {
+              // 导入预设管理器
+              const { PresetManager } = await import('../presets/presetManager');
+              const presetManager = PresetManager.getInstance();
+              await presetManager.initialize();
+
+              // 应用默认预设
+              const defaultPresetId = 'default';
+              console.log('应用默认预设:', defaultPresetId);
+              await presetManager.setActivePreset(defaultPresetId);
+              console.log('默认预设应用成功');
+            } catch (presetError) {
+              console.error('应用默认预设时发生错误:', presetError);
+            }
+          }
+        } catch (error) {
+          console.error('切换前检查设置时发生错误:', error);
+        }
+      })();
 
       // 切换阅读模式
       if (currentState) {
