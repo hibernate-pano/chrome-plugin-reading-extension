@@ -22,14 +22,17 @@ const Tooltip: React.FC<TooltipProps> = ({
   delay = 300,
   className = '',
   maxWidth = 200,
-  showArrow = true,
+  showArrow = false, // Default to false for Material Design
   transitionType = 'fade'
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipInnerRef = useRef<HTMLDivElement>(null); // Ref for the actual tooltip content div for ID
+  const tooltipRef = useRef<HTMLDivElement>(null); // Ref for the fixed positioned container
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const tooltipId = React.useId ? React.useId() : `tooltip-${Math.random().toString(36).substring(2, 9)}`;
 
   // 显示提示
   const showTooltip = () => {
@@ -39,7 +42,7 @@ const Tooltip: React.FC<TooltipProps> = ({
     
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true);
-      updatePosition();
+      // updatePosition will be called by useEffect when isVisible changes and tooltipInnerRef is available
     }, delay);
   };
 
@@ -49,12 +52,36 @@ const Tooltip: React.FC<TooltipProps> = ({
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    
     setIsVisible(false);
   };
+  
+  // Handle aria-describedby on trigger
+  useEffect(() => {
+    const triggerElement = triggerRef.current;
+    if (triggerElement) {
+      if (isVisible) {
+        triggerElement.setAttribute('aria-describedby', tooltipId);
+      } else {
+        triggerElement.removeAttribute('aria-describedby');
+      }
+    }
+    // Cleanup on unmount or if triggerElement changes (though not expected here)
+    return () => {
+      if (triggerElement) {
+        triggerElement.removeAttribute('aria-describedby');
+      }
+    };
+  }, [isVisible, tooltipId]);
 
-  // 更新提示位置
+
+  // 更新提示位置 - needs tooltipInnerRef for accurate measurement
   const updatePosition = () => {
+    if (!triggerRef.current || !tooltipInnerRef.current) return; // Use tooltipInnerRef
+    
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipInnerRef.current.getBoundingClientRect(); // Use tooltipInnerRef for size
+    
+    let top = 0;
     if (!triggerRef.current || !tooltipRef.current) return;
     
     const triggerRect = triggerRef.current.getBoundingClientRect();
@@ -111,14 +138,19 @@ const Tooltip: React.FC<TooltipProps> = ({
       }
     };
     
+    // Update position when isVisible changes and tooltip is rendered
+    if (isVisible && tooltipInnerRef.current) {
+      updatePosition();
+    }
+
     window.addEventListener('resize', handleResize);
-    window.addEventListener('scroll', handleResize);
+    window.addEventListener('scroll', handleResize, true); // Use capture phase for scroll
     
     return () => {
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', handleResize);
+      window.removeEventListener('scroll', handleResize, true);
     };
-  }, [isVisible]);
+  }, [isVisible]); // updatePosition will be called if isVisible is true
 
   // 清理超时
   useEffect(() => {
@@ -129,13 +161,29 @@ const Tooltip: React.FC<TooltipProps> = ({
     };
   }, []);
 
-  // 箭头样式
+  // Define a consistent dark gray for tooltip background, approximating Material's "inverse surface" or tooltip color.
+  // e.g., Material Design uses #616161 (grey 700) for tooltips.
+  // Using bg-gray-700 as an approximation if neutral-700 is not defined.
+  const tooltipBgColor = 'bg-gray-700/90'; // Using Tailwind's gray-700 with 90% opacity.
+  const tooltipTextColor = 'text-white';
+  const tooltipPadding = 'px-3 py-1.5'; // 12px horizontal, 6px vertical
+  const tooltipRounded = 'rounded-sm'; // 4dp
+  const tooltipShadow = 'shadow-md'; // Approximating shadow-md-dp2
+
+  // Arrow styles - will only be applied if showArrow is true
+  // Arrow color needs to match the tooltipBgColor. This is tricky with Tailwind opacity modifiers.
+  // For simplicity, if an arrow is shown, it will use a solid color that matches the tooltip's base color.
+  const arrowBaseColor = 'border-gray-700'; // Matching the base of tooltipBgColor
+
   const arrowStyles = {
-    top: 'bottom-full border-t-gray-800 dark:border-t-gray-700 border-l-transparent border-r-transparent border-b-transparent',
-    bottom: 'top-full border-b-gray-800 dark:border-b-gray-700 border-l-transparent border-r-transparent border-t-transparent',
-    left: 'right-full border-l-gray-800 dark:border-l-gray-700 border-t-transparent border-r-transparent border-b-transparent',
-    right: 'left-full border-r-gray-800 dark:border-r-gray-700 border-t-transparent border-l-transparent border-b-transparent'
+    top: `bottom-full border-t-${arrowBaseColor} border-l-transparent border-r-transparent border-b-transparent`,
+    bottom: `top-full border-b-${arrowBaseColor} border-l-transparent border-r-transparent border-t-transparent`,
+    left: `right-full border-l-${arrowBaseColor} border-t-transparent border-r-transparent border-b-transparent`,
+    right: `left-full border-r-${arrowBaseColor} border-t-transparent border-l-transparent border-b-transparent`
   };
+  
+  // Ensure arrow dynamic classes are fully generated for Tailwind JIT
+  // border-t-gray-700 border-b-gray-700 border-l-gray-700 border-r-gray-700
 
   return (
     <div className="inline-block">
@@ -166,15 +214,23 @@ const Tooltip: React.FC<TooltipProps> = ({
           duration={200}
         >
           <div
-            className={`bg-gray-800 dark:bg-gray-700 text-white text-sm rounded-md py-1 px-2 shadow-lg ${className}`}
+            ref={tooltipInnerRef} // Ref for the actual content box
+            id={tooltipId}
+            role="tooltip"
+            className={`
+              ${tooltipBgColor} ${tooltipTextColor} 
+              text-sm 
+              ${tooltipRounded} ${tooltipPadding} ${tooltipShadow}
+              ${className}
+            `}
             style={{ maxWidth }}
           >
             {content}
             
-            {/* 箭头 */}
+            {/* Arrow - Conditionally rendered */}
             {showArrow && (
               <div
-                className={`absolute w-0 h-0 border-solid border-4 ${arrowStyles[position]}`}
+                className={`absolute w-0 h-0 border-solid border-4 ${arrowStyles[position] || ''}`}
                 style={{
                   ...(position === 'top' && { bottom: '-8px', left: 'calc(50% - 4px)' }),
                   ...(position === 'bottom' && { top: '-8px', left: 'calc(50% - 4px)' }),

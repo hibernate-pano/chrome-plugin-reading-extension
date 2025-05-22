@@ -54,6 +54,10 @@ export const Slider: React.FC<SliderProps> = ({
   const thumbOffsetDefault = '-0.375rem'; // 6px for 12px thumb
   const currentThumbOffset = isDragging || hover ? thumbOffsetDragging : thumbOffsetDefault; // Use larger offset if thumb is larger on hover too
   const currentThumbSize = isDragging || hover ? mdThumbSizeInteracting : mdThumbSizeDefault;
+  
+  // Unique ID for ARIA labelling
+  const inputId = React.useId ? React.useId() : `slider-${Math.random().toString(36).substring(2, 9)}`;
+  const labelId = `slider-label-${inputId}`;
 
   return (
     <div className={`space-y-2 ${className}`}
@@ -62,9 +66,11 @@ export const Slider: React.FC<SliderProps> = ({
       {(label || showValue) && (
         <div className="flex justify-between items-center">
           {label && (
-            <label className={`${componentLabelTypography} text-material-onSurface dark:text-material-darkOnSurface`}>
+            // Using <label htmlFor> would be better if the input wasn't visually hidden and complexly styled.
+            // For now, providing an id to the label text and using aria-labelledby on input.
+            <span id={labelId} className={`${componentLabelTypography} text-material-onSurface dark:text-material-darkOnSurface`}>
               {label}
-            </label>
+            </span>
           )}
           {showValue && ( // This is the label next to the component label, not the tooltip
             <span className={`${valueLabelTypography} text-material-onSurface/75 dark:text-material-darkOnSurface/75 px-2 py-0.5 rounded-sm`}>
@@ -125,6 +131,9 @@ export const Slider: React.FC<SliderProps> = ({
           onTouchEnd={() => setIsDragging(false)}
           className="absolute w-full h-full bg-transparent appearance-none cursor-pointer z-10 opacity-0 m-0 p-0 top-0 left-0"
           style={{ WebkitAppearance: 'none' }}
+          aria-labelledby={label ? labelId : undefined}
+          aria-label={!label ? 'Slider' : undefined} // Fallback aria-label if no visual label prop
+          aria-valuetext={displayValue}
         />
         
         {/* Value Label Tooltip - shown on hover or drag */}

@@ -157,9 +157,15 @@ export default {
         'paper-texture': "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAFOklEQVRoQ92a23IbNxBEG5RkOVZi5/9/LXbKlhVR3G42Z7p3QO1DVS4CJbEE9vT9dIvw9/v3H803/l6//vjzZj5zfl33+vd1/TV6v/NM1/Vn/I+vL9++fS/uu65Pd/u8ct9NkcxE8JnBOG75HQJKAFFYCUDQJVnUgQtADMZAOZBz/TUEyMADkJsikwxJZkKiiwsZDICMBBIgA2GJpCSrVQOJvhvXpcUc0NmFCIoWJUZCp/EwMQ/DzWFOIcQxVjCYJwVkwOHZpkwhIwwAMQClkuCJeBaWkYqmQhNx19qAJMWwU0c4YBWKCAUBOAYrNSp1R74bCGOkzJHiY/sQlxBdBzV3AhGmVDPRsUJIcGYD4c0K4wbkYOYUYn0JCGZmOXllQu/7ABBZghUdNwKhlSi+pQOeZQxzLH1mQsQGRWEAZHdtzSIxgjjLlwWqNWCvJNJJRB4xFBQs5rQOxfHjewIBE8GG2bEHYO+N26VdMuTDZFUCY6GjGMwQRvouDPHbvUECMB9MJBDA0QX1xFDjZCfnGpGBu4iZB9dyzBCIecDK8yTWiFaQrKJFjPEeMCmGLsVAGl/CFpKXU8wMkTiQ3BsbJyC9RFmh6ZwCwrlBhqBCKT/MjBQpKAEJ9Ys6w3DnvE0QAAnVMVsCkEF0dHCZG8JUSGtGlYFsRKSz/vQsSQFUXESPQ76IrHIOscBk4eCUQFT7FEoZGcsDFh5FpS2C8yAjy+v8fciR5HGGkW2w9FaxQgPJxjpLV+SZFTLGQJRXgUkYMjdUbcJGZD3GSuQjXnQgYA7KESpxo84RrTRXcpLLPojYARSh7asFBPJvBrQE10KHNfK+K1QKilnDyiQbz2H3+iL8GQDBEYiDriBqb0UKm8qRxCaUYQzliEIWNecwl1ixXMTCF/UvJCXOcE+hsgZ64sZ6ooCxTcDEUZGp9B1IMOOa0tUrhKCgqCBJjRyGlDDrj4GgSkHFXJFi9sSB1eo0x6E3DmSu0zCvPSCAUTNkQHZfxLYGQnbwHDRzXntsY9U2RqICuQcQqXEvOu9GhUMQqHkCYjXWBtw6R6Q0qWDJ3BYVCgPpvciNTZQF1S0FZPVFmb5j5giD5lBEGOxZWL1U07HfJyjqZF2dOeCSZnbIkXU7Y6YwDO4EAo+U/GCLSSAxVOX0tnrCRqRMXRwIQIzdJ8Gg2JkbqG6wSGQWU6mOb4LwbhZ9C8BwOTEfJwAEQgVAQRGQHJG5sPgitAoqvJ45YSAqenLVgZQdkW5QR1oGpAYKs1wvkJQ1RrVUkTwjMC1foIl5a73LCNZ5B5JGYmq/0qkJtR4gk2ImiiBYseXuWBJnrGcQsdWoWgXvUlhxNUdKs2cQqlhb03qfkSIWc1ahXKFnfzlnZpY2p7YzPAykTl80NuhkVkbIkhTCm3PEYX6fV4qfPU/uB4J9rLd6mR9s3ycrMPdEyYbGGrR3LFcg2i0BjHLGOjbXD1G89MWRFB7xUYtXrYHcJXqkgyKidQ4eTwXAe7b1C8dTWqyKnYq3xr3lrQZSG/B1PaUJRCqUZFgfNtWvR49Pjo82HbdB6HGXsQMlqnfMbWRrxSB1TyD48TbpUTDoiXXZBYsajhwz/UfpfFRUvlr/JGXuAtLthR2YZHCNQkMVKZm5SQ1xrH26n7k0Et8Aoxl3wXPcJBiJZAlMXl7Bw9kOdWXqOzJf3XsOsPcf/Mdc9+j/SJJt9ZSCF1/fsR/5Lx4YZJ6KLfabAAAAAElFTkSuQmCC')",
       },
       transitionTimingFunction: {
-        'elastic': 'cubic-bezier(0.4, 0.0, 0.2, 1.5)',
-        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        'bounce': 'cubic-bezier(0.175, 0.885, 0.32, 1.5)',
+        // Material Design Standard Easing Curves
+        'md-standard': 'cubic-bezier(0.4, 0.0, 0.2, 1)',      // Standard curve - for elements quickly changing screen state
+        'md-decelerate': 'cubic-bezier(0.0, 0.0, 0.2, 1)',    // Deceleration curve - for elements entering the screen
+        'md-accelerate': 'cubic-bezier(0.4, 0.0, 1, 1)',      // Acceleration curve - for elements exiting the screen
+        // Custom easings below are not standard Material Design.
+        // Consider replacing their usage in UI elements with the 'md-' prefixed ones.
+        // 'elastic': 'cubic-bezier(0.4, 0.0, 0.2, 1.5)', // Kept for reference, but prefer MD curves for UI
+        // 'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)', // Kept for reference
+        // 'bounce': 'cubic-bezier(0.175, 0.885, 0.32, 1.5)', // Kept for reference
       },
     },
   },

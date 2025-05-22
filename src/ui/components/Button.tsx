@@ -1,4 +1,5 @@
 import React from 'react';
+import React, { memo } from 'react';
 import Ripple from './Ripple'; // Assuming Ripple.tsx is in the same directory
 import Spinner from './Spinner'; // Assuming Spinner.tsx is in the same directory
 
@@ -172,4 +173,4 @@ const Button: React.FC<ButtonProps> = ({
   );
 };
 
-export default Button;
+export default memo(Button);

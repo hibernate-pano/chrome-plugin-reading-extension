@@ -1,658 +1,391 @@
-/* 阅读模式的基础样式 - 基于 Obsidian Clipper 设计理念 */
+:root {
+  /* Light Theme Material Colors */
+  --reader-bg-color: #FFFFFF; /* material.background */
+  --reader-text-color: #000000; /* material.onBackground */
+  --reader-surface-color: #FFFFFF; /* material.surface */
+  --reader-onsurface-color: #000000; /* material.onSurface */
+  --reader-primary-color: #3e678a; /* material.primary */
+  --reader-secondary-color: #E09F3E; /* material.secondary */
+  --reader-error-color: #B00020; /* material.error */
+  
+  /* Specific element colors - light theme */
+  --reader-blockquote-bg: #f0f0f0; /* Lighter gray or surface-variant like */
+  --reader-blockquote-border: var(--reader-primary-color);
+  --reader-blockquote-text: var(--reader-onsurface-color); /* Or a slightly muted onSurface */
+  --reader-divider-color: rgba(0, 0, 0, 0.12); /* material.onSurface at 12% */
+  --reader-code-bg: #f5f5f5; /* Light gray for code blocks */
+  --reader-code-text-color: #333333;
+  --reader-inline-code-bg: rgba(0, 0, 0, 0.05);
+  --reader-inline-code-text-color: var(--reader-onsurface-color);
+  --reader-link-color: var(--reader-primary-color);
+
+  /* Default font settings from Tailwind config (Roboto should be first) */
+  --reader-font-family: 'Roboto', 'Inter var', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --reader-font-family-serif: 'Georgia', Cambria, 'Times New Roman', Times, serif; /* Kept for specific elements if needed */
+  --reader-font-family-mono: 'Roboto Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  /* Standard line height and letter spacing - can be adjusted by user settings later */
+  --reader-line-height: 1.6;
+  --reader-letter-spacing: normal;
+
+  /* Scrollbar colors */
+  --reading-scrollbar-track: rgba(0, 0, 0, 0.05);
+  --reading-scrollbar-thumb: rgba(0, 0, 0, 0.2);
+  --reading-scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+
+  /* Selection colors */
+  --reading-selection-bg: #cfe2ff; /* Light blue, common selection color */
+  --reading-selection-text: #000000;
+}
+
+body[data-theme='dark'] #reading-mode-container, /* Specific to #reading-mode-container for dark theme */
+#reading-mode-container.dark-theme /* Legacy support if class is on container */ {
+  /* Dark Theme Material Colors */
+  --reader-bg-color: #121212; /* material.darkBackground */
+  --reader-text-color: #FFFFFF; /* material.darkOnBackground */
+  --reader-surface-color: #1E1E1E; /* material.darkSurface */
+  --reader-onsurface-color: #FFFFFF; /* material.darkOnSurface */
+  /* Primary, secondary, error usually remain the same or use darker variants if defined */
+  /* --reader-primary-color: ...; (if a dark variant of primary is needed) */
+  
+  /* Specific element colors - dark theme */
+  --reader-blockquote-bg: #2c2c2c; /* Darker gray */
+  --reader-blockquote-text: var(--reader-onsurface-color);
+  --reader-divider-color: rgba(255, 255, 255, 0.12); /* material.darkOnSurface at 12% */
+  --reader-code-bg: #2d2d2d; /* Dark gray for code blocks */
+  --reader-code-text-color: #e0e0e0;
+  --reader-inline-code-bg: rgba(255, 255, 255, 0.1);
+  --reader-inline-code-text-color: var(--reader-onsurface-color);
+  /* --reader-link-color: ...; (if a dark variant of primary for links is needed) */
+
+  /* Scrollbar colors */
+  --reading-scrollbar-track: rgba(255, 255, 255, 0.05);
+  --reading-scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --reading-scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+
+  /* Selection colors */
+  --reading-selection-bg: #506680; /* Darker blue for dark theme */
+  --reading-selection-text: #FFFFFF;
+}
+
+body[data-theme='sepia'] #reading-mode-container,
+#reading-mode-container.sepia-theme {
+  --reader-bg-color: #f5f2e9; /* paper.sepia */
+  --reader-text-color: #5B4636; /* Dark brown */
+  --reader-surface-color: #efebe0; /* Slightly lighter sepia for content card */
+  --reader-onsurface-color: #5B4636;
+  --reader-primary-color: #795548; /* Brown as primary */
+  
+  --reader-blockquote-bg: #e6e0d5;
+  --reader-blockquote-text: #5B4636;
+  --reader-divider-color: rgba(91, 70, 54, 0.2); /* Brownish divider */
+  --reader-code-bg: #e6e0d5;
+  --reader-code-text-color: #5B4636;
+  --reader-inline-code-bg: rgba(91, 70, 54, 0.1);
+  --reader-inline-code-text-color: #5B4636;
+  --reader-link-color: #795548;
+
+  /* Scrollbar colors */
+  --reading-scrollbar-track: rgba(91, 70, 54, 0.08);
+  --reading-scrollbar-thumb: rgba(91, 70, 54, 0.3);
+  --reading-scrollbar-thumb-hover: rgba(91, 70, 54, 0.4);
+
+  /* Selection colors */
+  --reading-selection-bg: #d3c7b7; 
+  --reading-selection-text: #5B4636;
+}
+
+
+/* Main Container */
 #reading-mode-container {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9999;
+  z-index: 9999; /* Ensure it's on top */
   overflow-y: auto;
-  background-color: var(--reading-bg-color);
-  color: var(--reading-text-color);
-  font-family: var(--reading-font-family);
-  line-height: var(--reading-line-height);
-  letter-spacing: var(--reading-letter-spacing);
-
-  /* 更加灵活的内边距 */
-  padding: max(4rem, 4vh) max(2rem, 5vw);
-
-  /* 平滑过渡效果 */
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-
-  /* 添加进入动画 */
-  animation: fadeIn 0.5s ease forwards;
+  background-color: var(--reader-bg-color);
+  color: var(--reader-text-color);
+  font-family: var(--reader-font-family);
+  line-height: var(--reader-line-height);
+  letter-spacing: var(--reader-letter-spacing);
+  padding: 1rem; /* Standard padding for the overall container */
+  transition: background-color 0.3s ease, color 0.3s ease; /* Smooth theme transitions */
+  /* Material Design standard curve for entering elements */
+  animation: fadeIn 0.3s cubic-bezier(0.0, 0.0, 0.2, 1) forwards; 
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); } /* Slightly increased travel for visibility */
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* 标题系统优化 */
-#reading-mode-container h1,
-#reading-mode-container h2,
-#reading-mode-container h3,
-#reading-mode-container h4,
-#reading-mode-container h5,
-#reading-mode-container h6 {
-  @apply mt-12 mb-4 leading-tight font-bold text-gray-900 tracking-tight relative;
-  font-family: 'Georgia', 'Times New Roman', serif;
-}
-
-#reading-mode-container h1 {
-  @apply text-5xl pb-6 mb-10 text-center relative;
-  background: linear-gradient(to right, transparent, var(--reading-accent-color, #3b82f6) 20%, var(--reading-accent-color, #3b82f6) 80%, transparent);
-  background-size: 100% 1px;
-  background-position: bottom;
-  background-repeat: no-repeat;
-  padding-bottom: 1.5rem;
-
-  /* 添加微妙的文字阴影 */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-
-  /* 添加动画 */
-  animation: slideInDown 0.8s ease forwards;
-}
-
-@keyframes slideInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-#reading-mode-container h2 {
-  @apply text-3xl pl-4 border-l-4 border-brand-500 ml-[-1.25em] mb-8 mt-12;
+/* Content Wrapper - .reading-mode-content */
+.reading-mode-content {
+  max-width: 700px; /* Default, can be overridden by settings */
+  margin: 2rem auto; /* Give some space from top/bottom on the page */
+  padding: 2rem; /* approx 32px, Material often uses 24px (p-6) */
+  background-color: var(--reader-surface-color);
+  color: var(--reader-onsurface-color);
+  border-radius: 0.5rem; /* rounded-lg (8px) */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); /* shadow-md-dp1 */
+  transition: all 0.3s ease; 
   position: relative;
-  transition: all 0.3s ease;
+  width: 100%; 
+  box-sizing: border-box;
 }
 
-#reading-mode-container h2:hover {
-  @apply border-brand-600;
-  transform: translateX(5px);
+@media (max-width: 768px) {
+  #reading-mode-container {
+    padding: 1rem; /* Less padding on mobile for the main container */
+  }
+  .reading-mode-content {
+    margin: 1rem auto;
+    padding: 1.5rem; /* 24px for content on mobile */
+    border-radius: 0.25rem; /* rounded-sm (4px) or rounded-md (6px) for mobile */
+  }
 }
 
-#reading-mode-container h3 {
-  @apply text-2xl text-brand-700 mb-6 mt-10;
-  position: relative;
-  padding-bottom: 0.5rem;
-}
 
-#reading-mode-container h3::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 3rem;
-  height: 2px;
-  background-color: var(--reading-accent-color, #3b82f6);
-  opacity: 0.5;
-  transition: width 0.3s ease;
-}
+/* Typography - Applying Material Design classes directly where possible */
+/* These are fallbacks if JS doesn't apply Tailwind classes like text-md-h1 */
+#reading-mode-container h1 { @apply text-md-h1 mb-6 mt-8; color: var(--reader-onsurface-color); font-family: var(--reader-font-family); }
+#reading-mode-container h2 { @apply text-md-h2 mb-5 mt-7; color: var(--reader-onsurface-color); font-family: var(--reader-font-family); }
+#reading-mode-container h3 { @apply text-md-h3 mb-5 mt-6; color: var(--reader-onsurface-color); font-family: var(--reader-font-family); }
+#reading-mode-container h4 { @apply text-md-h4 mb-4 mt-5; color: var(--reader-onsurface-color); font-family: var(--reader-font-family); }
+#reading-mode-container h5 { @apply text-md-h5 mb-3 mt-4; color: var(--reader-onsurface-color); font-family: var(--reader-font-family); }
+#reading-mode-container h6 { @apply text-md-h6 mb-3 mt-4; color: var(--reader-onsurface-color); font-family: var(--reader-font-family); }
 
-#reading-mode-container h3:hover::after {
-  width: 5rem;
-}
-
-#reading-mode-container h4 {
-  @apply text-xl text-gray-800 mb-5 mt-8;
-  font-weight: 600;
-}
-
-/* 段落和内容块优化 */
 #reading-mode-container p {
-  @apply my-7 leading-relaxed text-gray-700 text-justify hyphens-auto;
-  text-indent: 2em;
-  line-height: 1.8;
-  letter-spacing: 0.01em;
+  @apply text-md-body1 mb-4; /* Uses Material line height */
+  color: var(--reader-onsurface-color); /* Opacity via text-material-onSurface/85 can be done in JS if needed */
 }
 
-#reading-mode-container img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 1.5em auto;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+#reading-mode-container a {
+  color: var(--reader-link-color);
+  @apply hover:underline;
 }
 
-#reading-mode-container img:hover {
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* 引用块优化 */
+/* Blockquotes */
 #reading-mode-container blockquote {
-  margin: 1.5em 0;
-  padding: 1em 1.5em;
-  border-left: 3px solid var(--reading-blockquote-border);
-  background-color: var(--reading-blockquote-bg);
-  border-radius: 4px;
-  color: var(--reading-blockquote-text);
-  font-style: italic;
-  font-size: 1em;
-  line-height: 1.6;
-  position: relative;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  @apply text-md-body1 italic border-l-4 pl-4 py-2 my-6;
+  border-color: var(--reader-blockquote-border);
+  background-color: var(--reader-blockquote-bg);
+  color: var(--reader-blockquote-text); /* This should be onSurface or similar */
+  border-radius: 0.25rem; /* rounded-sm */
 }
+#reading-mode-container blockquote p { @apply mb-0; } /* Remove bottom margin for paragraphs inside blockquote */
 
-/* 列表优化 */
+
+/* Lists */
 #reading-mode-container ul,
 #reading-mode-container ol {
-  @apply my-6 pl-6 text-gray-700 space-y-2 list-outside;
-  line-height: 1.7;
+  @apply text-md-body1 pl-6 my-4 space-y-1 list-outside; /* list-inside makes markers part of text flow */
+  color: var(--reader-onsurface-color);
 }
+#reading-mode-container li { @apply mb-1 leading-relaxed; } /* leading-relaxed for list items if needed */
+#reading-mode-container ul { @apply list-disc; }
+#reading-mode-container ol { @apply list-decimal; }
 
-#reading-mode-container li {
-  @apply relative leading-relaxed mb-3;
-}
-
-/* 无序列表样式 */
-#reading-mode-container ul {
-  list-style: none;
-}
-
-#reading-mode-container ul>li {
-  @apply pl-5;
-}
-
-#reading-mode-container ul>li::before {
-  @apply absolute left-0 top-[0.6em] w-2 h-2 rounded-full bg-brand-500 transform scale-75;
-  content: "";
-}
-
-/* 有序列表样式 */
-#reading-mode-container ol {
-  @apply pl-8;
-  list-style: none;
-  counter-reset: item;
-}
-
-#reading-mode-container ol>li {
-  @apply pl-2;
-  counter-increment: item;
-}
-
-#reading-mode-container ol>li::before {
-  @apply absolute left-[-1.5em] top-0 text-brand-500 font-semibold text-sm;
-  content: counter(item) ".";
-}
-
-/* 嵌套列表样式 */
+/* Nested lists */
 #reading-mode-container ul ul,
 #reading-mode-container ul ol,
 #reading-mode-container ol ul,
 #reading-mode-container ol ol {
-  @apply mt-2 mb-0 ml-4;
+  @apply mt-1 mb-1 ml-6; /* Consistent deeper indent */
 }
 
-#reading-mode-container ul ul>li::before {
-  @apply bg-brand-400 scale-[0.6];
+/* Images */
+#reading-mode-container img {
+  @apply rounded-md shadow-md my-6 block mx-auto; /* Using shadow-md as approx for dp4 */
+  max-width: 100%;
+  height: auto;
 }
 
-#reading-mode-container ol ol {
-  counter-reset: subitem;
-}
-
-#reading-mode-container ol ol>li {
-  counter-increment: subitem;
-}
-
-#reading-mode-container ol ol>li::before {
-  content: counter(subitem, lower-alpha) ".";
-  @apply text-brand-400;
-}
-
-/* 列表项内容样式 */
-#reading-mode-container li>p {
-  @apply my-1 !important;
-  text-indent: 0 !important;
-}
-
-#reading-mode-container li>p:first-child {
-  @apply mt-0 !important;
-}
-
-#reading-mode-container li>p:last-child {
-  @apply mb-0 !important;
-}
-
-/* 深色主题列表样式 */
-body.dark-theme #reading-mode-container ul,
-body.dark-theme #reading-mode-container ol {
-  @apply text-gray-300;
-}
-
-body.dark-theme #reading-mode-container ul>li::before {
-  @apply bg-brand-400;
-}
-
-body.dark-theme #reading-mode-container ol>li::before {
-  @apply text-brand-400;
-}
-
-/* 代码块容器优化 */
+/* Code Blocks */
 #reading-mode-container pre {
-  @apply my-8 rounded-xl overflow-hidden relative shadow-card;
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-  margin-bottom: 2rem;
+  @apply rounded-md shadow-sm my-6 p-4 overflow-x-auto text-sm; /* Using shadow-sm as approx for dp2 */
+  background-color: var(--reader-code-bg);
+  color: var(--reader-code-text-color);
+  font-family: var(--reader-font-family-mono);
+  line-height: 1.5; 
+  border: 1px solid var(--reader-divider-color); 
+}
+#reading-mode-container pre::before,
+#reading-mode-container pre::after { content: none; }
+
+#reading-mode-container pre .copy-button { 
+  @apply absolute top-2 right-2 p-1.5 rounded text-xs;
+  background-color: rgba(0,0,0,0.1); /* Generic, adapt per theme if possible */
+  color: var(--reader-code-text-color);
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+#reading-mode-container pre:hover .copy-button { opacity: 1; }
+
+
+/* Inline Code */
+#reading-mode-container code:not(pre > code) {
+  @apply text-sm rounded-sm px-1 py-0.5;
+  background-color: var(--reader-inline-code-bg);
+  color: var(--reader-inline-code-text-color);
+  font-family: var(--reader-font-family-mono);
 }
 
-/* 代码块顶部工具栏 */
-#reading-mode-container pre::before {
-  content: "";
-  @apply absolute top-0 left-0 right-0 h-10;
-  background: rgba(30, 41, 59, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 代码语言标签 */
-#reading-mode-container pre::after {
-  @apply absolute top-2.5 left-4 px-2 py-1 text-xs font-medium rounded-md z-20;
-  content: attr(data-language);
-  background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;
-}
-
-/* 代码块复制按钮 */
-#reading-mode-container pre .copy-button {
-  @apply absolute top-2 right-4 px-3 py-1 rounded-md z-20 flex items-center gap-1.5 text-sm opacity-0 transition-opacity duration-200;
-  background: #3b82f6;
-  color: white;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;
-}
-
-#reading-mode-container pre:hover .copy-button {
-  @apply opacity-100;
-}
-
-#reading-mode-container pre .copy-button:hover {
-  @apply bg-blue-700;
-}
-
-#reading-mode-container pre .copy-button.copied {
-  @apply bg-green-500;
-}
-
-/* 代码内容 */
-#reading-mode-container pre code {
-  @apply block py-12 px-6 pt-16 overflow-x-auto text-gray-100 font-mono text-sm;
-  line-height: 1.6;
-  tab-size: 2;
-  -webkit-font-smoothing: auto;
-  -moz-osx-font-smoothing: auto;
-}
-
-/* 代码行号 */
-#reading-mode-container pre code.line-numbers {
-  @apply pl-12 relative;
-}
-
-#reading-mode-container pre code.line-numbers>span {
-  @apply relative;
-}
-
-#reading-mode-container pre code.line-numbers>span::before {
-  @apply absolute -left-10 top-0 text-right w-8 text-gray-500 select-none;
-  content: attr(data-line);
-  font-size: 0.85em;
-}
-
-/* 分隔线 */
+/* Horizontal Rule */
 #reading-mode-container hr {
-  @apply my-12 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent border-0;
+  @apply my-8 border-0;
+  height: 1px;
+  background-color: var(--reader-divider-color);
 }
 
-/* 深色主题样式 */
-body.dark-theme #reading-mode-container {
-  @apply bg-gray-900 text-gray-200 border-gray-700;
-  background-image: none;
-}
 
-body.dark-theme #reading-mode-container h1,
-body.dark-theme #reading-mode-container h2,
-body.dark-theme #reading-mode-container h3,
-body.dark-theme #reading-mode-container h4,
-body.dark-theme #reading-mode-container h5,
-body.dark-theme #reading-mode-container h6 {
-  @apply text-gray-100;
-}
+/* Remove old theme-specific overrides */
+/* All body.dark-theme #reading-mode-container ... rules are removed */
 
-body.dark-theme #reading-mode-container h1::after {
-  @apply bg-brand-400;
-}
 
-body.dark-theme #reading-mode-container h2 {
-  @apply border-brand-400;
+/* Scrollbar styling using new variables */
+/* For main container */
+#reading-mode-container::-webkit-scrollbar { width: 8px; }
+#reading-mode-container::-webkit-scrollbar-track { background-color: var(--reading-scrollbar-track); }
+#reading-mode-container::-webkit-scrollbar-thumb {
+  background-color: var(--reading-scrollbar-thumb);
+  @apply rounded-md;
+  transition: background-color 0.2s ease;
 }
+#reading-mode-container::-webkit-scrollbar-thumb:hover { background-color: var(--reading-scrollbar-thumb-hover); }
 
-body.dark-theme #reading-mode-container h3 {
-  @apply text-brand-400;
-}
-
-body.dark-theme #reading-mode-container p {
-  @apply text-gray-300;
-}
-
-body.dark-theme #reading-mode-container blockquote {
-  background-color: var(--reading-blockquote-bg);
-  border-left-color: var(--reading-blockquote-border);
-  color: var(--reading-blockquote-text);
-}
-
-body.dark-theme #reading-mode-container ul li::before {
-  @apply bg-brand-400;
-}
-
-body.dark-theme #reading-mode-container pre {
-  @apply bg-gray-900 border-gray-700;
-}
-
-body.dark-theme #reading-mode-container pre::before {
-  @apply bg-gray-800 border-gray-700;
-}
-
-body.dark-theme #reading-mode-container pre::after {
-  @apply bg-gray-800 text-brand-400 border-brand-500/20;
-}
-
-body.dark-theme #reading-mode-container pre code {
-  @apply text-gray-300;
-}
-
-body.dark-theme #reading-mode-container pre code.line-numbers>span::before {
-  @apply text-gray-600;
-}
-
-/* 滚动条样式 */
-#reading-mode-container pre::-webkit-scrollbar {
-  @apply h-2 bg-transparent;
-}
-
-#reading-mode-container pre::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-
+/* For code blocks */
+#reading-mode-container pre::-webkit-scrollbar { @apply h-2 bg-transparent; }
+#reading-mode-container pre::-webkit-scrollbar-track { @apply bg-transparent; }
 #reading-mode-container pre::-webkit-scrollbar-thumb {
-  @apply bg-gray-600/50 rounded-full hover:bg-gray-500/70 transition-colors;
+  background-color: var(--reading-scrollbar-thumb);
+  @apply rounded-full transition-colors;
+}
+#reading-mode-container pre::-webkit-scrollbar-thumb:hover {
+  background-color: var(--reading-scrollbar-thumb-hover);
 }
 
-body.dark-theme #reading-mode-container pre::-webkit-scrollbar-thumb {
-  @apply bg-gray-700/70;
+/* Text selection */
+#reading-mode-container ::selection {
+  background-color: var(--reading-selection-bg);
+  color: var(--reading-selection-text);
 }
 
-body.dark-theme #reading-mode-container pre::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-600;
-}
 
-/* 移动端响应式样式 */
-@media (max-width: 768px) {
-  #reading-mode-container {
-    @apply px-5 py-6;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  #reading-mode-container h1 {
-    @apply text-3xl pb-4 mb-6;
-  }
-
-  #reading-mode-container h2 {
-    @apply text-2xl pl-3 ml-[-1em];
-  }
-
-  #reading-mode-container h3 {
-    @apply text-xl;
-  }
-
-  #reading-mode-container h4 {
-    @apply text-lg;
-  }
-
-  #reading-mode-container blockquote {
-    @apply p-4 my-6;
-  }
-
-  #reading-mode-container pre {
-    @apply rounded-lg my-6;
-  }
-}
-
-/* 内容导航目录 */
+/* TOC and Toolbar styling - Adapt colors using new CSS variables */
 #reading-mode-toc {
-  @apply fixed top-32 right-8 w-56 bg-white/90 backdrop-blur-sm rounded-xl shadow-card p-4 border border-gray-200/30 max-h-[70vh] overflow-y-auto transition-all duration-300;
-  opacity: 0.7;
+  background-color: var(--reader-surface-color);
+  border: 1px solid var(--reader-divider-color);
+  /* Material elevation for TOC: dp8 if it's a modal-like element, or dp2-dp4 for a side panel */
+  @apply fixed top-20 right-4 md:right-8 w-64 md:w-72 backdrop-blur-sm rounded-lg shadow-md-dp4 p-4 max-h-[calc(100vh-10rem)] overflow-y-auto transition-all duration-300;
+  opacity: 0.95; 
   transform: translateX(0);
-  display: none;
-  /* 默认隐藏 */
+  display: none; /* Default hidden, JS toggles this */
 }
+#reading-mode-toc:hover { opacity: 1; @apply shadow-md-dp8; } 
+#reading-mode-toc.hidden { transform: translateX(calc(100% + 2rem)); }
 
-/* 目录切换按钮 */
-#toc-toggle-button {
-  @apply fixed top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-md flex items-center justify-center cursor-pointer z-50 transition-all duration-300;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  opacity: 0.7;
+#reading-mode-toc h3 { /* TOC Title */
+  color: var(--reader-onsurface-color);
+  border-bottom: 1px solid var(--reader-divider-color);
+  @apply text-md-subtitle1 mb-3 pb-2; /* Material type */
 }
-
-#toc-toggle-button:hover {
-  @apply bg-white shadow-lg;
-  opacity: 1;
-}
-
-body.dark-theme #toc-toggle-button {
-  @apply bg-gray-800/90;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme #toc-toggle-button:hover {
-  @apply bg-gray-700;
-}
-
-#reading-mode-toc:hover {
-  @apply opacity-100 shadow-float;
-}
-
-#reading-mode-toc.hidden {
-  transform: translateX(calc(100% + 2rem));
-}
-
-#reading-mode-toc h3 {
-  @apply text-base font-medium text-gray-800 mb-3 pb-2 border-b border-gray-100;
-}
-
-#reading-mode-toc ul {
-  @apply list-none p-0 m-0 space-y-1;
-}
-
-#reading-mode-toc li {
-  @apply text-sm;
-}
-
+#reading-mode-toc ul { @apply list-none p-0 m-0 space-y-1; }
+#reading-mode-toc li { @apply text-md-body2; } /* Material type for TOC items */
 #reading-mode-toc a {
-  @apply block py-1.5 px-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-brand-600 transition-colors;
+  color: var(--reader-onsurface-color); 
+  @apply block py-1.5 px-2 rounded-md opacity-80 hover:opacity-100; 
 }
+#reading-mode-toc a:hover { 
+  background-color: rgba(0,0,0,0.04); /* Subtle hover */
+  color: var(--reader-primary-color); 
+}
+body[data-theme='dark'] #reading-mode-toc a:hover { background-color: rgba(255,255,255,0.06); }
 
 #reading-mode-toc a.active {
-  @apply bg-brand-50 text-brand-600 font-medium;
+  background-color: var(--reader-primary-color); 
+  color: #FFFFFF; /* Assuming onPrimary for our primary color is white */
+  @apply font-medium bg-opacity-20 dark:bg-opacity-30;
 }
+/* Ensure active text color has contrast */
+body[data-theme='light'] #reading-mode-toc a.active { color: var(--reader-primary-color); }
+body[data-theme='dark'] #reading-mode-toc a.active { color: var(--reader-primary-color); }
 
-#reading-mode-toc .toc-h1 {
-  @apply ml-0;
+
+#reading-mode-toc .toc-h1 { @apply ml-0; }
+#reading-mode-toc .toc-h2 { @apply ml-2 text-md-caption; } /* Slightly smaller for indentation */
+#reading-mode-toc .toc-h3 { @apply ml-4 text-xs; } /* Even smaller */
+#reading-mode-toc .toc-h4 { @apply ml-6 text-xs opacity-80; }
+
+
+#toc-toggle-button {
+  background-color: var(--reader-surface-color);
+  border: 1px solid var(--reader-divider-color);
+  color: var(--reader-onsurface-color);
+  /* Material FAB-like: dp6 */
+  @apply fixed top-4 right-4 w-10 h-10 backdrop-blur-sm rounded-full shadow-md-dp6 flex items-center justify-center cursor-pointer z-[10001] transition-all duration-300 opacity-90;
 }
-
-#reading-mode-toc .toc-h2 {
-  @apply ml-2;
-}
-
-#reading-mode-toc .toc-h3 {
-  @apply ml-4;
-}
-
-#reading-mode-toc .toc-h4 {
-  @apply ml-6;
-}
-
-/* 深色主题下的目录样式 */
-body.dark-theme #reading-mode-toc {
-  @apply bg-gray-800/90 border-gray-700/50;
-}
-
-body.dark-theme #reading-mode-toc h3 {
-  @apply text-gray-200 border-gray-700;
-}
-
-body.dark-theme #reading-mode-toc a {
-  @apply text-gray-400 hover:bg-gray-700/50 hover:text-brand-400;
-}
-
-body.dark-theme #reading-mode-toc a.active {
-  @apply bg-brand-900/30 text-brand-400;
-}
-
-/* 快捷工具栏 */
-#reading-mode-toolbar {
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background-color: var(--reading-content-bg-color);
-  border: 1px solid var(--reading-border-color);
-  border-radius: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  opacity: 0.7;
-  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  z-index: 50;
-}
-
-#reading-mode-toolbar:hover {
+#toc-toggle-button:hover {
   opacity: 1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  @apply shadow-md-dp8; /* Higher elevation on hover */
+  color: var(--reader-primary-color);
 }
 
-#reading-mode-toolbar.hidden {
-  transform: translateY(calc(100% + 2rem));
+
+/* Toolbar */
+#reading-mode-toolbar {
+  background-color: var(--reader-surface-color);
+  border: 1px solid var(--reader-divider-color);
+  /* Material Bottom App Bar like: dp8 */
+  @apply fixed bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-1 p-1.5 rounded-full shadow-md-dp8 opacity-95;
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 10000; 
 }
+#reading-mode-toolbar:hover { opacity: 1; @apply shadow-md-dp12; } 
+#reading-mode-toolbar.hidden { transform: translate(-50%, calc(100% + 2rem)); } 
 
 #reading-mode-toolbar button {
   background: transparent;
   border: none;
-  color: var(--reading-muted-color);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  color: var(--reader-onsurface-color); 
+  /* Standard icon button size for Material is 40dp or 48dp touch target, icon 24dp */
+  /* Using 32x32 (w-8, h-8) container for a 20px icon, or 40x40 (w-10,h-10) for 24px icon */
+  @apply w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 opacity-70 hover:opacity-100;
 }
+#reading-mode-toolbar button svg { @apply w-5 h-5; } /* Assuming 20px icons */
 
 #reading-mode-toolbar button:hover {
-  background-color: var(--reading-border-color);
-  color: var(--reading-text-color);
+  background-color: var(--reader-primary-color); 
+  color: #FFFFFF; /* Assuming onPrimary for our primary color is white */
+  @apply bg-opacity-10 dark:bg-opacity-20;
 }
+/* Ensure icon color changes on hover to primary if text does */
+body[data-theme='light'] #reading-mode-toolbar button:hover { color: var(--reader-primary-color); }
+body[data-theme='dark'] #reading-mode-toolbar button:hover { color: var(--reader-primary-color); }
+
 
 #reading-mode-toolbar button.active {
-  background-color: var(--reading-accent-color);
-  color: white;
+  background-color: var(--reader-primary-color);
+  color: #FFFFFF; /* Assuming onPrimary is white for our primary color */
+  @apply opacity-100;
 }
+/* Ensure active icon is also onPrimary color */
+#reading-mode-toolbar button.active svg { color: #FFFFFF; }
 
-/* 深色主题下的工具栏样式由变量控制 */
 
-.reading-mode-content {
-  max-width: var(--reading-page-width);
-  margin: 0 auto;
-  /* 确保内容居中 */
-  padding: var(--reading-content-padding);
-  background-color: var(--reading-content-bg-color);
-  border-radius: 12px;
-  box-shadow: var(--reading-content-shadow);
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-
-  /* 添加微妙的边框 */
-  border: 1px solid rgba(0, 0, 0, 0.05);
-
-  /* 添加进入动画，稍微延迟以产生层叠效果 */
-  animation: contentFadeIn 0.6s ease 0.1s forwards;
-  opacity: 0;
-  transform: translateY(15px);
-
-  /* 确保内容在容器中居中 */
-  width: 100%;
-  box-sizing: border-box;
-}
-
-@keyframes contentFadeIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 深色主题下的边框 */
-body.dark-theme .reading-mode-content {
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* 自定义滚动条样式 */
-#reading-mode-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-#reading-mode-container::-webkit-scrollbar-track {
-  background-color: var(--reading-scrollbar-track);
-}
-
-#reading-mode-container::-webkit-scrollbar-thumb {
-  background-color: var(--reading-scrollbar-thumb);
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-/* 退出动画 */
+/* Exit animation */
 #reading-mode-container.exit-animation {
-  animation: fadeOut 0.3s ease forwards;
+  /* Material Design standard curve for exiting elements */
+  animation: fadeOut 0.3s cubic-bezier(0.4, 0.0, 1, 1) forwards;
 }
-
 @keyframes fadeOut {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateY(10px);
-  }
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(16px); } /* Slightly increased travel for visibility */
 }
 
-#reading-mode-container::-webkit-scrollbar-thumb:hover {
-  background-color: var(--reading-scrollbar-thumb-hover);
-}
-
-/* 文字选择样式 */
-#reading-mode-container ::selection {
-  background-color: var(--reading-selection-bg);
-  color: var(--reading-selection-text);
+/* Final check on animations, ensure they don't conflict with theme transitions */
+#reading-mode-container, .reading-mode-content {
+  /* Ensure any other direct animations use Material Design principles */
 }

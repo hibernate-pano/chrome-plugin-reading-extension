@@ -9,18 +9,56 @@ interface ReaderViewProps {
 }
 
 const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
+import Button from '../../../../src/ui/components/Button'; // Adjusted path
+import Menu, { MenuItem } from '../../../../src/ui/components/Menu'; // Adjusted path
+import { SettingsPanel } from '../../../../src/popup/components/SettingsPanel'; // Import SettingsPanel
+
+// Helper for SVG Icons (placeholders for now, ideally use real SVGs)
+const IconPlaceholder = ({ name, className = "w-6 h-6" }: { name: string, className?: string }) => (
+  <span className={className}>{name}</span>
+);
+
+
+const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   const [content, setContent] = useState<ExtractedContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('light');
+  const [isFabExpanded, setIsFabExpanded] = useState(false); // FAB state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false); // State for Settings Drawer
   const contentContainerRef = useRef<HTMLDivElement>(null);
+  const readerViewContainerRef = useRef<HTMLDivElement | null>(null);
+  const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // 处理初始主题设置
+
+  // Effect to find the root container for theme attribute
   useEffect(() => {
-    // 根据系统偏好设置初始主题
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setTheme(prefersDark ? 'dark' : 'light');
+    if (contentContainerRef.current) {
+      const container = contentContainerRef.current.closest('.reader-view-container');
+      if (container instanceof HTMLDivElement) {
+        readerViewContainerRef.current = container;
+      }
+    }
   }, []);
+
+
+  // 处理初始主题设置 & Update data-theme attribute on the container
+  useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = prefersDark ? 'dark' : 'light';
+    setTheme(initialTheme);
+    
+    // Moved theme application to a separate effect to handle theme changes
+  }, []);
+
+  useEffect(() => {
+    if (readerViewContainerRef.current) {
+      readerViewContainerRef.current.setAttribute('data-theme', theme);
+    }
+    // Fallback or if targeting body/document element for global themes
+    // document.body.setAttribute('data-theme', theme); 
+    // document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // 内容提取
   useEffect(() => {
@@ -56,9 +94,13 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
 
   }, [content, isLoading, theme]);
 
-  // 切换主题
+  // 切换主题 - cycle through light, dark, sepia
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    setTheme(prev => {
+      if (prev === 'light') return 'dark';
+      if (prev === 'dark') return 'sepia';
+      return 'light';
+    });
   };
 
   const handleRetry = () => {
@@ -76,16 +118,18 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
       });
   };
 
+  // Determine icon for theme button
+  const getThemeIcon = () => {
+    if (theme === 'light') return '🌙'; // Moon for switching to dark
+    if (theme === 'dark') return '🎨'; // Palette for switching to sepia (or sun if only 2 themes)
+    return '☀️'; // Sun for switching to light
+  };
+
+  };
+
   return (
-    <div className={styles.readerView} data-theme={theme}>
-      <div className={styles.toolbar}>
-        <button className={styles.closeButton} onClick={onClose} aria-label="关闭阅读模式">
-          ✕
-        </button>
-        <button className={styles.themeButton} onClick={toggleTheme} aria-label="切换主题">
-          {theme === 'light' ? '🌙' : '☀️'}
-        </button>
-      </div>
+    <div className={styles.readerView}>
+      {/* Old toolbar removed */}
 
       <div className={styles.contentContainer} ref={contentContainerRef}>
         {isLoading ? (
@@ -116,18 +160,103 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
               {content.date && <span>日期: {new Date(content.date).toLocaleDateString()}</span>}
               {content.readingTime && <span>阅读时间: {content.readingTime} 分钟</span>}
             </div>
-            <div 
+            <div
               className={styles.articleContent}
               dangerouslySetInnerHTML={{ __html: content.content }}
             />
           </div>
         )}
       </div>
+
+      {/* FAB Container */}
+      <div className={styles.fabContainer}>
+        {isFabExpanded && (
+          <div className={`${styles.fabActions} ${styles.fabActionsVisible}`}>
+            {/* Settings Action */}
+            <Button
+              variant="contained"
+              color="primary"
+              className={`${styles.fabActionItem} rounded-full !w-12 !h-12`}
+              onClick={() => { setIsSettingsOpen(true); setIsFabExpanded(false); }}
+              aria-label="Settings"
+              aria-haspopup="true" // For drawer/dialog
+              aria-expanded={isSettingsOpen}
+            >
+              <IconPlaceholder name="S" />
+            </Button>
+             {/* Font Size Action */}
+             <Button
+              variant="contained"
+              color="primary"
+              className={`${styles.fabActionItem} rounded-full !w-12 !h-12`}
+              onClick={() => console.log('Font size clicked')}
+              aria-label="Adjust font size"
+            >
+              <IconPlaceholder name="Aa" />
+            </Button>
+            {/* Theme Switch Action */}
+            <Button
+              variant="contained"
+              color="primary"
+              className={`${styles.fabActionItem} rounded-full !w-12 !h-12`}
+              onClick={toggleTheme}
+              aria-label="Switch theme"
+            >
+              <IconPlaceholder name={getThemeIcon()} />
+            </Button>
+             {/* Close Action */}
+             <Button
+              variant="contained"
+              color="primary" // Or perhaps 'error' or a neutral color
+              className={`${styles.fabActionItem} rounded-full !w-12 !h-12`}
+              onClick={onClose}
+              aria-label="Close reader view"
+            >
+              <IconPlaceholder name="X" />
+            </Button>
+            {/* More Actions Menu Trigger */}
+            <Menu
+              trigger={
+                <Button
+                  ref={moreMenuTriggerRef}
+                  variant="contained"
+                  color="primary"
+                  className={`${styles.fabActionItem} rounded-full !w-12 !h-12`}
+                  aria-label="More options"
+                >
+                  <IconPlaceholder name="..." />
+                </Button>
+              }
+              position="top-right" 
+              closeOnClick={true}
+            >
+              <MenuItem onClick={() => console.log('Toggle TOC')}>Toggle Table of Contents</MenuItem>
+              <MenuItem onClick={() => console.log('Toggle Fullscreen')}>Toggle Fullscreen</MenuItem>
+            </Menu>
+          </div>
+        )}
+        <Button
+          variant="contained"
+          color="secondary"
+          className={`${styles.mainFab} rounded-full !w-14 !h-14 shadow-md-dp6`}
+          onClick={() => setIsFabExpanded(!isFabExpanded)}
+          aria-expanded={isFabExpanded}
+          aria-label={isFabExpanded ? "Close actions menu" : "Open actions menu"}
+        >
+          {/* Change icon based on expanded state: + when closed, X or ^ when open */}
+          <IconPlaceholder name={isFabExpanded ? "✕" : "+"} />
+        </Button>
+      </div>
+
+      <SettingsPanel 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
     </div>
   );
 };
 
-// 追踪当前阅读模式实例的ID，避免多个实例
+// Track current reader view instance ID to avoid multiple instances
 let currentReaderViewId: string | null = null;
 
 // 用于存储原始样式的全局变量
@@ -209,6 +338,10 @@ export function cleanupReaderView(): void {
   // 重置原始样式引用
   originalOverflowStyle = null;
   originalBodyOverflowStyle = null;
+  
+  // Ensure data-theme is removed from the active container if it was set there by ID
+  // The global documentElement.removeAttribute('data-theme') might be too broad if other things use it.
+  // However, if we set it on the specific reader container, this is handled by its removal.
 }
 
-export default ReaderView; 
+export default ReaderView;

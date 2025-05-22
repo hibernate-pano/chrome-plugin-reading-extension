@@ -28,7 +28,7 @@ const Menu: React.FC<MenuProps> = ({
   className = '',
   closeOnClick = true,
   closeOnOutsideClick = true,
-  transitionType = 'fade'
+  transitionType = 'zoom' // Changed default to 'zoom' for Material-like reveal
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -73,20 +73,61 @@ const Menu: React.FC<MenuProps> = ({
     };
   }, [isOpen, closeOnOutsideClick]);
 
-  // 处理 ESC 键关闭菜单
+  // 处理 ESC 键关闭菜单 & Focus restoration
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (isOpen && event.key === 'Escape') {
         closeMenu();
+        triggerRef.current?.focus(); // Return focus to trigger
       }
     };
-
     document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, [isOpen, closeMenu]);
 
-    return () => {
-      document.removeEventListener('keydown', handleEscKey);
-    };
-  }, [isOpen]);
+
+  // Focus first item and handle arrow key navigation when menu is open
+  useEffect(() => {
+    if (isOpen && menuRef.current) {
+      const items = Array.from(
+        menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])')
+      );
+      if (items.length > 0) {
+        items[0].focus(); // Focus the first item
+      }
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        const { key } = event;
+        if (key === 'ArrowUp' || key === 'ArrowDown') {
+          event.preventDefault();
+          const currentFocusedIndex = items.findIndex(item => item === document.activeElement);
+          let nextFocusedIndex = -1;
+
+          if (key === 'ArrowDown') {
+            nextFocusedIndex = currentFocusedIndex >= 0 && currentFocusedIndex < items.length - 1 ? currentFocusedIndex + 1 : 0;
+          } else if (key === 'ArrowUp') {
+            nextFocusedIndex = currentFocusedIndex > 0 ? currentFocusedIndex - 1 : items.length - 1;
+          }
+          
+          if (nextFocusedIndex !== -1) {
+            items[nextFocusedIndex].focus();
+          }
+        } else if (key === 'Tab') {
+          // Close menu on Tab, allowing focus to move naturally
+          // This is simpler than full focus trapping for a dropdown menu
+          closeMenu();
+          // Optional: try to focus next/prev element outside menu, but browser default might be fine
+        }
+      };
+
+      const menuElement = menuRef.current;
+      menuElement.addEventListener('keydown', handleKeyDown);
+      return () => {
+        menuElement.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isOpen, children, closeMenu]);
+
 
   // 位置样式
   const positionStyles = {
@@ -103,6 +144,8 @@ const Menu: React.FC<MenuProps> = ({
         ref={triggerRef}
         className="cursor-pointer"
         onClick={toggleMenu}
+        aria-haspopup="true" // ARIA attribute for menu trigger
+        aria-expanded={isOpen} // ARIA attribute for menu trigger state
       >
         {trigger}
       </div>
@@ -122,10 +165,11 @@ const Menu: React.FC<MenuProps> = ({
             py-2 ${className}
           `}
           style={{ width }}
-          // onClick for handleMenuItemClick is removed here, will be on each MenuItem
+          role="menu" // ARIA role for the menu container
+          // tabIndex={-1} // Make menu container focusable for key events if needed, but items are better
         >
           {/* Pass down handleMenuItemClick to children if they are MenuItem components */}
-          {React.Children.map(children, child => {
+          {React.Children.map(children, (child, index) => {
             if (React.isValidElement(child) && child.type === MenuItem) {
               return React.cloneElement(child as React.ReactElement<any>, { 
                 onItemClick: handleMenuItemClick 
@@ -202,9 +246,12 @@ export const MenuItem: React.FC<MenuItemProps> = ({
         ${className}
       `}
       onClick={disabled ? undefined : handleClick}
-      tabIndex={disabled ? -1 : 0} // Make it focusable
-      onKeyDown={(e) => { // Allow activation with Enter/Space
+      tabIndex={disabled ? -1 : 0}
+      role="menuitem" // ARIA role for menu item
+      aria-disabled={disabled} // ARIA disabled state
+      onKeyDown={(e) => { 
         if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+          if (e.key === ' ') e.preventDefault(); // Prevent page scroll for Space key
           handleClick();
         }
       }}

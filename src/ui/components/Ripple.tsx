@@ -12,7 +12,7 @@ export interface RippleProps {
  */
 const Ripple: React.FC<RippleProps> = ({
   color = 'rgba(255, 255, 255, 0.3)',
-  duration = 600,
+  duration = 300, // Adjusted default duration to be faster
   className = ''
 }) => {
   const [ripples, setRipples] = useState<Array<{

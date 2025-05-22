@@ -49,6 +49,13 @@ export const Card: React.FC<CardProps> = ({
     ? 'cursor-pointer active:scale-[0.99] hover:scale-[1.01]' 
     : '';
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (onClick && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div 
       className={`
@@ -59,6 +66,9 @@ export const Card: React.FC<CardProps> = ({
         ${className}
       `.replace(/\s+/g, ' ').trim()} // Clean up whitespace
       onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
+      role={onClick ? "button" : undefined}
+      onKeyDown={onClick ? handleKeyDown : undefined}
     >
       {children}
     </div>

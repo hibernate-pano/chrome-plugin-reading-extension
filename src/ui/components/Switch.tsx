@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 interface SwitchProps {
   label?: string;
@@ -63,22 +63,28 @@ const Switch: React.FC<SwitchProps> = ({
   // Checked thumb: translate-x of (36px - 20px - (-2px) + (-2px)) = 16px. So translate-x-4.
   // Thumb vertical: top: -3px ( (20px-14px)/2 )
 
+  const inputId = React.useId ? React.useId() : `switch-${Math.random().toString(36).substring(2, 9)}`;
+  const labelId = label ? `switch-label-${inputId}` : undefined;
+  const descriptionId = description ? `switch-description-${inputId}` : undefined;
+
   return (
-    <label className={`inline-flex items-center cursor-pointer group ${className}`}>
-      <div className="relative"> {/* Container for input and visual switch */}
+    // The root is changed from <label> to <div> to allow more complex structures if needed,
+    // and to use explicit labelling with htmlFor and aria-labelledby.
+    <div className={`inline-flex items-center group ${className}`}>
+      {/* Visual Switch part */}
+      <div className="relative cursor-pointer" onClick={() => onChange(!checked)} > {/* Allow click on visual part */}
         <input
           type="checkbox"
+          id={inputId}
           className="sr-only peer"
           checked={checked}
           onChange={handleChange}
-          // Add focus visible styling for accessibility
-          // Note: For `after:` elements, focus rings are tricky. This applies to the hidden input.
-          // A visible focus state on the track or a custom ring around the thumb is better.
-          // For now, applying to peer:
-          // peer-focus-visible:ring-2 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-material-primary/50
-          // This will outline the track effectively.
+          aria-labelledby={labelId}
+          aria-describedby={descriptionId}
         />
         <div
+          // Optionally, add role="switch" and aria-checked={checked} here for the visual element
+          // aria-labelledby={labelId} aria-describedby={descriptionId} could also be here.
           className={`
             relative ${trackWidth} ${trackHeight} rounded-full transition-colors duration-200 ease-in-out
             flex items-center  /* For vertical centering of the thumb */
@@ -108,22 +114,23 @@ const Switch: React.FC<SwitchProps> = ({
         />
         {/* Removed "开/关" text span */}
       </div>
+      {/* Text Label and Description part */}
       {(label || description) && (
         <div className="ml-3">
           {label && (
-            <span className={`text-md-body1 text-material-onSurface dark:text-material-darkOnSurface ${description ? 'block' : ''}`}>
+            <label htmlFor={inputId} id={labelId} className={`text-md-body1 text-material-onSurface dark:text-material-darkOnSurface cursor-pointer ${description ? 'block' : ''}`}>
               {label}
-            </span>
+            </label>
           )}
           {description && (
-            <p className="text-md-caption text-material-onSurface/75 dark:text-material-darkOnSurface/75 mt-0.5">
+            <p id={descriptionId} className="text-md-caption text-material-onSurface/75 dark:text-material-darkOnSurface/75 mt-0.5">
               {description}
             </p>
           )}
         </div>
       )}
-    </label>
+    </div>
   );
 };
 
-export default Switch;
+export default memo(Switch);

@@ -117,7 +117,7 @@ const Transition: React.FC<TransitionProps> = ({
 
   return (
     <div
-      className={`transition-all ease-in-out ${animationClass} ${className}`}
+      className={`transition-all timing-md-standard ${animationClass} ${className}`}
       style={{ transitionDuration: `${duration}ms` }}
     >
       {children}
