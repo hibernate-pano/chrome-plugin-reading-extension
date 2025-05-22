@@ -8,10 +8,11 @@ interface SliderProps {
   step: number;
   className?: string;
   label?: string;
-  showValue?: boolean;
+  showValue?: boolean; // For the label next to the main label, not the tooltip
   valueFormat?: (value: number) => string;
-  variant?: 'default' | 'accent' | 'gradient';
-  size?: 'sm' | 'md' | 'lg';
+  // `variant` prop removed, defaults to material.primary
+  // `size` prop kept for now, but effects will be standardized
+  size?: 'sm' | 'md' | 'lg'; 
 }
 
 export const Slider: React.FC<SliderProps> = ({
@@ -24,124 +25,93 @@ export const Slider: React.FC<SliderProps> = ({
   label,
   showValue = true,
   valueFormat,
-  variant = 'default',
-  size = 'md',
+  size = 'md', // Default size, though MD spec is fairly standard
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [hover, setHover] = useState(false);
   
-  // 计算当前值的位置百分比
   const percentage = ((value - min) / (max - min)) * 100;
-  
-  // 格式化显示值
   const displayValue = valueFormat ? valueFormat(value) : value.toString();
-  
-  // 根据大小确定样式
-  const sizeClasses = {
-    sm: {
-      track: 'h-1',
-      thumb: 'w-3 h-3',
-      thumbActive: 'w-4 h-4',
-      valueLabel: 'text-xs',
-    },
-    md: {
-      track: 'h-1.5',
-      thumb: 'w-4 h-4',
-      thumbActive: 'w-5 h-5',
-      valueLabel: 'text-sm',
-    },
-    lg: {
-      track: 'h-2',
-      thumb: 'w-5 h-5',
-      thumbActive: 'w-6 h-6',
-      valueLabel: 'text-base',
-    },
-  };
-  
-  // 根据变体确定颜色
-  const variantClasses = {
-    default: {
-      track: 'bg-gray-200 dark:bg-gray-700',
-      filled: 'bg-gradient-to-r from-brand-500 to-brand-600 dark:from-brand-600 dark:to-brand-500',
-      thumb: 'bg-white border-brand-500 shadow-sm',
-      thumbActive: 'border-brand-600 shadow-md',
-      valueLabel: 'bg-gray-100 text-brand-700 dark:bg-gray-800 dark:text-brand-400',
-      valueLabelActive: 'bg-brand-600 text-white scale-110',
-    },
-    accent: {
-      track: 'bg-gray-200 dark:bg-gray-700',
-      filled: 'bg-gradient-to-r from-accent-400 to-accent-500 dark:from-accent-500 dark:to-accent-400',
-      thumb: 'bg-white border-accent-400 shadow-sm',
-      thumbActive: 'border-accent-500 shadow-md',
-      valueLabel: 'bg-gray-100 text-accent-500 dark:bg-gray-800 dark:text-accent-300',
-      valueLabelActive: 'bg-accent-500 text-white scale-110',
-    },
-    gradient: {
-      track: 'bg-gray-200 dark:bg-gray-700',
-      filled: 'bg-gradient-to-r from-blue-500 via-brand-500 to-accent-400',
-      thumb: 'bg-white border-brand-500 shadow-sm',
-      thumbActive: 'border-brand-600 shadow-md',
-      valueLabel: 'bg-gray-100 text-brand-700 dark:bg-gray-800 dark:text-brand-400',
-      valueLabelActive: 'bg-gradient-to-r from-blue-600 to-brand-600 text-white scale-110',
-    },
-  };
-  
-  const { track, thumb, thumbActive, valueLabel } = sizeClasses[size];
-  const variantStyle = variantClasses[variant];
-  
+
+  // Standard Material Design sizes
+  const mdTrackHeight = 'h-0.5'; // 2px
+  const mdThumbSizeDefault = 'w-3 h-3'; // 12px
+  const mdThumbSizeInteracting = 'w-5 h-5'; // 20px
+  const mdTickSize = 'w-1 h-1'; // 4px, but track is 2px. Tick should be on the track. Let's make it a 2x2 dot on the 2px track.
+                                 // Or a 1x1 div that looks like a 2px dot due to border or bg.
+                                 // Material spec says 2dp diameter for tick mark dot when track is 2dp. So w-0.5 h-0.5 for a 2px dot.
+
+  // Adjusting based on `size` prop - for now, mostly affects label text size if needed.
+  // The core slider elements will try to stick to MD standard.
+  // const valueLabelTypography = size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'; // Old logic
+  const componentLabelTypography = 'text-md-body2'; // Standard for component labels
+  const valueLabelTypography = 'text-md-caption'; // For the tooltip and potentially the side label
+  const minMaxLabelTypography = 'text-md-caption';
+
+
+  // Thumb positioning needs to account for its size to be centered on the percentage
+  const thumbOffsetDragging = '-0.625rem'; // 10px for 20px thumb
+  const thumbOffsetDefault = '-0.375rem'; // 6px for 12px thumb
+  const currentThumbOffset = isDragging || hover ? thumbOffsetDragging : thumbOffsetDefault; // Use larger offset if thumb is larger on hover too
+  const currentThumbSize = isDragging || hover ? mdThumbSizeInteracting : mdThumbSizeDefault;
+
   return (
     <div className={`space-y-2 ${className}`}
          onMouseEnter={() => setHover(true)}
-         onMouseLeave={() => setHover(false)}>
-      {/* 标签和当前值显示 */}
+         onMouseLeave={() => { setHover(false); setIsDragging(false); /* Stop dragging if mouse leaves */ }}>
       {(label || showValue) && (
         <div className="flex justify-between items-center">
           {label && (
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className={`${componentLabelTypography} text-material-onSurface dark:text-material-darkOnSurface`}>
               {label}
             </label>
           )}
-          {showValue && (
-            <span className={`${valueLabel} font-medium transition-all duration-200 px-2 py-1 rounded-md
-              ${isDragging ? variantStyle.valueLabelActive : variantStyle.valueLabel}`}>
+          {showValue && ( // This is the label next to the component label, not the tooltip
+            <span className={`${valueLabelTypography} text-material-onSurface/75 dark:text-material-darkOnSurface/75 px-2 py-0.5 rounded-sm`}>
               {displayValue}
             </span>
           )}
         </div>
       )}
       
-      {/* 滑块轨道和把手 */}
       <div 
-        className="relative py-3 group cursor-pointer" 
-        onMouseDown={() => setIsDragging(true)}
-        onTouchStart={() => setIsDragging(true)}
+        className="relative py-3 group cursor-pointer" // Increased py for easier thumb interaction
+        onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onTouchStart={(e) => { e.preventDefault(); setIsDragging(true); }}
         onMouseUp={() => setIsDragging(false)}
-        onMouseLeave={() => setIsDragging(false)}
+        // onMouseLeave handled by parent div
+        onTouchEnd={() => setIsDragging(false)}
+        // TODO: Add click/drag handling to update value based on position
       >
-        {/* 滑块轨道底色 */}
-        <div className={`absolute w-full ${track} ${variantStyle.track} rounded-full overflow-hidden`}>
-          {/* 填充部分 */}
+        {/* Track background (inactive part) */}
+        <div className={`absolute w-full ${mdTrackHeight} bg-material-primary/30 dark:bg-material-primary/30 rounded-full top-1/2 -translate-y-1/2`}>
+          {/* Filled part of the track (active) */}
           <div 
-            className={`absolute h-full ${variantStyle.filled} rounded-full transition-all duration-150 ease-elastic`}
+            className={`absolute h-full bg-material-primary dark:bg-material-primary rounded-full`}
             style={{ width: `${percentage}%` }}
           />
         </div>
         
-        {/* 刻度标记 */}
-        {(max - min) / step <= 20 && (
-          <div className="absolute w-full flex justify-between px-[1px]">
-            {Array.from({ length: Math.floor((max - min) / step) + 1 }).map((_, index) => (
-              <div 
-                key={index}
-                className={`w-0.5 h-2 rounded-full mt-3 transition-opacity duration-200 
-                           ${index * step + min <= value ? 'bg-brand-500/30 dark:bg-brand-400/30' : 'bg-gray-300/50 dark:bg-gray-600/50'}
-                           ${hover ? 'opacity-100' : 'opacity-0'}`}
-              />
-            ))}
+        {/* Tick Marks for discrete sliders */}
+        {step && (max - min) / step <= 20 && ( // Show ticks if step is defined and not too many
+          <div className="absolute w-full flex justify-between top-1/2 -translate-y-1/2 px-0"> 
+            {Array.from({ length: Math.floor((max - min) / step) + 1 }).map((_, index) => {
+              const tickValue = min + (index * step);
+              const tickPosition = ((tickValue - min) / (max - min)) * 100;
+              // Only show ticks within the bounds
+              if (tickPosition < 0 || tickPosition > 100) return null;
+              return (
+                <div 
+                  key={index}
+                  className={`absolute w-1 h-1 rounded-full transform -translate-x-1/2 
+                             ${tickValue <= value ? 'bg-material-primary' : 'bg-material-onSurface/30 dark:bg-material-darkOnSurface/30'}`}
+                  style={{ left: `${tickPosition}%` }} // translate-x-1/2 will center it on the position
+                />
+              );
+            })}
           </div>
         )}
         
-        {/* 输入范围控件 */}
         <input
           type="range"
           min={min}
@@ -151,53 +121,45 @@ export const Slider: React.FC<SliderProps> = ({
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onMouseDown={() => setIsDragging(true)}
           onMouseUp={() => setIsDragging(false)}
-          onMouseLeave={() => setIsDragging(false)}
           onTouchStart={() => setIsDragging(true)}
           onTouchEnd={() => setIsDragging(false)}
-          className="relative w-full h-6 bg-transparent appearance-none cursor-pointer 
-                     z-10 opacity-0"
-          style={{ 
-            WebkitAppearance: 'none',
-            position: 'absolute',
-            top: '0',
-            left: '0' 
-          }}
+          className="absolute w-full h-full bg-transparent appearance-none cursor-pointer z-10 opacity-0 m-0 p-0 top-0 left-0"
+          style={{ WebkitAppearance: 'none' }}
         />
         
-        {/* 气泡标记 - 悬停或拖动时显示 */}
+        {/* Value Label Tooltip - shown on hover or drag */}
         {(hover || isDragging) && (
           <div 
-            className={`absolute bottom-full left-0 mb-2 px-2 py-1 rounded bg-white dark:bg-gray-800 
-                        text-xs font-medium shadow-sm border border-gray-200 dark:border-gray-700
-                        transform -translate-x-1/2 transition-all duration-100 z-20
-                        ${isDragging ? 'opacity-100' : 'opacity-80'}`}
+            className={`absolute bottom-full left-0 mb-2 px-1.5 py-0.5 rounded-sm 
+                        bg-material-onSurface dark:bg-material-darkOnSurface 
+                        ${valueLabelTypography} text-material-surface dark:text-material-darkSurface 
+                        shadow-md transform -translate-x-1/2 transition-opacity duration-100 z-20
+                        ${isDragging || hover ? 'opacity-100' : 'opacity-0'}`}
             style={{ left: `${percentage}%` }}
           >
             {displayValue}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-4 border-transparent border-t-white dark:border-t-gray-800"></div>
+            {/* Optional: Inverted teardrop shape using borders - more complex, rounded rect is fine */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-[4px] border-x-transparent border-t-[4px] border-t-material-onSurface dark:border-t-material-darkOnSurface"></div>
+
           </div>
         )}
         
-        {/* 自定义滑块把手 */}
+        {/* Custom Thumb */}
         <div 
-          className={`absolute top-1/2 -translate-y-1/2 rounded-full border-2
-                      transition-all duration-200 ease-spring
-                      ${isDragging ? `${thumbActive} ${variantStyle.thumbActive}` : 
-                                    (hover ? `${thumb} scale-110 ${variantStyle.thumb}` : 
-                                           `${thumb} ${variantStyle.thumb}`)}`}
-          style={{ left: `calc(${percentage}% - ${isDragging ? '0.625rem' : '0.5rem'})` }}
+          className={`absolute top-1/2 -translate-y-1/2 rounded-full 
+                      bg-material-primary dark:bg-material-primary 
+                      shadow-md-dp2 transition-all duration-150 ease-in-out
+                      ${currentThumbSize}`}
+          style={{ left: `calc(${percentage}% + ${currentThumbOffset})` }}
         >
-          {/* 内部闪光效果 */}
-          <div className={`absolute inset-0 rounded-full bg-white/80 scale-50 opacity-0
-                            ${isDragging ? 'animate-pulse opacity-80' : ''}`}></div>
+          {/* Optional: Inner pulse or different visual for dragging state if needed */}
         </div>
       </div>
       
-      {/* 最小值和最大值标记 */}
-      <div className="relative flex justify-between px-[6px] mt-1">
-        <span className="text-[9px] text-gray-400 dark:text-gray-500">{min}</span>
-        <span className="text-[9px] text-gray-400 dark:text-gray-500">{max}</span>
+      <div className="relative flex justify-between px-1 mt-0.5">
+        <span className={`${minMaxLabelTypography} text-material-onSurface/75 dark:text-material-darkOnSurface/75`}>{min}</span>
+        <span className={`${minMaxLabelTypography} text-material-onSurface/75 dark:text-material-darkOnSurface/75`}>{max}</span>
       </div>
     </div>
   );
-}; 
+};

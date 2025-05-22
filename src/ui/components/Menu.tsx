@@ -1,5 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import Transition from './Transition';
+import Ripple from './Ripple'; // Import Ripple
+
+// A simple context for dark mode, you might have a more robust one
+// For now, we'll simulate it or assume a way to get it.
+// const DarkModeContext = React.createContext(false);
 
 export interface MenuProps {
   trigger: React.ReactNode;
@@ -110,11 +115,24 @@ const Menu: React.FC<MenuProps> = ({
       >
         <div
           ref={menuRef}
-          className={`absolute z-50 ${positionStyles[position]} bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 ${className}`}
+          className={`
+            absolute z-50 ${positionStyles[position]} 
+            bg-material-surface dark:bg-material-darkSurface 
+            rounded shadow-md-dp8 
+            py-2 ${className}
+          `}
           style={{ width }}
-          onClick={handleMenuItemClick}
+          // onClick for handleMenuItemClick is removed here, will be on each MenuItem
         >
-          {children}
+          {/* Pass down handleMenuItemClick to children if they are MenuItem components */}
+          {React.Children.map(children, child => {
+            if (React.isValidElement(child) && child.type === MenuItem) {
+              return React.cloneElement(child as React.ReactElement<any>, { 
+                onItemClick: handleMenuItemClick 
+              });
+            }
+            return child;
+          })}
         </div>
       </Transition>
     </div>
@@ -127,6 +145,7 @@ export interface MenuItemProps {
   disabled?: boolean;
   className?: string;
   icon?: React.ReactNode;
+  onItemClick?: () => void; // Internal prop from Menu
 }
 
 /**
@@ -137,19 +156,62 @@ export const MenuItem: React.FC<MenuItemProps> = ({
   onClick,
   disabled = false,
   className = '',
-  icon
+  icon,
+  onItemClick // internal prop
 }) => {
+  // const isDarkMode = useContext(DarkModeContext); // Example: detect dark mode
+  // For ripple, using approximated colors based on typical onSurface for light/dark
+  // A more robust solution would involve theme context.
+  // For now, we assume onSurface is dark for light theme, light for dark theme.
+  // So ripple is light on dark hover bg, dark on light hover bg.
+  // The hover background is onSurface/10.
+  // Let's use a fixed ripple color that works on a slightly opaque background.
+  // `material.onSurface` is black, `material.darkOnSurface` is white.
+  // A common ripple on such items is a slightly darker shade of the hover.
+  // Or, the text color with very low opacity.
+  // For simplicity: using a generic gray ripple.
+  // A better approach: pass 'text-material-onSurface dark:text-material-darkOnSurface' to Ripple and let it handle opacity.
+  // However, Ripple takes a direct color string.
+  // Light theme: text is material.onSurface (e.g. black), ripple rgba(0,0,0,0.1)
+  // Dark theme: text is material.darkOnSurface (e.g. white), ripple rgba(255,255,255,0.1)
+  // The MenuItem component itself doesn't easily know if it's in dark mode without context.
+  // For this exercise, we'll use the light theme ripple color.
+  // A real implementation would use a theme context to switch this color.
+  const rippleColor = 'rgba(0, 0, 0, 0.1)'; // Corresponds to material.onSurface (black) at 10% opacity
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    }
+    if (onItemClick) { // Call the Menu's handler for closing
+      onItemClick();
+    }
+  };
+
   return (
     <div
       className={`
-        px-4 py-2 text-sm cursor-pointer flex items-center
-        ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}
+        relative overflow-hidden 
+        px-4 py-3 flex items-center
+        text-md-body1 text-material-onSurface dark:text-material-darkOnSurface
+        cursor-pointer
+        focus:outline-none 
+        ${disabled 
+          ? 'text-material-onSurface/30 dark:text-material-darkOnSurface/30 cursor-not-allowed' 
+          : 'hover:bg-material-onSurface/10 dark:hover:bg-material-darkOnSurface/10 focus:bg-material-onSurface/10 dark:focus:bg-material-darkOnSurface/10'}
         ${className}
       `}
-      onClick={disabled ? undefined : onClick}
+      onClick={disabled ? undefined : handleClick}
+      tabIndex={disabled ? -1 : 0} // Make it focusable
+      onKeyDown={(e) => { // Allow activation with Enter/Space
+        if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+          handleClick();
+        }
+      }}
     >
-      {icon && <span className="mr-2">{icon}</span>}
+      {icon && <span className="mr-4">{icon}</span>}
       {children}
+      {!disabled && <Ripple color={rippleColor} />}
     </div>
   );
 };
@@ -158,7 +220,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
  * 菜单分割线组件
  */
 export const MenuDivider: React.FC = () => {
-  return <div className="my-1 border-t border-gray-200 dark:border-gray-700" />;
+  return <div className="my-1 border-t border-material-onSurface/12 dark:border-material-darkOnSurface/12" />;
 };
 
 export default Menu;

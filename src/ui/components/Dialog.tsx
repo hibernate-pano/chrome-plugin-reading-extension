@@ -101,24 +101,29 @@ const Dialog: React.FC<DialogProps> = ({
         >
           <div
             ref={dialogRef}
-            className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${sizeMap[size]} ${className}`}
+            className={`
+              bg-material-surface dark:bg-material-darkSurface 
+              rounded-md shadow-md-dp24 
+              w-full ${sizeMap[size]} 
+              p-6 ${className}
+            `}
             onClick={(e) => e.stopPropagation()}
           >
             {/* 标题栏 */}
             {(title || showCloseButton) && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between mb-5"> {/* Spacing: title to content (20px) */}
                 {title && (
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  <h3 className="text-md-h6 font-md-medium text-material-onSurface dark:text-material-darkOnSurface">
                     {title}
                   </h3>
                 )}
                 {showCloseButton && (
                   <button
                     type="button"
-                    className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+                    className="text-material-onSurface/75 dark:text-material-darkOnSurface/75 hover:text-material-onSurface dark:hover:text-material-darkOnSurface focus:outline-none"
                     onClick={onClose}
                   >
-                    <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -126,14 +131,14 @@ const Dialog: React.FC<DialogProps> = ({
               </div>
             )}
 
-            {/* 内容区域 */}
-            <div className="px-6 py-4">
+            {/* 内容区域 - padding is handled by the main p-6, specific content styling is up to children */}
+            <div className="text-material-onSurface/85 dark:text-material-darkOnSurface/85"> {/* Default content text color */}
               {children}
             </div>
 
-            {/* 底部区域 */}
+            {/* 底部区域 - spacing from content to actions (24px) */}
             {footer && (
-              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="mt-6">
                 {footer}
               </div>
             )}
@@ -166,12 +171,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = '确认',
+  title = '确认', // Default title for confirm dialogs
   children,
   confirmText = '确认',
   cancelText = '取消',
-  confirmButtonProps,
-  cancelButtonProps,
+  confirmButtonProps = { variant: 'text', color: 'primary' }, // Default to Material text button
+  cancelButtonProps = { variant: 'text' }, // Default to Material text button
   size = 'sm',
   className = '',
   transitionType = 'zoom'
@@ -187,16 +192,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       footer={
         <div className="flex justify-end space-x-2">
           <Button
-            variant="outline"
             onClick={onClose}
-            {...cancelButtonProps}
+            {...cancelButtonProps} // variant="text" by default
           >
             {cancelText}
           </Button>
           <Button
-            variant="primary"
             onClick={onConfirm}
-            {...confirmButtonProps}
+            {...confirmButtonProps} // variant="text" color="primary" by default
           >
             {confirmText}
           </Button>

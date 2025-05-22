@@ -1,48 +1,50 @@
 import React from 'react';
 
+import React from 'react';
+
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  variant?: 'default' | 'hover' | 'elevated' | 'flat' | 'paper';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
-  border?: boolean;
+  variant?: 'elevated' | 'outlined'; // Material Design variants
+  padding?: 'none' | 'sm' | 'md' | 'lg'; // sm: 8dp, md: 16dp, lg: 24dp
   onClick?: () => void;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
   className = '',
-  variant = 'default',
+  variant = 'elevated', // Default to elevated
   padding = 'md',
-  border = true,
   onClick,
 }) => {
-  // 基础类
-  const baseClasses = 'rounded-xl transition-all duration-200';
+  // Base classes: Material surface colors, rounded corners, transition
+  const baseClasses = `
+    bg-material-surface dark:bg-material-darkSurface 
+    rounded-md 
+    transition-all duration-200
+  `;
 
-  // 变体样式
+  // Variant-specific styles
   const variantClasses = {
-    default: 'bg-white/90 backdrop-blur-sm shadow-sm dark:bg-gray-800/90',
-    hover: 'bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md hover:scale-[1.01] dark:bg-gray-800/90',
-    elevated: 'bg-white/90 backdrop-blur-sm shadow-card dark:bg-gray-800/90',
-    flat: 'bg-gray-50/90 backdrop-blur-sm dark:bg-gray-900/50',
-    paper: 'bg-paper-cream shadow-paper bg-paper-texture dark:bg-gray-800/90',
+    elevated: `
+      shadow-md-dp1 
+      ${onClick ? 'hover:shadow-md-dp8' : ''}
+    `, // Apply hover shadow only if clickable
+    outlined: `
+      shadow-none 
+      border border-gray-300 dark:border-gray-700 
+    `, // Using existing grays for border, consider material-outline if defined
   };
 
-  // 内边距
+  // Padding classes based on Material Design spacing
   const paddingClasses = {
     none: 'p-0',
-    sm: 'p-3',
-    md: 'p-5',
-    lg: 'p-7',
+    sm: 'p-2', // 8dp
+    md: 'p-4', // 16dp
+    lg: 'p-6', // 24dp
   };
 
-  // 边框
-  const borderClass = border 
-    ? 'border border-gray-100 dark:border-gray-700/50' 
-    : '';
-
-  // 点击状态
+  // Clickable effect (scale preserved)
   const clickableClass = onClick 
     ? 'cursor-pointer active:scale-[0.99] hover:scale-[1.01]' 
     : '';
@@ -53,10 +55,9 @@ export const Card: React.FC<CardProps> = ({
         ${baseClasses}
         ${variantClasses[variant]}
         ${paddingClasses[padding]}
-        ${borderClass}
         ${clickableClass}
         ${className}
-      `}
+      `.replace(/\s+/g, ' ').trim()} // Clean up whitespace
       onClick={onClick}
     >
       {children}
@@ -81,13 +82,13 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
     <div className={`flex items-start justify-between mb-4 ${className}`}>
       <div>
         {typeof title === 'string' ? (
-          <h3 className="text-base font-medium text-gray-800 dark:text-gray-200">{title}</h3>
+          <h3 className="text-md-h6 font-md-medium text-material-onSurface dark:text-material-darkOnSurface">{title}</h3> 
         ) : (
           title
         )}
         {subtitle && (
           typeof subtitle === 'string' ? (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+            <p className="mt-1 text-md-body2 text-material-onSurface/75 dark:text-material-darkOnSurface/75">{subtitle}</p>
           ) : (
             subtitle
           )
@@ -110,7 +111,7 @@ export const CardContent: React.FC<CardContentProps> = ({
   className = '',
 }) => {
   return (
-    <div className={className}>
+    <div className={className}> {/* Padding is handled by the parent Card component */}
       {children}
     </div>
   );
@@ -128,8 +129,9 @@ export const CardFooter: React.FC<CardFooterProps> = ({
   divider = true,
 }) => {
   return (
-    <div className={`mt-4 ${divider ? 'pt-4 border-t border-gray-100 dark:border-gray-700/50' : ''} ${className}`}>
+    // Adjusted divider color for better consistency
+    <div className={`mt-4 ${divider ? 'pt-4 border-t border-gray-200 dark:border-gray-700' : ''} ${className}`}>
       {children}
     </div>
   );
-}; 
+};

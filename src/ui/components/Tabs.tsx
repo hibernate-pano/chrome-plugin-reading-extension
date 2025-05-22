@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react'; // Removed useState for hoveredTab as it's not used in MD style
+import Ripple from './Ripple'; // Assuming Ripple.tsx is in the same directory
 
 export interface TabItem {
   id: string;
@@ -10,8 +11,7 @@ interface TabsProps {
   tabs: TabItem[];
   activeTab: string;
   onChange: (tabId: string) => void;
-  variant?: 'pill' | 'underline' | 'minimal';
-  size?: 'sm' | 'md' | 'lg';
+  // variant and size props removed
   fullWidth?: boolean;
   className?: string;
 }
@@ -20,105 +20,43 @@ export const Tabs: React.FC<TabsProps> = ({
   tabs,
   activeTab,
   onChange,
-  variant = 'pill',
-  size = 'md',
   fullWidth = false,
   className = '',
 }) => {
-  // 确定悬停状态
-  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
-  
-  // 根据变体确定样式
-  const getVariantClasses = () => {
-    switch (variant) {
-      case 'pill':
-        return {
-          container: 'bg-gray-100/80 p-1 rounded-xl backdrop-blur-sm dark:bg-gray-800/50',
-          tab: (isActive: boolean, id: string) => `
-            rounded-lg transition-all duration-200
-            ${isActive 
-              ? 'bg-white text-brand-700 shadow-sm dark:bg-gray-700 dark:text-brand-400'
-              : 'text-gray-600 hover:text-brand-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-brand-400 dark:hover:bg-gray-800/80'
-            }
-          `,
-        };
-      case 'underline':
-        return {
-          container: 'border-b border-gray-200 dark:border-gray-700',
-          tab: (isActive: boolean, id: string) => `
-            border-b-2 transition-all duration-200
-            ${isActive 
-              ? 'border-brand-500 text-brand-700 dark:border-brand-400 dark:text-brand-400'
-              : 'border-transparent text-gray-600 hover:text-brand-600 hover:border-gray-300 dark:text-gray-400 dark:hover:text-brand-400 dark:hover:border-gray-600'
-            }
-          `,
-        };
-      case 'minimal':
-        return {
-          container: '',
-          tab: (isActive: boolean, id: string) => `
-            transition-all duration-200
-            ${isActive 
-              ? 'text-brand-700 font-medium dark:text-brand-400'
-              : 'text-gray-600 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400'
-            }
-          `,
-        };
-      default:
-        return {
-          container: '',
-          tab: () => '',
-        };
-    }
-  };
-  
-  // 根据尺寸确定样式
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'text-xs py-1.5 px-2.5';
-      case 'lg':
-        return 'text-base py-2.5 px-4';
-      case 'md':
-      default:
-        return 'text-sm py-2 px-3';
-    }
-  };
-  
-  const variantClasses = getVariantClasses();
-  const sizeClasses = getSizeClasses();
-  
+  const rippleColor = 'rgba(62, 103, 138, 0.1)'; // Approx of material.primary #3e678a with 10% opacity
+
   return (
-    <div className={`${variantClasses.container} ${className}`}>
-      <nav className={`flex ${fullWidth ? 'w-full' : ''} ${variant === 'minimal' ? 'gap-4' : 'gap-1'}`}>
+    <div className={`border-b border-material-onSurface/12 dark:border-material-darkOnSurface/12 ${className}`}>
+      <nav className={`flex ${fullWidth ? 'w-full' : ''} overflow-x-auto whitespace-nowrap`}>
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
-          const isHovered = tab.id === hoveredTab;
           
           return (
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              onMouseEnter={() => setHoveredTab(tab.id)}
-              onMouseLeave={() => setHoveredTab(null)}
               className={`
+                relative overflow-hidden /* For Ripple */
                 ${fullWidth ? 'flex-1' : ''}
-                ${sizeClasses}
-                ${variantClasses.tab(isActive, tab.id)}
-                font-medium leading-none flex items-center justify-center transition-all
-                focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-400
-                ${isActive ? 'z-10' : ''}
+                min-h-[3rem] px-4 /* 48dp height, 16dp padding */
+                flex items-center justify-center
+                text-md-button uppercase 
+                border-b-2 transition-colors duration-200
+                focus:outline-none focus:bg-material-onSurface/10 dark:focus:bg-material-darkOnSurface/10
+                ${isActive 
+                  ? 'text-material-primary dark:text-material-primary border-material-primary dark:border-material-primary'
+                  : 'text-material-onSurface/60 dark:text-material-darkOnSurface/60 hover:text-material-onSurface dark:hover:text-material-darkOnSurface border-transparent'
+                }
               `}
               aria-current={isActive ? 'page' : undefined}
             >
               {tab.icon && (
-                <span className={`${tab.label ? 'mr-1.5' : ''} ${
-                  isActive || isHovered ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'
-                } transition-colors duration-200`}>
+                <span className={`${tab.label ? 'mr-1.5' : ''} text-current /* Icon inherits text color */`}>
                   {tab.icon}
                 </span>
               )}
-              <span className="transition-all duration-200">{tab.label}</span>
+              <span>{tab.label}</span>
+              <Ripple color={rippleColor} />
             </button>
           );
         })}
