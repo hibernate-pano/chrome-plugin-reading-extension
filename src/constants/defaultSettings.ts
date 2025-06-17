@@ -1,7 +1,6 @@
 import { StorageKeys, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 import { 
   DEFAULT_LINE_HEIGHT, 
-  DEFAULT_LINE_SPACING, 
   DEFAULT_PARAGRAPH_SPACING 
 } from './options';
 
@@ -15,17 +14,11 @@ export const DEFAULT_SETTINGS = {
   codeFontSize: 14,
   codeTheme: 'github' as keyof typeof CODE_THEMES,
   lineHeight: DEFAULT_LINE_HEIGHT,
-  lineSpacing: DEFAULT_LINE_SPACING,
-  letterSpacing: 0,
-  pageWidth: 1200,
   textAlign: 'left' as 'left' | 'center' | 'right' | 'justify',
-  firstLineIndent: false,
   showImages: true,
-  showDirectory: false,
   fontFamily: 'default' as keyof typeof FONT_FAMILIES,
   backgroundColor: 'white' as keyof typeof BACKGROUND_COLORS,
   paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
-  debug: false
 };
 
 /**

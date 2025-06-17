@@ -384,8 +384,9 @@ import { performanceMonitor } from '../utils/performance';
 // 不再使用资源加载器
 import { /* resourceLoader, LoadPriority */ } from '../utils/resourceLoader';
 import { getWorkerManager, releaseWorkerManager } from '../workers/workerManager';
-import { TextSelectionToolbar, defaultToolbarOptions } from './components/TextSelectionToolbar';
 import { Toast } from '../ui/components/Toast';
+import { createFloatingButton, removeFloatingButton } from './ui/readerFloatingButton';
+import { handleMediaElements } from './processors/mediaProcessor';
 
 // 导入增强提取器
 import {
@@ -414,150 +415,44 @@ interface ReadingModeSettings {
   codeFontSize: number;
   codeTheme: keyof typeof CODE_THEMES;
   lineHeight: number;
-  letterSpacing: number;
-  lineSpacing: number;
-  pageWidth: number;
+  paragraphSpacing: number;
   textAlign: 'left' | 'center' | 'right' | 'justify';
-  firstLineIndent: boolean;
   showImages: boolean;
   fontFamily: keyof typeof FONT_FAMILIES;
   backgroundColor: keyof typeof BACKGROUND_COLORS;
-  showDirectory: boolean;
-  paragraphSpacing: number;
-  debug?: boolean;
 }
 
 let originalContent: string | null = null;
 let isReadingMode = false;
-let textSelectionToolbar: TextSelectionToolbar | null = null;
 
 import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
 
 async function fetchSettings(): Promise<ReadingModeSettings> {
+  const [theme, fontSize, codeFontSize, codeTheme, lineHeight, paragraphSpacing, textAlign, showImages, fontFamily, backgroundColor] = await Promise.all([
+    getStorage<'light' | 'dark'>(StorageKeys.THEME),
+    getStorage<number>(StorageKeys.FONT_SIZE),
+    getStorage<number>(StorageKeys.CODE_FONT_SIZE),
+    getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME),
+    getStorage<number>(StorageKeys.LINE_HEIGHT),
+    getStorage<number>(StorageKeys.PARAGRAPH_SPACING),
+    getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN),
+    getStorage<boolean>(StorageKeys.SHOW_IMAGES),
+    getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY),
+    getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR),
+  ]);
+
   return {
-    theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? DEFAULT_SETTINGS.theme,
-    fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? DEFAULT_SETTINGS.fontSize,
-    codeFontSize: await getStorage<number>(StorageKeys.CODE_FONT_SIZE) ?? DEFAULT_SETTINGS.codeFontSize,
-    codeTheme: await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME) ?? DEFAULT_SETTINGS.codeTheme,
-    lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? DEFAULT_SETTINGS.lineHeight,
-    letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? DEFAULT_SETTINGS.letterSpacing,
-    lineSpacing: await getStorage<number>(StorageKeys.LINE_SPACING) ?? DEFAULT_SETTINGS.lineSpacing,
-    pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? DEFAULT_SETTINGS.pageWidth,
-    textAlign: await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN) ?? DEFAULT_SETTINGS.textAlign,
-    firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? DEFAULT_SETTINGS.firstLineIndent,
-    showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? DEFAULT_SETTINGS.showImages,
-    fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? DEFAULT_SETTINGS.fontFamily,
-    backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? DEFAULT_SETTINGS.backgroundColor,
-    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? DEFAULT_SETTINGS.showDirectory,
-    paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? DEFAULT_SETTINGS.paragraphSpacing,
-    debug: await getStorage<boolean>(StorageKeys.DEBUG) ?? DEFAULT_SETTINGS.debug,
+    theme: theme ?? DEFAULT_SETTINGS.theme,
+    fontSize: fontSize ?? DEFAULT_SETTINGS.fontSize,
+    codeFontSize: codeFontSize ?? DEFAULT_SETTINGS.codeFontSize,
+    codeTheme: codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+    lineHeight: lineHeight ?? DEFAULT_SETTINGS.lineHeight,
+    paragraphSpacing: paragraphSpacing ?? DEFAULT_SETTINGS.paragraphSpacing,
+    textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
+    showImages: showImages ?? DEFAULT_SETTINGS.showImages,
+    fontFamily: fontFamily ?? DEFAULT_SETTINGS.fontFamily,
+    backgroundColor: backgroundColor ?? DEFAULT_SETTINGS.backgroundColor,
   };
-}
-
-function handleMediaElements(container: HTMLElement | null, showImages: boolean) {
-  if (!container) return;
-
-  // 首先处理所有图片容器
-  const imageContainers = container.querySelectorAll('.enhanced-image-container, .background-image-container, figure');
-  imageContainers.forEach(container => {
-    const containerElement = container as HTMLElement;
-    containerElement.style.display = showImages ? 'block' : 'none';
-  });
-
-  // 处理所有图片标题
-  const imageCaptions = container.querySelectorAll('.image-caption, figcaption');
-  imageCaptions.forEach(caption => {
-    const captionElement = caption as HTMLElement;
-    captionElement.style.display = showImages ? 'block' : 'none';
-  });
-
-  const mediaSelectors = [
-    'img', 'svg', 'video', 'audio', 'iframe',
-    'canvas', 'object', 'embed', 'picture', 'source'
-  ];
-  mediaSelectors.forEach(selector => {
-    const elements = container.getElementsByTagName(selector);
-    for (const element of elements) {
-      const htmlElement = element as HTMLElement;
-      htmlElement.style.display = showImages ? 'block' : 'none';
-
-      if (showImages && element instanceof HTMLImageElement) {
-        // 处理懒加载图片
-        const lazyAttributes = [
-          'data-src', 'data-srcset', 'data-original', 'data-lazy-src',
-          'data-lazy', 'data-src-lazy', 'data-original-src', 'data-load-src',
-          'data-img-src', 'data-origin', 'data-lazyload', 'data-srcset-lazy',
-          'data-lazy-srcset', 'data-lazy-original'
-        ];
-
-        // 如果图片没有 src，尝试从懒加载属性中获取
-        if (!element.src || element.src.trim() === '' || element.src.includes('data:image/gif;base64')) {
-          for (const attr of lazyAttributes) {
-            const value = element.getAttribute(attr);
-            if (value) {
-              element.src = value;
-              break;
-            }
-          }
-        }
-
-        // 确保图片可见
-        element.removeAttribute('loading');
-        element.removeAttribute('decoding');
-        element.removeAttribute('importance');
-        element.removeAttribute('loading-strategy');
-        element.removeAttribute('fetchpriority');
-        htmlElement.style.visibility = 'visible';
-        htmlElement.style.opacity = '1';
-
-        // 如果图片在增强容器中，确保容器可见
-        const container = element.closest('.enhanced-image-container');
-        if (container) {
-          (container as HTMLElement).style.display = 'block';
-        }
-
-        // 如果图片有 srcset，确保它被正确加载
-        if (element.srcset === '' && element.getAttribute('data-srcset')) {
-          element.srcset = element.getAttribute('data-srcset')!;
-        }
-
-        // 触发图片加载
-        if (element.complete) {
-          const event = new Event('load');
-          element.dispatchEvent(event);
-        }
-      }
-    }
-  });
-
-  // 处理背景图片
-  const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
-  elementsWithBgImage.forEach(element => {
-    if (!showImages) {
-      (element as HTMLElement).style.backgroundImage = 'none';
-    } else {
-      // 检查是否有懒加载的背景图片
-      const lazyAttributes = [
-        'data-background', 'data-bg', 'data-background-image',
-        'data-lazy-background', 'data-background-src'
-      ];
-
-      for (const attr of lazyAttributes) {
-        const value = element.getAttribute(attr);
-        if (value && element instanceof HTMLElement) {
-          element.style.backgroundImage = `url(${value})`;
-          break;
-        }
-      }
-    }
-  });
-
-  // 处理图片占位符
-  const placeholders = container.querySelectorAll('.image-placeholder');
-  placeholders.forEach(placeholder => {
-    const placeholderElement = placeholder as HTMLElement;
-    placeholderElement.style.display = showImages ? 'flex' : 'none';
-  });
 }
 
 async function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings, forceReprocess: boolean = false) {
@@ -701,2059 +596,322 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
   }
 }
 
-// 代码主题的样式映射
-const CODE_THEME_STYLES = {
-  'github': {
-    background: '#ffffff',
-    text: '#24292e',
-    selection: '#b3d4fc',
-    comment: '#6a737d',
-    punctuation: '#24292e',
-    keyword: '#d73a49',
-    function: '#6f42c1',
-    string: '#032f62',
-    number: '#005cc5',
-    class: '#22863a',
-    variable: '#24292e',
-  },
-  'one-dark': {
-    background: '#282c34',
-    text: '#abb2bf',
-    selection: '#3e4451',
-    comment: '#5c6370',
-    punctuation: '#abb2bf',
-    keyword: '#c678dd',
-    function: '#61afef',
-    string: '#98c379',
-    number: '#d19a66',
-    class: '#e5c07b',
-    variable: '#e06c75',
-  },
-  'one-light': {
-    background: '#fafafa',
-    text: '#383a42',
-    selection: '#e5e5e6',
-    comment: '#a0a1a7',
-    punctuation: '#383a42',
-    keyword: '#a626a4',
-    function: '#4078f2',
-    string: '#50a14f',
-    number: '#986801',
-    class: '#c18401',
-    variable: '#e45649',
-  },
-  'material-dark': {
-    background: '#263238',
-    text: '#eeffff',
-    selection: '#80cbc4',
-    comment: '#546e7a',
-    punctuation: '#89ddff',
-    keyword: '#c792ea',
-    function: '#82aaff',
-    string: '#c3e88d',
-    number: '#f78c6c',
-    class: '#ffcb6b',
-    variable: '#eeffff',
-  },
-  'material-light': {
-    background: '#fafafa',
-    text: '#90a4ae',
-    selection: '#80cbc4',
-    comment: '#90a4ae',
-    punctuation: '#39adb5',
-    keyword: '#7c4dff',
-    function: '#6182b8',
-    string: '#91b859',
-    number: '#f76d47',
-    class: '#f6a434',
-    variable: '#90a4ae',
-  },
-  'night-owl': {
-    background: '#011627',
-    text: '#d6deeb',
-    selection: '#1d3b53',
-    comment: '#637777',
-    punctuation: '#7fdbca',
-    keyword: '#c792ea',
-    function: '#82aaff',
-    string: '#ecc48d',
-    number: '#f78c6c',
-    class: '#ffcb8b',
-    variable: '#d7dbe0',
-  },
-  'dracula': {
-    background: '#282a36',
-    text: '#f8f8f2',
-    selection: '#44475a',
-    comment: '#6272a4',
-    punctuation: '#f8f8f2',
-    keyword: '#ff79c6',
-    function: '#50fa7b',
-    string: '#f1fa8c',
-    number: '#bd93f9',
-    class: '#8be9fd',
-    variable: '#f8f8f2',
-  },
-  'solarized-dark': {
-    background: '#002b36',
-    text: '#839496',
-    selection: '#073642',
-    comment: '#586e75',
-    punctuation: '#839496',
-    keyword: '#859900',
-    function: '#268bd2',
-    string: '#2aa198',
-    number: '#d33682',
-    class: '#b58900',
-    variable: '#b58900',
-  },
-  'solarized-light': {
-    background: '#fdf6e3',
-    text: '#657b83',
-    selection: '#eee8d5',
-    comment: '#93a1a1',
-    punctuation: '#657b83',
-    keyword: '#859900',
-    function: '#268bd2',
-    string: '#2aa198',
-    number: '#d33682',
-    class: '#b58900',
-    variable: '#b58900',
-  },
-} as const;
-
-// 生成代码主题的 CSS
-function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: ReadingModeSettings) {
-  const themeStyles = CODE_THEME_STYLES[theme] || CODE_THEME_STYLES['github'];
-
-  return `
-    /* 代码块主题变量 */
-    :root {
-      --code-bg-color: ${themeStyles.background};
-      --code-text-color: ${themeStyles.text};
-      --code-selection-color: ${themeStyles.selection};
-      --code-comment-color: ${themeStyles.comment};
-      --code-punctuation-color: ${themeStyles.punctuation};
-      --code-keyword-color: ${themeStyles.keyword};
-      --code-function-color: ${themeStyles.function};
-      --code-string-color: ${themeStyles.string};
-      --code-number-color: ${themeStyles.number};
-      --code-class-color: ${themeStyles.class};
-      --code-variable-color: ${themeStyles.variable};
-      --code-border-color: ${themeStyles.comment}40;
-      --code-shadow-color: ${themeStyles.comment}20;
-      --code-font-size: ${settings.codeFontSize}px;
-    }
-
-    /* 代码块基础样式 */
-    pre.line-numbers,
-    .enhanced-code-container pre,
-    .code-block pre {
-      background-color: var(--code-bg-color) !important;
-      color: var(--code-text-color) !important;
-      font-size: var(--code-font-size) !important;
-      line-height: 1.5;
-      padding: 1em;
-      margin: 1em 0;
-      border-radius: 8px;
-      overflow-x: auto;
-      position: relative;
-      padding-left: 3.8em !important;
-      counter-reset: linenumber;
-      border: 1px solid var(--code-border-color);
-      box-shadow: 0 2px 4px var(--code-shadow-color);
-    }
-
-    /* 代码工具栏样式 */
-    .code-toolbar {
-      background-color: var(--code-bg-color) !important;
-      color: var(--code-text-color) !important;
-      border-bottom: 1px solid var(--code-border-color);
-      font-size: var(--code-font-size) !important;
-    }
-
-    /* 行号容器样式 */
-    pre.line-numbers .line-numbers-rows,
-    .enhanced-code-container .line-numbers-rows,
-    .code-block .line-numbers-rows {
-      position: absolute;
-      pointer-events: none;
-      top: 1em;
-      font-size: var(--code-font-size) !important;
-      left: 0;
-      width: 3em;
-      letter-spacing: -1px;
-      border-right: 1px solid var(--code-border-color);
-      user-select: none;
-    }
-
-    /* 行号样式 */
-    .line-numbers-rows > span {
-      display: block;
-      counter-increment: linenumber;
-      pointer-events: none;
-    }
-
-    .line-numbers-rows > span:before {
-      content: counter(linenumber);
-      color: var(--code-comment-color)80;
-      display: block;
-      padding-right: 0.8em;
-      text-align: right;
-    }
-
-    /* 代码语法高亮 */
-    .token.comment,
-    .token.prolog,
-    .token.doctype,
-    .token.cdata {
-      color: var(--code-comment-color) !important;
-      font-style: italic;
-    }
-
-    .token.punctuation {
-      color: var(--code-punctuation-color) !important;
-    }
-
-    .token.keyword,
-    .token.operator {
-      color: var(--code-keyword-color) !important;
-    }
-
-    .token.function {
-      color: var(--code-function-color) !important;
-    }
-
-    .token.string {
-      color: var(--code-string-color) !important;
-    }
-
-    .token.number {
-      color: var(--code-number-color) !important;
-    }
-
-    .token.class-name {
-      color: var(--code-class-color) !important;
-    }
-
-    .token.variable {
-      color: var(--code-variable-color) !important;
-    }
-
-    /* 代码选择样式 */
-    pre.line-numbers ::selection,
-    pre.line-numbers ::-moz-selection,
-    .enhanced-code-container ::selection,
-    .enhanced-code-container ::-moz-selection,
-    .code-block ::selection,
-    .code-block ::-moz-selection {
-      background: var(--code-selection-color) !important;
-    }
-
-    /* 内联代码样式 */
-    #reading-mode-container code:not(pre code) {
-      background-color: var(--code-bg-color)40;
-      color: var(--code-keyword-color);
-      padding: 0.2em 0.4em;
-      border-radius: 3px;
-      font-size: var(--code-font-size) !important;
-      font-family: 'Fira Code', Consolas, Monaco, monospace;
-      border: 1px solid var(--code-border-color);
-    }
-
-    /* 确保代码块工具栏按钮样式正确 */
-    .code-toolbar .toolbar-item button {
-      color: var(--code-text-color) !important;
-      background-color: var(--code-bg-color) !important;
-      border: 1px solid var(--code-border-color) !important;
-      font-size: calc(var(--code-font-size) * 0.9) !important;
-    }
-
-    .code-toolbar .toolbar-item button:hover {
-      background-color: var(--code-selection-color) !important;
-    }
-  `;
-}
 
 async function applyStyles(settings: ReadingModeSettings) {
-  const styleId = 'reading-mode-style';
-  let style = document.getElementById(styleId);
+  const rootElement = document.documentElement;
+  const bodyElement = document.body;
 
-  if (!style) {
-    style = document.createElement('style');
-    style.id = styleId;
-    document.head.appendChild(style);
-  }
+  // 应用主题
+  rootElement.setAttribute('data-theme', settings.theme);
+  bodyElement.setAttribute('data-theme', settings.theme);
 
-  // 应用代码块样式
-  const codeblockStyles = document.getElementById('reading-mode-codeblock-styles');
-  if (codeblockStyles) {
-    // 设置代码块主题
-    const themeClass = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
+  // 应用字体大小
+  rootElement.style.setProperty('--reader-font-size', `${settings.fontSize}px`);
 
-    // 添加主题类到容器
-    const container = document.getElementById('reading-mode-container');
-    if (container) {
-      container.classList.remove('dark-theme', 'light-theme');
-      container.classList.add(themeClass);
-    }
+  // 应用行高
+  rootElement.style.setProperty('--reader-line-height', `${settings.lineHeight}`);
 
-    // 设置代码字体大小变量
-    codeblockStyles.textContent = `
-      :root {
-        --code-font-size: ${settings.codeFontSize}px;
+  // 应用段间距
+  rootElement.style.setProperty('--reader-paragraph-spacing', `${settings.paragraphSpacing}em`);
+
+  // 应用文本对齐
+  rootElement.style.setProperty('--reader-text-align', settings.textAlign);
+
+  // 应用字体家族
+  rootElement.style.setProperty('--reader-font-family', FONT_FAMILIES[settings.fontFamily] || FONT_FAMILIES.default);
+
+  // 应用背景颜色
+  rootElement.style.setProperty('--reader-background-color', BACKGROUND_COLORS[settings.backgroundColor] || BACKGROUND_COLORS.white);
+
+  // 处理媒体元素（图片等）的显示
+  handleMediaElements(bodyElement, settings.showImages);
+
+  // 处理代码块样式
+  await handleCodeBlocks(bodyElement, settings);
+
+  // 更新阅读模式下特定元素的样式
+  const readerContent = document.querySelector('.reader-content-container');
+  if (readerContent) {
+    const readerStyles = document.createElement('style');
+    readerStyles.id = 'reading-mode-dynamic-styles';
+    readerStyles.textContent = `
+      .reader-content-container p,
+      .reader-content-container li,
+      .reader-content-container blockquote,
+      .reader-content-container pre {
+        line-height: var(--reader-line-height);
+        margin-bottom: var(--reader-paragraph-spacing);
+        text-align: var(--reader-text-align);
       }
-
-      /* 确保工具栏字体大小与代码内容一致 */
-      .code-toolbar {
-        font-size: var(--code-font-size, ${settings.codeFontSize}px);
+      .reader-content-container {
+        font-family: var(--reader-font-family);
+        font-size: var(--reader-font-size);
+        background-color: var(--reader-background-color);
+        color: var(--reader-text-color); /* 定义在 CSS Modules 中 */
       }
-
-      /* 确保代码块主题颜色统一 */
-      .code-toolbar, .line-numbers {
-        border-color: var(--code-border);
-      }
-
-      /* 行号字体大小特别调整 */
-      .line-number {
-        font-size: ${Math.max(settings.codeFontSize - 2, 10)}px;
-      }
-    `;
-  }
-
-  // 应用列表样式
-  const listStyles = document.getElementById('reading-mode-list-styles');
-  if (listStyles) {
-    // 设置列表样式
-    listStyles.textContent = `
-      /* 列表样式 */
-      .enhanced-list {
-        margin: 1.5em 0;
-        padding-left: 2em;
-        list-style-position: outside;
-        font-size: ${settings.fontSize - 1}px;
-        color: ${settings.theme === 'dark' ? '#adbac7' : '#24292f'};
-      }
-
-      .enhanced-list-item {
-        margin: 0.75em 0;
-        padding-left: 0.5em;
-        position: relative;
-        line-height: ${settings.lineHeight + 0.1};
-      }
-
-      /* 无序列表样式 */
-      .enhanced-unordered-list {
-        list-style: none;
-      }
-
-      .enhanced-unordered-list > .enhanced-list-item {
-        padding-left: 1.75em;
-        position: relative;
-      }
-
-      .enhanced-unordered-list > .enhanced-list-item::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 0.65em;
-        width: 8px;
-        height: 8px;
-        background-color: ${settings.theme === 'dark' ? '#539bf5' : '#0969da'};
-        border-radius: 50%;
-        transform: scale(0.8);
-        transition: transform 0.2s ease, background-color 0.2s ease;
-      }
-
-      .enhanced-unordered-list > .enhanced-list-item:hover::before {
-        transform: scale(1);
-        background-color: ${settings.theme === 'dark' ? '#6cb6ff' : '#0550ae'};
-      }
-
-      /* 有序列表样式 */
-      .enhanced-ordered-list {
-        list-style: none;
-        counter-reset: item;
-      }
-
-      .enhanced-ordered-list > .enhanced-list-item {
-        counter-increment: item;
-        padding-left: 0.5em;
-      }
-
-      .enhanced-ordered-list > .enhanced-list-item::before {
-        content: counter(item) ".";
-        position: absolute;
-        left: -1.75em;
-        top: 0;
-        color: ${settings.theme === 'dark' ? '#539bf5' : '#0969da'};
-        font-weight: 600;
-        transition: color 0.2s ease;
-      }
-
-      .enhanced-ordered-list > .enhanced-list-item:hover::before {
-        color: ${settings.theme === 'dark' ? '#6cb6ff' : '#0550ae'};
-      }
-
-      /* 嵌套列表样式 */
-      .enhanced-list .enhanced-list {
-        margin: 0.75em 0 0.75em 0.5em;
+      .dark .reader-content-container {
+        color: var(--reader-dark-text-color);
       }
     `;
-  }
-
-  const container = document.getElementById('reading-mode-container');
-
-  // 处理媒体元素
-  handleMediaElements(container, settings.showImages);
-
-  // 处理代码块 - 初始化时需要完全处理
-  await handleCodeBlocks(container, settings, true);
-
-  // 使用工具模块中的函数更新 CSS 变量
-  // 从 utils.ts 导入的 updateReadingModeStyles 函数
-  import('./utils').then(({ updateReadingModeStyles }) => {
-    updateReadingModeStyles(settings, isReadingMode);
-  }).catch(error => {
-    console.error('加载样式工具时发生错误:', error);
-  });
-
-  // 合并基础样式和代码主题样式
-  style.textContent = `
-    ${generateCodeThemeStyles(settings.codeTheme, settings)}
-
-    /* 基础样式 */
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: var(--reading-bg-color) !important;
-      color: var(--reading-text-color);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start; /* 确保内容从顶部开始 */
-      font-size: var(--reading-font-size) !important;
-    }
-
-    /* 阅读容器样式 */
-    #reading-mode-container {
-      box-sizing: border-box;
-      width: var(--reading-page-width);
-      padding: 2rem;
-      margin: ${settings.showDirectory ? '0 0 0 250px' : '0 auto'};
-      font-size: var(--reading-font-size) !important;
-      line-height: var(--reading-line-height);
-      letter-spacing: var(--reading-letter-spacing);
-      text-align: ${settings.textAlign};
-      font-family: var(--reading-font-family);
-      background-color: var(--reading-content-bg-color) !important;
-      color: var(--reading-text-color);
-      transition: all 0.3s ease;
-      box-shadow: var(--reading-content-shadow);
-      border-radius: 8px;
-    }
-
-    /* 确保所有文本元素都使用正确的字体大小 */
-    #reading-mode-container * {
-      font-size: inherit;
-    }
-
-    /* 响应式布局 */
-    @media screen and (max-width: ${settings.pageWidth + 250}px) {
-      #reading-mode-toc {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-      }
-
-      #reading-mode-toc:hover {
-        transform: translateX(0);
-      }
-
-      #reading-mode-container {
-        width: min(${settings.pageWidth}px, 100vw - 4rem);
-        margin: 0 auto !important; /* 强制居中，覆盖之前的设置 */
-        padding: 2rem;
-      }
-    }
-
-    @media screen and (max-width: 600px) {
-      #reading-mode-container {
-        width: calc(100vw - 2rem);
-        margin: 0 auto;
-        padding: 1rem;
-      }
-    }
-
-    /* 文章标题样式 */
-    #reading-mode-container h1:first-child {
-      font-size: calc(var(--reading-font-size) * 1.8) !important;
-      font-weight: 700;
-      margin: 0 0 1em;
-      line-height: 1.2;
-      color: var(--reading-heading-color);
-      letter-spacing: -0.02em;
-    }
-
-    /* 标题层级样式 */
-    #reading-mode-container h2 {
-      font-size: calc(var(--reading-font-size) * 1.5) !important;
-      font-weight: 600;
-      margin: 2em 0 0.8em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-      letter-spacing: -0.01em;
-      border-bottom: 1px solid var(--reading-border-color);
-      padding-bottom: 0.3em;
-    }
-
-    #reading-mode-container h3 {
-      font-size: calc(var(--reading-font-size) * 1.3) !important;
-      font-weight: 600;
-      margin: 1.8em 0 0.7em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-    }
-
-    #reading-mode-container h4 {
-      font-size: calc(var(--reading-font-size) * 1.1) !important;
-      font-weight: 600;
-      margin: 1.5em 0 0.7em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-    }
-
-    #reading-mode-container h5, #reading-mode-container h6 {
-      font-size: calc(var(--reading-font-size) * 1.05) !important;
-      font-weight: 600;
-      margin: 1.2em 0 0.5em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-    }
-
-    /* 段落样式 */
-    #reading-mode-container p {
-      margin: 0;
-      margin-bottom: ${settings.paragraphSpacing}em;
-      line-height: ${settings.lineSpacing};
-      letter-spacing: ${settings.letterSpacing}px;
-      opacity: 0.95;
-      text-indent: ${settings.firstLineIndent ? '2em' : '0'};
-      font-size: var(--reading-font-size) !important;
-    }
-
-    /* 覆盖特殊段落的缩进 */
-    #reading-mode-container blockquote p,
-    #reading-mode-container li p,
-    #reading-mode-container .no-indent {
-      text-indent: 0;
-    }
-
-    /* 列表样式优化 */
-    #reading-mode-container ul,
-    #reading-mode-container ol {
-      margin: 1.2em 0;
-      padding-left: 2.5em;
-      line-height: ${settings.lineSpacing}; /* 与段落保持一致的行间距 */
-      list-style-position: outside;
-      font-size: var(--reading-font-size) !important;
-    }
-
-    #reading-mode-container li {
-      margin: 0.6em 0;
-      padding-left: 0.3em;
-      position: relative;
-      font-size: var(--reading-font-size) !important;
-    }
-
-    #reading-mode-container ul {
-      list-style: none;
-    }
-
-    #reading-mode-container ul > li {
-      padding-left: 1.5em;
-    }
-
-    #reading-mode-container ul > li::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0.6em;
-      width: 6px;
-      height: 6px;
-      background-color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-      border-radius: 50%;
-      transform: scale(0.75);
-    }
-
-    #reading-mode-container ol {
-      list-style: none;
-      counter-reset: item;
-    }
-
-    #reading-mode-container ol > li {
-      counter-increment: item;
-    }
-
-    #reading-mode-container ol > li::before {
-      content: counter(item) ".";
-      position: absolute;
-      left: -1.5em;
-      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-      font-weight: 600;
-    }
-
-    #reading-mode-container ul ul,
-    #reading-mode-container ul ol,
-    #reading-mode-container ol ul,
-    #reading-mode-container ol ol {
-      margin: 0.5em 0 0.5em 1em;
-    }
-
-    #reading-mode-container ol ol {
-      counter-reset: subitem;
-    }
-
-    #reading-mode-container ol ol > li {
-      counter-increment: subitem;
-    }
-
-    #reading-mode-container ol ol > li::before {
-      content: counter(subitem, lower-alpha) ".";
-      color: ${settings.theme === 'dark' ? '#93c5fd' : '#60a5fa'};
-    }
-
-    #reading-mode-container li > p {
-      margin: 0.25em 0 !important;
-      text-indent: 0 !important;
-    }
-
-    #reading-mode-container li::marker {
-      color: ${settings.theme === 'dark' ? '#808080' : '#666666'};
-    }
-
-    /* 引用块样式优化 */
-    #reading-mode-container blockquote {
-      margin: 2em 0;
-      padding: 1em 2em;
-      border-left: 4px solid var(--reading-blockquote-border);
-      background-color: var(--reading-code-bg-color);
-      color: var(--reading-blockquote-color);
-      font-style: italic;
-      border-radius: 0.25em;
-      transition: all 0.3s ease;
-      font-size: var(--reading-font-size) !important;
-    }
-
-    #reading-mode-container blockquote p {
-      margin: 0.5em 0;
-      text-indent: 0;
-    }
-
-    /* 链接样式优化 */
-    #reading-mode-container a {
-      color: var(--reading-link-color);
-      text-decoration: none;
-      transition: all 0.2s ease;
-      border-bottom: 1px solid transparent;
-      font-size: inherit !important;
-    }
-
-    #reading-mode-container a:hover {
-      color: ${settings.theme === 'dark' ? '#93c5fd' : '#2563eb'};
-      border-bottom-color: currentColor;
-    }
-
-    /* 图片容器样式 */
-    #reading-mode-container figure {
-      margin: 2em 0;
-      text-align: center;
-    }
-
-    #reading-mode-container figcaption {
-      margin-top: 0.8em;
-      font-size: 0.9em;
-      color: ${settings.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-      font-style: italic;
-    }
-
-    /* 图片样式优化 */
-    #reading-mode-container img {
-      max-width: 100%;
-      height: auto;
-      margin: 0 auto;
-      display: block;
-      border-radius: 0.5em;
-      box-shadow: ${settings.theme === 'dark' ?
-      '0 4px 6px rgba(0, 0, 0, 0.3)' :
-      '0 4px 6px rgba(0, 0, 0, 0.1)'};
-      transition: all 0.3s ease;
-    }
-
-    /* 水平分割线样式 */
-    #reading-mode-container hr {
-      margin: 2.5em 0;
-      border: none;
-      height: 1px;
-      background: ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
-      transition: background-color 0.3s ease;
-    }
-
-    /* 文字选择样式 */
-    #reading-mode-container ::selection {
-      background-color: ${settings.theme === 'dark' ? '#4a5d7c' : '#bfdbfe'};
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#1e40af'};
-    }
-
-    /* 滚动条样式 */
-    #reading-mode-container::-webkit-scrollbar {
-      width: 12px;
-    }
-
-    #reading-mode-container::-webkit-scrollbar-track {
-      background: ${settings.theme === 'dark' ? '#2d2d2d' : '#f1f1f1'};
-      border-radius: 6px;
-    }
-
-    #reading-mode-container::-webkit-scrollbar-thumb {
-      background: ${settings.theme === 'dark' ? '#404040' : '#c1c1c1'};
-      border-radius: 6px;
-      border: 3px solid ${settings.theme === 'dark' ? '#2d2d2d' : '#f1f1f1'};
-    }
-
-    #reading-mode-container::-webkit-scrollbar-thumb:hover {
-      background: ${settings.theme === 'dark' ? '#4a4a4a' : '#a1a1a1'};
-    }
-
-    /* 目录样式 */
-    #reading-mode-toc {
-      position: fixed;
-      left: 0;
-      top: 0;
-      height: 100vh;
-      width: 250px;
-      overflow-y: auto;
-      background-color: ${settings.theme === 'dark' ? '#2a2a2a' : '#ffffff'};
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-      padding: 20px;
-      font-size: 14px;
-      z-index: 1000;
-      transition: all 0.3s ease;
-      border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
-    }
-
-    #reading-mode-toc .toc-title {
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid ${settings.theme === 'dark' ? '#404040' : '#eee'};
-      color: ${settings.theme === 'dark' ? '#fff' : '#333'};
-    }
-
-    #reading-mode-toc .toc-empty {
-      color: ${settings.theme === 'dark' ? '#888' : '#999'};
-      font-style: italic;
-      text-align: center;
-      padding: 20px 0;
-    }
-
-    #reading-mode-toc::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    #reading-mode-toc::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.2);
-      border-radius: 2px;
-    }
-
-    #reading-mode-toc ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    #reading-mode-toc li {
-      margin: 4px 0;
-      line-height: 1.4;
-    }
-
-    #reading-mode-toc a {
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#333'};
-      text-decoration: none;
-      display: block;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-      border-left: 2px solid transparent;
-    }
-
-    #reading-mode-toc a:hover {
-      background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
-      border-left-color: ${settings.theme === 'dark' ? '#666' : '#ddd'};
-    }
-
-    #reading-mode-toc a.active {
-      background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
-      border-left-color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-    }
-
-    #reading-mode-toc .toc-level-1 { margin-left: 0; }
-    #reading-mode-toc .toc-level-2 { margin-left: 12px; }
-    #reading-mode-toc .toc-level-3 { margin-left: 24px; }
-    #reading-mode-toc .toc-level-4 { margin-left: 36px; }
-    #reading-mode-toc .toc-level-5 { margin-left: 48px; }
-    #reading-mode-toc .toc-level-6 { margin-left: 60px; }
-
-    /* 调整阅读容器的边距，为目录留出空间 */
-    #reading-mode-container {
-      margin-left: 250px !important;
-      width: calc(${settings.pageWidth}px - 250px) !important;
-    }
-
-    @media screen and (max-width: ${settings.pageWidth + 250}px) {
-      #reading-mode-toc {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-      }
-
-      #reading-mode-toc:hover {
-        transform: translateX(0);
-      }
-
-      #reading-mode-container {
-        margin-left: 0 !important;
-        width: ${settings.pageWidth}px !important;
-      }
-    }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background-color: ${BACKGROUND_COLORS[settings.backgroundColor]};
-    }
-
-    #reading-mode-title {
-      font-size: 2em;
-      font-weight: bold;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
-      margin: 1em 0 1.5em;
-      padding: 0;
-      text-align: center;
-      font-family: ${FONT_FAMILIES[settings.fontFamily]};
-    }
-
-    .toc-article-title {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
-      margin: 0 0 1em;
-      padding: 0 1em;
-      text-align: center;
-      font-family: ${FONT_FAMILIES[settings.fontFamily]};
-      border-bottom: 1px solid ${settings.theme === 'dark' ? '#666666' : '#dddddd'};
-      padding-bottom: 0.5em;
-    }
-
-    .toc-title {
-      font-size: 1.2em;
-      font-weight: bold;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
-      margin: 1em 0;
-      padding: 0 1em;
-      text-align: center;
-      font-family: ${FONT_FAMILIES[settings.fontFamily]};
-    }
-
-    /* 段落间距样式 */
-    #reading-mode-container p {
-      margin-bottom: ${settings.paragraphSpacing}em;
-    }
-
-    /* 首行缩进样式 */
-    #reading-mode-container p {
-      text-indent: ${settings.firstLineIndent ? '2em' : '0'};
-    }
-  `;
-
-  // 移除工具栏（如果存在）
-  const toolbar = document.getElementById('reading-mode-toolbar');
-  if (toolbar) {
-    toolbar.remove();
+    document.head.appendChild(readerStyles);
   }
 }
 
-function createFloatingButton() {
-  // 创建退出按钮
-  const button = document.createElement('button');
-  button.id = 'reading-mode-exit-button';
-  button.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 6L6 18"></path>
-      <path d="M6 6l12 12"></path>
-    </svg>
-    <span>退出阅读模式</span>
-  `;
-  button.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    padding: 10px 20px;
-    background-color: var(--reading-accent-color, #3b82f6);
-    color: white;
-    border: none;
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    opacity: 0.85;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    backdrop-filter: blur(4px);
-    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
-  `;
-
-  // 添加动画样式
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translate(-50%, 20px);
-      }
-      to {
-        opacity: 0.85;
-        transform: translate(-50%, 0);
-      }
-    }
-  `;
-  document.head.appendChild(style);
-
-  // 添加事件监听器
-  button.addEventListener('mouseover', () => {
-    button.style.opacity = '1';
-    button.style.transform = 'translateX(-50%) scale(1.05)';
-    button.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-  });
-
-  button.addEventListener('mouseout', () => {
-    button.style.opacity = '0.85';
-    button.style.transform = 'translateX(-50%) scale(1)';
-    button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-  });
-
-  button.addEventListener('click', () => {
-    // 添加退出动画
-    document.getElementById('reading-mode-container')?.classList.add('exit-animation');
-
-    // 延迟退出，以便显示动画
-    setTimeout(() => {
-      disableReadingMode();
-    }, 300);
-  });
-
-  document.body.appendChild(button);
-}
-
-function removeFloatingButton() {
-  const button = document.getElementById('reading-mode-exit-button');
-  if (button) {
-    button.remove();
-  }
-}
-
-async function applyAutoSpacing() {
-  const container = document.getElementById('reading-mode-container');
-  if (!container) return;
-
-  try {
-    // 暂时禁用 pangu 自动间距功能
-    // 后续可以重新实现或使用其他方法
-    return true;
-  } catch (error) {
-    console.error('应用自动间距时发生错误:', error);
-    return false;
-  }
-}
+// 将 createFloatingButton 和 removeFloatingButton 移动到 src/content/ui/readerFloatingButton.ts
 
 async function enableReadingMode() {
-  // 检查是否已经处于阅读模式，避免重复进入
-  if (isReadingMode) {
-    console.log('已经处于阅读模式，无需重复进入');
-    return;
-  }
+  if (isReadingMode) return;
 
-  if (!document.body) {
-    console.error('文档体不存在，无法启用阅读模式');
-    return;
-  }
+  const originalBodyClassName = document.body.className;
+  const originalHtmlClassName = document.documentElement.className;
+  const originalBodyStyle = document.body.style.cssText;
+  const originalHtmlStyle = document.documentElement.style.cssText;
 
-  let loadingToast;
+  // 存储原始HTML
+  originalContent = document.documentElement.outerHTML;
 
-  try {
-    console.log('开始启用阅读模式');
+  // 恢复到初始的overflow状态
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
 
-    // 显示加载提示
-    loadingToast = Toast.info('正在准备阅读模式...', {
-      duration: 0,
-      showProgress: true
-    });
+  // 动态导入 Readability，减少初始加载体积
+  const { Readability } = await import('@mozilla/readability');
+  const { ExtractorFactory } = await import('./extractors');
 
-    // 开始性能监控
-    performanceMonitor.start('enableReadingMode');
+  // 使用 JSDOM 解析原始 HTML，避免直接操作活动 DOM
+  // const dom = new JSDOM(originalContent);
+  // const documentClone = dom.window.document;
 
-    // 保存原始内容
-    if (!originalContent) {
-      originalContent = document.documentElement.innerHTML;
-    }
+  // 尝试提取主要内容
+  const reader = new Readability(document);
+  const article = reader.parse();
 
+  if (article) {
+    // 获取用户设置
     const settings = await fetchSettings();
 
-    // 导入内容处理管道
-    const { ContentPipeline } = await import('./pipeline/contentPipeline');
-
-    // 创建文档克隆以避免修改原始DOM
-    const docClone = document.implementation.createHTMLDocument();
-    docClone.documentElement.innerHTML = originalContent;
-
-    console.log('开始使用内容处理管道处理页面...');
-
-    // 创建新的内容处理管道实例，以便传入自定义选项
-    const pipeline = new ContentPipeline({
-      extractorOptions: {
-        defuddleOptions: {
-          debug: settings.debug || false,
-          url: window.location.href
-        }
-      },
-      converterOptions: {
-        headingStyle: "atx",
-        codeBlockStyle: "fenced",
-        emDelimiter: "*",
-        bulletListMarker: "-"
-      },
-      rendererOptions: {
-        html: true,
-        linkify: true,
-        typographer: true,
-        breaks: false,
-        plugins: {
-          anchor: true,
-          toc: settings.showDirectory,
-          highlightjs: true,
-          taskLists: true
-        }
-      }
-    });
-
-    // 使用内容处理管道
-    const result = await pipeline.process(docClone);
-
-    console.log('内容处理完成');
-    console.log('标题:', result.title);
-    console.log('元数据:', result.metadata);
-
     // 创建阅读模式容器
-    const container = document.createElement('div');
-    container.id = 'reading-mode-container';
-    container.className = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
+    const readerContainer = document.createElement('div');
+    readerContainer.id = 'panbo-reader-view';
+    readerContainer.className = 'panbo-reader-view-container'; // 添加类名以便样式控制
+    readerContainer.setAttribute('data-theme', settings.theme); // 应用主题类
+    document.body.appendChild(readerContainer);
 
-    // 添加文章标题
-    const titleElement = document.createElement('h1');
-    titleElement.id = 'reading-mode-title';
-    titleElement.textContent = result.title || document.title;
-    container.appendChild(titleElement);
+    // 注入阅读模式CSS
+    const readerModeCss = document.createElement('style');
+    readerModeCss.id = 'panbo-reader-mode-css';
+    readerModeCss.textContent = `
+      html.reader-mode-active, body.reader-mode-active {
+        overflow: hidden !important;
+      }
+      .panbo-reader-view-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 99999;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background-color: var(--reader-background-color); /* 使用CSS变量 */
+        color: var(--reader-text-color);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
 
-    // 添加文章内容
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'reading-mode-content';
-    contentDiv.innerHTML = result.html;
+      /* 针对滚动条的样式，使其更美观 */
+      .panbo-reader-view-container::-webkit-scrollbar {
+        width: 8px;
+        background-color: transparent;
+      }
+      .panbo-reader-view-container::-webkit-scrollbar-thumb {
+        background-color: #ccc;
+        border-radius: 4px;
+      }
+      .panbo-reader-view-container::-webkit-scrollbar-thumb:hover {
+        background-color: #aaa;
+      }
 
-    // 将处理后的内容添加到容器
-    container.appendChild(contentDiv);
+      .panbo-reader-view-container .reader-content-wrapper {
+        max-width: 800px; /* 限制内容宽度，提供舒适阅读体验 */
+        margin: 0 auto;
+        padding: 40px 20px; /* 增加内边距 */
+        box-sizing: border-box;
+      }
 
-    // 清空并重建页面
-    document.body.innerHTML = '';
-    document.body.appendChild(container);
+      .panbo-reader-view-container h1, .panbo-reader-view-container h2, .panbo-reader-view-container h3, .panbo-reader-view-container h4, .panbo-reader-view-container h5, .panbo-reader-view-container h6 {
+        font-family: var(--reader-font-family);
+        color: inherit;
+        line-height: 1.3;
+        margin-top: 1.5em;
+        margin-bottom: 0.8em;
+      }
+      .panbo-reader-view-container h1 { font-size: 2.2em; }
+      .panbo-reader-view-container h2 { font-size: 1.8em; }
+      .panbo-reader-view-container h3 { font-size: 1.5em; }
+      .panbo-reader-view-container h4 { font-size: 1.2em; }
 
-    // 应用样式
-    try {
+      .panbo-reader-view-container p, .panbo-reader-view-container li {
+        font-size: var(--reader-font-size);
+        line-height: var(--reader-line-height);
+        margin-bottom: var(--reader-paragraph-spacing);
+        text-align: var(--reader-text-align);
+        font-family: var(--reader-font-family);
+        color: inherit;
+      }
+
+      .panbo-reader-view-container a {
+        color: var(--reader-link-color);
+        text-decoration: none;
+        border-bottom: 1px solid var(--reader-link-color);
+        transition: border-color 0.2s ease;
+      }
+      .panbo-reader-view-container a:hover {
+        border-bottom-color: transparent;
+      }
+
+      .panbo-reader-view-container blockquote {
+        border-left: 4px solid var(--reader-quote-border-color);
+        padding-left: 1em;
+        margin: 1em 0;
+        color: var(--reader-quote-text-color);
+        font-style: italic;
+      }
+
+      .panbo-reader-view-container img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.5em auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+
+      .panbo-reader-view-container pre {
+        background-color: var(--reader-code-background-color);
+        padding: 1em;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: var(--reader-code-font-family);
+        font-size: var(--reader-code-font-size);
+        line-height: 1.5;
+        color: var(--reader-code-text-color);
+        margin-bottom: var(--reader-paragraph-spacing);
+      }
+      .panbo-reader-view-container pre code {
+        font-size: var(--reader-code-font-size);
+        line-height: 1.5;
+      }
+
+      /* 暗色模式变量 */
+      .dark {
+        --reader-text-color: #e0e0e0;
+        --reader-link-color: #90caf9;
+        --reader-quote-border-color: #616161;
+        --reader-quote-text-color: #bdbdbd;
+        --reader-code-background-color: #282c34;
+        --reader-code-text-color: #abb2bf;
+      }
+
+      /* 亮色模式变量 */
+      .light {
+        --reader-text-color: #333;
+        --reader-link-color: #1a73e8;
+        --reader-quote-border-color: #e0e0e0;
+        --reader-quote-text-color: #666;
+        --reader-code-background-color: #f6f8fa;
+        --reader-code-text-color: #24292e;
+      }
+    `;
+    document.head.appendChild(readerModeCss);
+
+    // 禁用页面原有滚动，只允许阅读模式容器滚动
+    document.documentElement.classList.add('reader-mode-active');
+    document.body.classList.add('reader-mode-active');
+
+    // 生成并插入 HTML
+    const extractor = await ExtractorFactory.createExtractor(window.location.href);
+    const extractedArticle = await extractor.extract(document, window.location.href);
+
+    if (extractedArticle && extractedArticle.content) {
+      const contentWrapper = document.createElement('div');
+      contentWrapper.className = 'reader-content-wrapper';
+      contentWrapper.innerHTML = `
+        <h1 class="reader-article-title">${extractedArticle.title || document.title}</h1>
+        <div class="reader-article-meta">
+          ${extractedArticle.author ? `<span>作者: ${extractedArticle.author}</span>` : ''}
+        </div>
+        <div class="reader-article-content">${extractedArticle.content}</div>
+      `;
+      readerContainer.appendChild(contentWrapper);
+
+      // 应用设置
       await applyStyles(settings);
-    } catch (error) {
-      console.warn('应用样式时发生错误:', error);
-    }
 
-    // 生成目录（如果启用）
-    if (settings.showDirectory) {
-      try {
-        generateTableOfContents(container, result.title || document.title);
-      } catch (error) {
-        console.warn('生成目录时发生错误:', error);
-      }
-    }
+      // 自动高亮代码块
+      await handleCodeBlocks(readerContainer, settings);
 
-    // 创建退出按钮
-    try {
       createFloatingButton();
-    } catch (error) {
-      console.warn('创建退出按钮时发生错误:', error);
+
+      isReadingMode = true;
+      console.log('阅读模式已开启');
+    } else {
+      console.error('未能成功提取文章内容。');
+      disableReadingMode(); // 提取失败则关闭阅读模式
+      alert('无法进入阅读模式，请刷新页面后重试。');
     }
-
-    // 处理媒体元素
-    try {
-      handleMediaElements(container, settings.showImages);
-    } catch (error) {
-      console.warn('处理媒体元素时发生错误:', error);
-    }
-
-    // 处理代码块
-    try {
-      await handleCodeBlocks(container, settings, true);
-    } catch (error) {
-      console.warn('处理代码块时发生错误:', error);
-    }
-
-    // 应用自动间距
-    try {
-      await applyAutoSpacing();
-    } catch (error) {
-      console.warn('应用自动间距时发生错误:', error);
-    }
-
-    // 初始化文本选择工具栏
-    try {
-      if (!textSelectionToolbar) {
-        textSelectionToolbar = new TextSelectionToolbar({
-          options: defaultToolbarOptions,
-          position: 'top',
-          theme: settings.theme,
-          delay: 300
-        });
-      }
-    } catch (error) {
-      console.warn('初始化文本选择工具栏时发生错误:', error);
-    }
-
-    isReadingMode = true;
-
-    // 结束性能监控
-    const perfRecord = performanceMonitor.end('enableReadingMode');
-    console.info(`阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
-
-    // 关闭加载提示并显示成功提示
-    if (loadingToast) loadingToast.close();
-    Toast.success('阅读模式已启用', {
-      position: 'top',
-      duration: 2000
-    });
-
-  } catch (error) {
-    // 显示错误提示
-    if (loadingToast) loadingToast.close();
-    Toast.error(`启用阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
-      position: 'top',
-      duration: 3000
-    });
-    console.error('启用阅读模式时发生错误:', error);
-
-    // 如果新的内容处理管道失败，回退到旧的处理方式
-    try {
-      console.warn('新的内容处理管道失败，尝试回退到旧的处理方式');
-      await enableReadingModeLegacy();
-    } catch (fallbackError) {
-      console.error('回退到旧的处理方式也失败:', fallbackError);
-      throw error; // 抛出原始错误
-    }
+  } else {
+    console.error('Readability 无法解析当前页面。');
+    disableReadingMode(); // 解析失败则关闭阅读模式
+    alert('无法进入阅读模式，请刷新页面后重试。');
   }
 }
-
-// 旧版本的阅读模式启用函数，作为回退方案
-async function enableReadingModeLegacy() {
-  console.log('使用旧版本的阅读模式处理方式');
-
-  if (!document.body) {
-    console.error('文档体不存在，无法启用阅读模式');
-    return;
-  }
-
-  let loadingToast;
-
-  try {
-    // 显示加载提示
-    loadingToast = Toast.info('正在准备阅读模式(旧版)...', {
-      duration: 0,
-      showProgress: true
-    });
-
-    // 开始性能监控
-    performanceMonitor.start('enableReadingModeLegacy');
-
-    // 预加载工作线程
-    try {
-      await getWorkerManager().initialize();
-      console.log('工作线程初始化成功');
-    } catch (error) {
-      console.warn('初始化工作线程失败，将在主线程中处理:', error);
-    }
-
-    // 保存原始内容
-    if (!originalContent) {
-      originalContent = document.documentElement.innerHTML;
-    }
-
-    const settings = await fetchSettings();
-
-    // 使用增强的内容提取器
-    performanceMonitor.start('contentExtraction');
-    console.log('开始提取页面内容');
-
-    let extractedContent;
-    try {
-      // 尝试使用 Defuddle 提取器
-      try {
-        extractedContent = await defuddleExtractor.extractFromHTML(originalContent, window.location.href);
-        console.log('Defuddle 内容提取完成');
-      } catch (defuddleError) {
-        // 如果 Defuddle 失败，回退到 Readability
-        console.warn('Defuddle 提取失败，回退到 Readability:', defuddleError);
-        extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
-        console.log('Readability 内容提取完成');
-      }
-    } catch (extractError) {
-      console.error('内容提取过程中发生错误:', extractError);
-      if (loadingToast) loadingToast.close();
-      Toast.error('内容提取失败: ' + (extractError instanceof Error ? extractError.message : '未知错误'), {
-        position: 'top',
-        duration: 3000
-      });
-      throw new Error('内容提取失败');
-    }
-    performanceMonitor.end('contentExtraction');
-
-    if (!extractedContent || !extractedContent.success) {
-      console.error('无法解析页面内容:', extractedContent?.error || '未知原因');
-      if (loadingToast) loadingToast.close();
-      Toast.error('无法解析页面内容', {
-        position: 'top',
-        duration: 3000
-      });
-      throw new Error('无法解析页面内容');
-    }
-
-    // 创建阅读模式容器
-    const container = document.createElement('div');
-    container.id = 'reading-mode-container';
-    container.className = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
-
-    // 添加文章标题
-    const titleElement = document.createElement('h1');
-    titleElement.id = 'reading-mode-title';
-    titleElement.textContent = extractedContent.title || document.title;
-    container.appendChild(titleElement);
-
-    // 添加文章内容
-    const contentDiv = document.createElement('div');
-
-    // 特殊站点处理
-    if (window.location.href.includes('juejin.cn')) {
-      console.log('检测到掘金网站，应用特殊处理');
-      // 处理掘金网站的内容
-      extractedContent.content = handleJuejinContent(extractedContent.content);
-    }
-
-    contentDiv.innerHTML = extractedContent.content;
-    contentDiv.className = 'reading-mode-content';
-
-    // 应用增强处理 - 每个增强处理都包裹在 try-catch 中
-    try {
-      // 增强表格
-      tableExtractor.enhanceAllTables(contentDiv);
-      tableExtractor.fixTableStructure(contentDiv);
-    } catch (error) {
-      console.warn('增强表格时发生错误:', error);
-    }
-
-    try {
-      // 增强图片和媒体
-      if (settings.showImages) {
-        // 使用增强型媒体提取器
-        enhancedMediaExtractor.enhanceAllImages(contentDiv);
-        enhancedMediaExtractor.enhanceVideos(contentDiv);
-        enhancedMediaExtractor.enhanceIframes(contentDiv);
-        enhancedMediaExtractor.processBackgroundImages(contentDiv);
-      } else {
-        // 如果不显示图片，隐藏所有媒体元素
-        handleMediaElements(contentDiv, false);
-      }
-    } catch (error) {
-      console.warn('增强媒体元素时发生错误:', error);
-      // 如果增强型媒体提取器失败，回退到原始媒体提取器
-      try {
-        if (settings.showImages) {
-          console.log('尝试使用原始媒体提取器');
-          mediaExtractor.enhanceAllImages(contentDiv);
-          mediaExtractor.enhanceVideos(contentDiv);
-          mediaExtractor.enhanceIframes(contentDiv);
-          mediaExtractor.processBackgroundImages(contentDiv);
-        }
-      } catch (fallbackError) {
-        console.error('原始媒体提取器也失败:', fallbackError);
-      }
-    }
-
-    try {
-      // 增强代码块
-      console.log('开始增强内容中的代码块');
-      codeExtractor.enhanceAllCodeBlocks(contentDiv);
-      codeExtractor.enhanceInlineCode(contentDiv);
-    } catch (error) {
-      console.warn('增强代码块时发生错误:', error);
-    }
-
-    try {
-      // 增强列表
-      listExtractor.fixListStructure(contentDiv);
-      listExtractor.enhanceAllLists(contentDiv);
-    } catch (error) {
-      console.warn('增强列表时发生错误:', error);
-    }
-
-    // 将处理后的内容添加到容器
-    container.appendChild(contentDiv);
-
-    // 清空并重建页面
-    document.body.innerHTML = '';
-    document.body.appendChild(container);
-
-    // 应用样式
-    try {
-      await applyStyles(settings);
-    } catch (error) {
-      console.warn('应用样式时发生错误:', error);
-    }
-
-    // 生成目录（如果启用）
-    if (settings.showDirectory) {
-      try {
-        generateTableOfContents(container, extractedContent.title || document.title);
-      } catch (error) {
-        console.warn('生成目录时发生错误:', error);
-      }
-    }
-
-    // 创建退出按钮
-    try {
-      createFloatingButton();
-    } catch (error) {
-      console.warn('创建退出按钮时发生错误:', error);
-    }
-
-    // 初始化文本选择工具栏
-    try {
-      if (!textSelectionToolbar) {
-        textSelectionToolbar = new TextSelectionToolbar({
-          options: defaultToolbarOptions,
-          position: 'top',
-          theme: settings.theme,
-          delay: 300
-        });
-      }
-    } catch (error) {
-      console.warn('初始化文本选择工具栏时发生错误:', error);
-    }
-
-    isReadingMode = true;
-
-    // 结束性能监控
-    const perfRecord = performanceMonitor.end('enableReadingModeLegacy');
-    console.info(`旧版阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
-
-    // 关闭加载提示并显示成功提示
-    if (loadingToast) loadingToast.close();
-    Toast.success('阅读模式已启用(旧版)', {
-      position: 'top',
-      duration: 2000
-    });
-
-  } catch (error) {
-    // 显示错误提示
-    if (loadingToast) loadingToast.close();
-    Toast.error(`启用旧版阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
-      position: 'top',
-      duration: 3000
-    });
-    console.error('启用旧版阅读模式时发生错误:', error);
-    throw error;
-  } finally {
-    // 释放工作线程资源
-    try {
-      releaseWorkerManager();
-    } catch (error) {
-      console.warn('释放工作线程资源时发生错误:', error);
-    }
-  }
-}
-
-// 这些函数已被提取器模块替代，但为了兼容性保留了函数签名
-// @ts-ignore - 已被 contentExtractor 替代
-function cleanupHtml(_doc: Document) { }
-
-// @ts-ignore - 已被 listExtractor 替代
-function preserveListStyles(_doc: Document) { }
-
-// @ts-ignore - 已被 listExtractor 替代
-function processLists(_container: HTMLElement) { }
 
 function disableReadingMode() {
-  performanceMonitor.start('disableReadingMode');
+  if (!isReadingMode) return;
 
-  // 检查是否处于阅读模式
-  if (!isReadingMode || !originalContent) {
-    console.log('当前不在阅读模式中或原始内容不存在');
-    performanceMonitor.end('disableReadingMode');
-    return;
-  }
-
-  // 显示加载提示
-  const loadingToast = Toast.info('正在返回原始页面...', {
-    duration: 0,
-    showProgress: true
-  });
-
-  try {
-    // 移除浮动退出按钮
-    removeFloatingButton();
-
-    // 移除目录
-    const toc = document.getElementById('reading-mode-toc');
-    if (toc) {
-      toc.remove();
-    }
-
-    // 移除所有由阅读模式添加的样式
-    const stylesToRemove = [
-      'reading-mode-style',
-      'reading-mode-codeblock-styles',
-      'reading-mode-list-styles',
-      'reading-mode-hljs-styles',
-      'reading-mode-custom-code-styles'
-    ];
-
-    stylesToRemove.forEach(id => {
-      const styleElement = document.getElementById(id);
-      if (styleElement) {
-        styleElement.remove();
-      }
-    });
-
-    // 移除所有事件监听器
-    window.removeEventListener('scroll', handleScroll);
-    document.removeEventListener('keydown', handleKeyDown);
-
-    // 恢复原始内容
-    document.documentElement.innerHTML = originalContent;
-
-    // 重新添加初始样式，以便下次进入阅读模式时能正确加载
-    try {
-      // 添加必要的样式元素，但不添加内容
-      // 这样可以避免样式冲突，同时确保元素存在
-      const codeblockStyles = document.createElement('style');
-      codeblockStyles.id = 'reading-mode-codeblock-styles';
-      document.head.appendChild(codeblockStyles);
-
-      const listStyles = document.createElement('style');
-      listStyles.id = 'reading-mode-list-styles';
-      document.head.appendChild(listStyles);
-
-      // 添加 highlight.js 样式元素，但不添加内容
-      const hljsStyles = document.createElement('style');
-      hljsStyles.id = 'reading-mode-hljs-styles';
-      document.head.appendChild(hljsStyles);
-
-      // 添加自定义代码高亮样式元素，但不添加内容
-      const customCodeStyles = document.createElement('style');
-      customCodeStyles.id = 'reading-mode-custom-code-styles';
-      document.head.appendChild(customCodeStyles);
-
-      console.log('样式元素重置完成');
-    } catch (styleError) {
-      console.error('重置样式元素时发生错误:', styleError);
-    }
-
-    // 销毁文本选择工具栏
-    if (textSelectionToolbar) {
-      textSelectionToolbar.destroy();
-      textSelectionToolbar = null;
-    }
-
-    // 完全重置状态
-    isReadingMode = false;
+  // 恢复原始HTML内容
+  if (originalContent) {
+    document.documentElement.outerHTML = originalContent;
     originalContent = null;
-    textSelectionToolbar = null;
-
-    // 清除可能的全局事件监听器
-    window.removeEventListener('resize', handleResize);
-    window.removeEventListener('click', handleDocumentClick);
-
-    // 清除可能的定时器
-    const timers = window.setTimeout(() => { }, 0);
-    for (let i = 0; i < timers; i++) {
-      window.clearTimeout(i);
-    }
-
-    const perfRecord = performanceMonitor.end('disableReadingMode');
-    console.info(`阅读模式禁用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
-
-    // 关闭加载提示并显示成功提示
-    loadingToast.close();
-    Toast.success('已返回原始页面', {
-      position: 'top',
-      duration: 2000
-    });
-
-    console.log('阅读模式完全禁用，状态已重置');
-  } catch (error) {
-    console.error('禁用阅读模式时发生错误:', error);
-    throw error;
-  }
-}
-
-// 处理掘金网站的内容
-function handleJuejinContent(content: string): string {
-  console.log('开始处理掘金网站内容');
-
-  // 创建一个临时元素来处理内容
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = content;
-
-  // 移除标题下的大空白
-  const emptyParagraphs = tempDiv.querySelectorAll('p:empty, p:only-child:not(:has(*)):not([style]):not([class])');
-  emptyParagraphs.forEach(p => {
-    if (p.textContent?.trim() === '') {
-      p.remove();
-    }
-  });
-
-  // 处理代码块
-  const codeBlocks = tempDiv.querySelectorAll('pre[data-lang]');
-  codeBlocks.forEach(pre => {
-    // 移除掘金的代码块头部
-    const codeBlockHeader = pre.previousElementSibling;
-    if (codeBlockHeader && codeBlockHeader.classList.contains('code-block-header')) {
-      codeBlockHeader.remove();
-    }
-
-    // 移除复制按钮
-    const copyButton = pre.nextElementSibling;
-    if (copyButton && copyButton.classList.contains('copy-code-btn')) {
-      copyButton.remove();
-    }
-
-    // 确保代码块有正确的语言标记
-    const lang = pre.getAttribute('data-lang');
-    if (lang) {
-      pre.classList.add(`language-${lang}`);
-      const code = pre.querySelector('code');
-      if (code) {
-        code.classList.add(`language-${lang}`);
-      }
-    }
-  });
-
-  // 移除广告和干扰元素
-  const selectors = [
-    '.article-suspended-panel', // 悬浮面板
-    '.recommend-box', // 推荐框
-    '.comment-box', // 评论框
-    '.author-info-block', // 作者信息
-    '.article-banner', // 文章横幅
-    '.article-end', // 文章结尾
-    '.column-container', // 专栏容器
-    '.markdown-body > .copy-code-btn', // 复制代码按钮
-    '.markdown-body > .code-block-header' // 代码块头部
-  ];
-
-  selectors.forEach(selector => {
-    const elements = tempDiv.querySelectorAll(selector);
-    elements.forEach(el => el.remove());
-  });
-
-  // 移除所有内联事件处理程序，避免 CSP 错误
-  const allElements = tempDiv.querySelectorAll('*');
-  allElements.forEach(el => {
-    // 移除所有以 'on' 开头的属性（如 onclick、onmouseover 等）
-    Array.from(el.attributes).forEach(attr => {
-      if (attr.name.startsWith('on')) {
-        el.removeAttribute(attr.name);
-      }
-    });
-
-    // 移除所有内联脚本
-    if (el.tagName === 'SCRIPT') {
-      el.remove();
-    }
-
-    // 处理所有链接，确保 URL 有效
-    if (el.tagName === 'A' && el.hasAttribute('href')) {
-      const href = el.getAttribute('href');
-      if (href) {
-        // 只处理明显无效的 URL
-        if (href.includes('${') && href.includes('}')) {
-          // 包含模板字符串的 URL，可能是未处理的模板
-          el.removeAttribute('href');
-        } else if (href.startsWith('javascript:')) {
-          // 移除 JavaScript 协议的 URL
-          el.removeAttribute('href');
-        }
-      }
-    }
-  });
-
-  // 移除所有内联样式属性，避免样式冲突
-  const elementsWithStyle = tempDiv.querySelectorAll('[style]');
-  elementsWithStyle.forEach(el => {
-    // 保留一些必要的样式，如图片尺寸
-    if (el.tagName === 'IMG') {
-      // 对于图片，只保留尺寸相关的样式
-      const imgEl = el as HTMLImageElement;
-      const width = imgEl.style.width;
-      const height = imgEl.style.height;
-      el.removeAttribute('style');
-      if (width) imgEl.style.width = width;
-      if (height) imgEl.style.height = height;
-    } else {
-      // 对于其他元素，完全移除样式
-      el.removeAttribute('style');
-    }
-  });
-
-  // 只移除特定的包含模板字符串的内容
-  // 定位包含特定模式的元素，这些元素可能导致 URL 解析错误
-  const problematicDivs = tempDiv.querySelectorAll('div[class*="comment"]');
-  problematicDivs.forEach(div => {
-    const text = div.textContent || '';
-    // 只移除包含特定模式的内容，这些内容可能导致 URL 解析错误
-    if (text.includes('${') && text.includes('}') &&
-      (text.includes('return') || text.includes('this.url.match'))) {
-      // 尝试保留内容，但移除可能导致错误的部分
-      const problematicText = text.match(/\$\{.*?\}/g) || [];
-      if (problematicText.length > 0) {
-        // 如果有多个模板字符串或包含特定关键字，可能是代码片段，移除整个元素
-        if (problematicText.length > 1 ||
-          text.includes('url.match') ||
-          text.includes('getPostId') ||
-          text.includes('?return')) {
-          div.remove();
-        }
-      }
-    }
-  });
-
-  // 特别处理掘金网站的评论区域，这里常包含导致错误的代码
-  const commentBlocks = tempDiv.querySelectorAll('.comment-content, .comment-block');
-  commentBlocks.forEach(block => {
-    const blockquotes = block.querySelectorAll('blockquote');
-    blockquotes.forEach(quote => {
-      const text = quote.textContent || '';
-      if (text.includes('${') && text.includes('return')) {
-        quote.remove();
-      }
-    });
-  });
-
-  // 处理特定的导致 URL 解析错误的元素
-  const specificErrorDiv = tempDiv.querySelector('div[t-N]');
-  if (specificErrorDiv && specificErrorDiv.getAttribute('t-N')?.includes('for(;h.length>0;)s+=')) {
-    // 这是掘金网站上导致 URL 解析错误的特定元素
-    specificErrorDiv.remove();
-    console.log('移除了导致 URL 解析错误的特定元素');
   }
 
-  // 处理包含特定模式的 div 元素
-  const allDivs = tempDiv.querySelectorAll('div');
-  allDivs.forEach(div => {
-    // 检查是否包含特定属性模式
-    if (div.hasAttribute('t-N') || div.hasAttribute('t-n')) {
-      const tNValue = div.getAttribute('t-N') || div.getAttribute('t-n') || '';
-      // 检查属性值是否包含特定模式
-      if (tNValue.includes('for(') && tNValue.includes('blockquote') && tNValue.includes('return')) {
-        div.remove();
-        console.log('移除了包含特定模式的 div 元素');
-      }
-    }
-
-    // 特别处理错误信息中显示的问题元素
-    if (div.textContent) {
-      // 检查多种可能导致错误的模式
-      if ((div.textContent.includes('return $') && div.textContent.includes('getPostId')) ||
-        (div.textContent.includes('</div>') && div.textContent.includes('T-N]for') && div.textContent.includes('blockquote'))) {
-        // 这是错误信息中显示的元素，包含了特定的代码片段
-        div.remove();
-        console.log('移除了错误信息中显示的问题元素');
-      }
-
-      // 检查错误截图中显示的特定元素
-      if (div.textContent.includes('/div>,T-N]for(;h.length>0;)s+=')) {
-        div.remove();
-        console.log('移除了错误截图中的特定元素');
-      }
-    }
-  });
-
-  // 直接定位并处理错误信息中的元素
-  // 使用属性选择器可能会导致错误，所以我们使用更安全的方法
-  const divElements = tempDiv.querySelectorAll('div[t-N]');
-  divElements.forEach(div => {
-    const attrValue = div.getAttribute('t-N');
-    if (attrValue && attrValue.includes('for(;h.length>0;)s+=') &&
-      attrValue.includes('</blockquote>') &&
-      attrValue.includes('return $getPostId()')) {
-      div.remove();
-      console.log('移除了特定的错误元素');
-    }
-  });
-
-  // 处理包含特定内容的元素
-  // 为了避免遍历所有元素带来的性能问题，我们只检查可能包含问题代码的元素
-  const potentialProblemElements = tempDiv.querySelectorAll('div, blockquote, pre, code');
-  potentialProblemElements.forEach(el => {
-    if (el.textContent) {
-      // 检查多种可能导致错误的模式
-      if (el.textContent.includes('url.match') && el.textContent.includes('return')) {
-        // 如果是代码块内的内容，不要移除，因为这可能是正常的代码示例
-        if (el.tagName !== 'PRE' && el.tagName !== 'CODE' && !el.closest('pre') && !el.closest('code')) {
-          // 只移除不在代码块内的内容
-          el.remove();
-          console.log('移除了包含特定内容的元素');
-        }
-      }
-
-      // 检查错误信息中的特定模式
-      if (el.textContent.includes('getPostId') && el.textContent.includes('d=this.url.match')) {
-        if (el.tagName !== 'PRE' && el.tagName !== 'CODE' && !el.closest('pre') && !el.closest('code')) {
-          el.remove();
-          console.log('移除了包含 getPostId 的元素');
-        }
-      }
-    }
-  });
-
-  // 最后的安全检查，处理可能遗漏的问题元素
-  try {
-    // 尝试找到并处理错误截图中的元素
-    const htmlContent = tempDiv.innerHTML;
-    if (htmlContent.includes('getPostId') && htmlContent.includes('url.match')) {
-      // 如果还有未处理的问题元素，尝试使用正则表达式删除
-      const cleanedHtml = htmlContent.replace(/<div[^>]*t-N[^>]*>.*?getPostId\(\).*?<\/div>/g, '');
-      tempDiv.innerHTML = cleanedHtml;
-      console.log('执行了最终安全检查，清理了可能的问题元素');
-    }
-  } catch (e) {
-    console.error('最终安全检查时出错：', e);
-    // 出错时不影响原始内容返回
+  // 移除阅读模式的CSS和容器
+  const readerModeCss = document.getElementById('panbo-reader-mode-css');
+  if (readerModeCss) {
+    readerModeCss.remove();
   }
 
-  return tempDiv.innerHTML;
-}
-
-// 事件处理函数（空实现，仅用于移除事件监听器）
-function handleScroll() { }
-function handleKeyDown() { }
-function handleResize() { }
-function handleDocumentClick() { }
-
-// 监听来自 popup 的消息
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  console.log('收到消息:', request.action);
-
-  if (request.action === 'TOGGLE_READING_MODE') {
-    try {
-      // 先保存当前状态
-      const currentState = isReadingMode;
-      console.log('当前阅读模式状态:', currentState);
-
-      // 切换阅读模式
-      if (currentState) {
-        try {
-          disableReadingMode();
-          console.log('禁用阅读模式成功');
-        } catch (disableError) {
-          console.error('禁用阅读模式时发生错误:', disableError);
-          throw disableError;
-        }
-      } else {
-        try {
-          enableReadingMode();
-          console.log('启用阅读模式成功');
-        } catch (enableError) {
-          console.error('启用阅读模式时发生错误:', enableError);
-          throw enableError;
-        }
-      }
-
-      // 发送切换后的状态，注意这里使用的是切换后的状态
-      const newState = !currentState;
-      console.log('新的阅读模式状态:', newState);
-      sendResponse({
-        success: true,
-        isReadingMode: newState,
-        buttonText: newState ? '退出阅读模式' : '进入阅读模式'
-      });
-    } catch (error) {
-      console.error('处理消息时发生错误:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      sendResponse({ success: false, error: errorMessage });
-    }
-  } else if (request.action === 'GET_READING_MODE_STATE') {
-    console.log('返回当前阅读模式状态:', isReadingMode);
-    sendResponse({
-      isReadingMode,
-      buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
-    });
-  }
-  return true; // 保持消息通道开启
-});
-
-// 监听存储变化
-chrome.storage.onChanged.addListener(async (changes, areaName) => {
-  if (areaName !== 'local' || !isReadingMode) return;
-
-  const settingsKeys = Object.values(StorageKeys);
-  const hasSettingsChanged = Object.keys(changes).some(key =>
-    settingsKeys.includes(key as any)
-  );
-
-  if (hasSettingsChanged) {
-    const settings = await fetchSettings();
-    applyStyles(settings);
-
-    // 处理代码主题或字体大小变化
-    if (changes[StorageKeys.CODE_THEME] || changes[StorageKeys.CODE_FONT_SIZE]) {
-      const container = document.getElementById('reading-mode-container');
-
-      // 如果是主题变化，先更新主题样式
-      if (changes[StorageKeys.CODE_THEME] && container) {
-        console.log('代码主题变化为:', settings.codeTheme);
-
-        // 更新主题样式
-        const styleElement = document.getElementById('reading-mode-style');
-        if (styleElement && styleElement.textContent) {
-          // 重新生成主题样式
-          styleElement.textContent = `
-            ${generateCodeThemeStyles(settings.codeTheme, settings)}
-            ${styleElement.textContent.split('/* 基础样式 */')[1] || ''}
-          `;
-        }
-
-        // 更新容器的代码主题属性
-        container.setAttribute('data-code-theme', settings.codeTheme);
-
-        // 更新所有代码块的代码主题属性
-        const codeBlocks = container.querySelectorAll('.code-block');
-        codeBlocks.forEach(block => {
-          block.setAttribute('data-code-theme', settings.codeTheme);
-
-          // 更新表格元素的主题
-          const codeTables = block.querySelectorAll('.code-table');
-          codeTables.forEach(table => {
-            table.setAttribute('data-code-theme', settings.codeTheme);
-          });
-        });
-      }
-
-      // 处理代码块
-      // 注意：这里不等待异步完成，因为这是事件监听器
-      // 如果需要等待，应该使用异步IIFE
-      if (container) {
-        (async () => {
-          try {
-            // 只有在代码主题变化时才强制重新处理代码块
-            const forceReprocess = !!changes[StorageKeys.CODE_THEME];
-            await handleCodeBlocks(container, settings, forceReprocess);
-            console.log(`代码块处理完成，${forceReprocess ? '已重新处理' : '仅更新样式'}`);
-          } catch (error) {
-            console.error('在存储变化监听器中处理代码块时发生错误:', error);
-          }
-        })();
-      }
-
-      // 如果是字体大小变化，更新工具栏字体大小
-      if (changes[StorageKeys.CODE_FONT_SIZE] && container) {
-        // 更新所有代码块工具栏的字体大小
-        const toolbars = container.querySelectorAll('.code-toolbar');
-        toolbars.forEach(toolbar => {
-          (toolbar as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
-        });
-      }
-    }
-
-    // 使用提取的函数处理多媒体内容显示状态的变化
-    if (changes[StorageKeys.SHOW_IMAGES]) {
-      const container = document.getElementById('reading-mode-container');
-      handleMediaElements(container, settings.showImages);
-    }
-
-    if (changes[StorageKeys.SHOW_DIRECTORY]) {
-      const tocElement = document.getElementById('reading-mode-toc');
-      const container = document.getElementById('reading-mode-container');
-      if (!container) return;
-
-      const showDirectory = changes[StorageKeys.SHOW_DIRECTORY].newValue;
-
-      // 调整目录显示
-      if (showDirectory) {
-        if (!tocElement) {
-          generateTableOfContents(container, document.querySelector('#reading-mode-title')?.textContent || document.title);
-        } else {
-          tocElement.style.display = 'block';
-        }
-      } else {
-        if (tocElement) {
-          tocElement.style.display = 'none';
-        }
-      }
-
-      // 调整容器位置
-      container.style.margin = showDirectory ? '0 0 0 250px' : '0 auto';
-      container.style.transition = 'margin 0.3s ease';
-    }
-  }
-});
-
-// 修改 generateTableOfContents 函数，添加显示状态的控制
-function generateTableOfContents(container: HTMLElement, articleTitle: string) {
-  // 如果已经存在目录，则移除
-  const existingToc = document.getElementById('reading-mode-toc');
-  if (existingToc) {
-    existingToc.remove();
+  const readerContainer = document.getElementById('panbo-reader-view');
+  if (readerContainer) {
+    readerContainer.remove();
   }
 
-  // 如果已经存在目录切换按钮，则移除
-  const existingToggleButton = document.getElementById('toc-toggle-button');
-  if (existingToggleButton) {
-    existingToggleButton.remove();
+  // 移除全局类名
+  document.documentElement.classList.remove('reader-mode-active');
+  document.body.classList.remove('reader-mode-active');
+
+  // 清理 highlight.js 的样式
+  const hljsStyles = document.getElementById('reading-mode-hljs-styles');
+  if (hljsStyles) {
+    hljsStyles.remove();
+  }
+  const customCodeStyles = document.getElementById('reading-mode-custom-code-styles');
+  if (customCodeStyles) {
+    customCodeStyles.remove();
+  }
+  const readerViewDynamicStyles = document.getElementById('reading-mode-dynamic-styles');
+  if (readerViewDynamicStyles) {
+    readerViewDynamicStyles.remove();
   }
 
-  // 创建目录容器
-  const tocContainer = document.createElement('div');
-  tocContainer.id = 'reading-mode-toc';
+  removeFloatingButton();
 
-  // 根据当前设置决定是否显示
-  getStorage<boolean>(StorageKeys.SHOW_DIRECTORY).then(showDirectory => {
-    tocContainer.style.display = showDirectory ? 'block' : 'none';
-  });
+  // 恢复原始溢出状态 (如果需要的话，但通常 enableReadingMode 已经处理了)
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
 
-  // 创建目录切换按钮
-  const tocToggleButton = document.createElement('div');
-  tocToggleButton.id = 'toc-toggle-button';
-  tocToggleButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
-  tocToggleButton.title = '显示/隐藏目录';
-
-  // 添加点击事件
-  tocToggleButton.addEventListener('click', () => {
-    const isVisible = tocContainer.style.display === 'block';
-    tocContainer.style.display = isVisible ? 'none' : 'block';
-
-    // 调整容器位置
-    const readingContainer = document.getElementById('reading-mode-container');
-    if (readingContainer) {
-      readingContainer.style.margin = isVisible ? '0 auto' : '0 0 0 250px';
-      // 添加过渡效果
-      readingContainer.style.transition = 'margin 0.3s ease';
-    }
-
-    // 保存设置
-    setStorage(StorageKeys.SHOW_DIRECTORY, !isVisible);
-  });
-
-  document.body.appendChild(tocToggleButton);
-
-  // 添加文章标题
-  const tocArticleTitle = document.createElement('div');
-  tocArticleTitle.className = 'toc-article-title';
-  tocArticleTitle.textContent = articleTitle;
-  tocContainer.appendChild(tocArticleTitle);
-
-  // 添加目录标题
-  const tocTitle = document.createElement('div');
-  tocTitle.className = 'toc-title';
-  tocTitle.textContent = '目录';
-  tocContainer.appendChild(tocTitle);
-
-  // 获取所有标题元素
-  const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
-  const toc = document.createElement('ul');
-
-  // 如果没有标题，显示提示信息
-  if (headings.length === 0) {
-    const noHeadings = document.createElement('div');
-    noHeadings.className = 'toc-empty';
-    noHeadings.textContent = '没有找到标题';
-    tocContainer.appendChild(noHeadings);
-    document.body.appendChild(tocContainer);
-    return;
-  }
-
-  // 创建目录项
-  headings.forEach((heading, index) => {
-    const level = parseInt(heading.tagName[1]);
-    const li = document.createElement('li');
-    li.className = `toc-level-${level}`;
-
-    // 为每个标题添加锚点
-    const id = `heading-${index}`;
-    heading.id = id;
-
-    const link = document.createElement('a');
-    link.href = `#${id}`;
-    link.textContent = heading.textContent || `标题 ${index + 1}`;
-    link.onclick = (e) => {
-      e.preventDefault();
-      heading.scrollIntoView({ behavior: 'smooth' });
-      // 移除其他链接的激活状态
-      toc.querySelectorAll('a').forEach(a => a.classList.remove('active'));
-      // 添加当前链接的激活状态
-      link.classList.add('active');
-    };
-
-    li.appendChild(link);
-    toc.appendChild(li);
-  });
-
-  tocContainer.appendChild(toc);
-  document.body.appendChild(tocContainer);
-
-  // 监听滚动事件，高亮当前可见的标题
-  let tocLinks = Array.from(toc.getElementsByTagName('a'));
-  let headingsPos = Array.from(headings).map(heading => ({
-    id: heading.id,
-    top: heading.getBoundingClientRect().top + window.pageYOffset
-  }));
-
-  window.addEventListener('scroll', () => {
-    const scrollPos = window.pageYOffset;
-    let currentHeading = headingsPos[0];
-
-    for (let i = 0; i < headingsPos.length; i++) {
-      if (scrollPos >= headingsPos[i].top - 100) {
-        currentHeading = headingsPos[i];
-      } else {
-        break;
-      }
-    }
-
-    tocLinks.forEach(link => {
-      link.classList.remove('active');
-      if (link.getAttribute('href') === `#${currentHeading.id}`) {
-        link.classList.add('active');
-      }
-    });
-  });
+  isReadingMode = false;
+  console.log('阅读模式已关闭');
 }
 
 // 监听存储变化
@@ -2761,72 +919,10 @@ chrome.storage.onChanged.addListener(async (changes) => {
   // 如果不在阅读模式下，不应用样式
   if (!isReadingMode) return;
 
-  const container = document.getElementById('reading-mode-container');
+  const container = document.getElementById('panbo-reader-view');
   if (!container) return;
 
   const settings = await fetchSettings();
 
-  if (changes.lineSpacing) {
-    // 更新所有需要行间距的元素
-    const elements = container.querySelectorAll('p, ul, ol, li');
-    elements.forEach(el => {
-      (el as HTMLElement).style.lineHeight = changes.lineSpacing.newValue;
-    });
-  }
-
-  if (changes.paragraphSpacing) {
-    // 更新段落间距和视觉分隔
-    const paragraphs = container.getElementsByTagName('p');
-    const newSpacing = changes.paragraphSpacing.newValue;
-    for (const p of paragraphs) {
-      p.style.marginBottom = `${newSpacing}em`;
-      p.style.paddingBottom = newSpacing > 1 ? '0.5em' : '0';
-      p.style.borderBottom = newSpacing > 1
-        ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}`
-        : 'none';
-    }
-  }
+  await applyStyles(settings);
 });
-
-// 初始化时应用行间距和段间距
-const initializeSpacing = async () => {
-  // 如果不在阅读模式下，不应用样式
-  if (!isReadingMode) return;
-
-  const { lineSpacing, paragraphSpacing } = await chrome.storage.local.get(['lineSpacing', 'paragraphSpacing']);
-  const settings = await fetchSettings();
-  const container = document.getElementById('reading-mode-container');
-  if (!container) return;
-
-  if (lineSpacing !== undefined) {
-    // 更新所有需要行间距的元素
-    const elements = container.querySelectorAll('p, ul, ol, li');
-    elements.forEach(el => {
-      (el as HTMLElement).style.lineHeight = lineSpacing;
-    });
-  }
-
-  if (paragraphSpacing !== undefined) {
-    // 更新段落间距和视觉分隔
-    const paragraphs = container.getElementsByTagName('p');
-    for (const p of paragraphs) {
-      p.style.marginBottom = `${paragraphSpacing}em`;
-      p.style.paddingBottom = paragraphSpacing > 1 ? '0.5em' : '0';
-      p.style.borderBottom = paragraphSpacing > 1
-        ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}`
-        : 'none';
-    }
-  }
-};
-
-// 在适当的时机调用初始化函数
-// 只在启用阅读模式后调用
-initializeSpacing();
-
-// 更新阅读模式样式 - 此函数已被移动到 utils.ts
-// 这里保留注释以供参考，实际使用时通过动态导入调用 utils.ts 中的实现
-// @ts-ignore - 此函数不再直接使用
-function _legacyUpdateReadingModeStyles() {
-  // 此函数已被替换，保留仅作为历史记录
-  console.warn('使用了已弃用的函数：updateReadingModeStyles');
-}

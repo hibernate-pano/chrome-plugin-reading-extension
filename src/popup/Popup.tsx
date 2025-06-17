@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import useAppStore, { initializeStore } from '../store';
+import useAppStore, { initializeStateFromStorage } from '../store';
 import Button from '../ui/components/Button';
 import { Slider } from '../ui/components/Slider';
 import Switch from '../ui/components/Switch';
@@ -11,54 +11,10 @@ import {
   MIN_LINE_HEIGHT,
   MAX_LINE_HEIGHT,
   LINE_HEIGHT_STEP,
-  MIN_LINE_SPACING,
-  MAX_LINE_SPACING,
-  LINE_SPACING_STEP,
   MIN_PARAGRAPH_SPACING,
   MAX_PARAGRAPH_SPACING,
   PARAGRAPH_SPACING_STEP
 } from '../constants/options';
-
-// 字体标签映射
-function getFontFamilyLabel(key: keyof typeof FONT_FAMILIES): string {
-  const labels: Record<keyof typeof FONT_FAMILIES, string> = {
-    default: '系统默认',
-    songti: '宋体',
-    heiti: '黑体',
-    kaiti: '楷体',
-    pingfang: '苹方',
-    microsoft: '微软雅黑',
-  };
-  return labels[key];
-}
-
-// 背景颜色标签映射
-function getBackgroundColorLabel(key: keyof typeof BACKGROUND_COLORS): string {
-  const labels: Record<keyof typeof BACKGROUND_COLORS, string> = {
-    white: '纯白',
-    warm: '暖色',
-    cool: '冷色',
-    sepia: '复古',
-    cream: '奶油',
-    mint: '薄荷',
-    gray: '灰色',
-  };
-  return labels[key];
-}
-
-// 获取背景颜色的样式类
-function getBackgroundColorClasses(key: keyof typeof BACKGROUND_COLORS): string {
-  switch (key) {
-    case 'white': return 'bg-white';
-    case 'warm': return 'bg-paper-warm';
-    case 'cool': return 'bg-paper-cool';
-    case 'sepia': return 'bg-paper-sepia';
-    case 'cream': return 'bg-paper-cream';
-    case 'mint': return 'bg-paper-mint';
-    case 'gray': return 'bg-gray-100';
-    default: return 'bg-white';
-  }
-}
 
 export const Popup = () => {
   const {
@@ -67,27 +23,15 @@ export const Popup = () => {
     codeFontSize,
     readingMode,
     lineHeight,
-    lineSpacing,
-    letterSpacing,
-    pageWidth,
-    textAlign,
-    firstLineIndent,
-    showImages,
-    showDirectory,
     paragraphSpacing,
+    showImages,
     setTheme,
     setFontSize,
     setCodeFontSize,
     setReadingMode,
     setLineHeight,
-    setLineSpacing,
-    setLetterSpacing,
-    setPageWidth,
-    setTextAlign,
-    setFirstLineIndent,
-    setShowImages,
-    setShowDirectory,
     setParagraphSpacing,
+    setShowImages,
   } = useAppStore();
 
   const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
@@ -97,7 +41,7 @@ export const Popup = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    initializeStore();
+    initializeStateFromStorage();
 
     const initializeSettings = async () => {
       setIsLoading(true);
@@ -119,7 +63,6 @@ export const Popup = () => {
 
     initializeSettings();
 
-    // 向 content script 请求当前阅读模式状态
     const getReadingModeState = async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -148,7 +91,6 @@ export const Popup = () => {
     getReadingModeState();
   }, []);
 
-  // 每次打开popup时都重新获取阅读模式状态
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
@@ -177,7 +119,6 @@ export const Popup = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
 
-    // 初始加载时也执行一次
     handleVisibilityChange();
 
     return () => {
@@ -188,13 +129,10 @@ export const Popup = () => {
 
   const toggleReadingMode = async () => {
     try {
-      // 禁用按钮，防止重复点击
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab.id) {
-        // 先切换本地状态，提供即时反馈
         setReadingMode(!readingMode);
 
-        // 先确保内容脚本已加载
         try {
           await chrome.runtime.sendMessage({ action: 'INJECT_CONTENT_SCRIPT' });
         } catch (injectError) {

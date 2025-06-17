@@ -4,19 +4,13 @@ export enum StorageKeys {
   THEME = 'theme',
   FONT_SIZE = 'fontSize',
   LINE_HEIGHT = 'lineHeight',
-  LINE_SPACING = 'lineSpacing',
-  LETTER_SPACING = 'letterSpacing',
-  PAGE_WIDTH = 'pageWidth',
   TEXT_ALIGN = 'textAlign',
-  FIRST_LINE_INDENT = 'firstLineIndent',
   SHOW_IMAGES = 'showImages',
-  SHOW_DIRECTORY = 'showDirectory',
   FONT_FAMILY = 'fontFamily',
   BACKGROUND_COLOR = 'backgroundColor',
   CODE_FONT_SIZE = 'codeFontSize',
   CODE_THEME = 'codeTheme',
   PARAGRAPH_SPACING = 'paragraphSpacing',
-  DEBUG = 'debug',
   ACTIVE_PRESET = 'activePreset',
   CUSTOM_PRESETS = 'customPresets'
 }
@@ -96,17 +90,12 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.CODE_FONT_SIZE, DEFAULT_SETTINGS.codeFontSize);
   await setStorage(StorageKeys.CODE_THEME, DEFAULT_SETTINGS.codeTheme);
   await setStorage(StorageKeys.LINE_HEIGHT, DEFAULT_SETTINGS.lineHeight);
-  await setStorage(StorageKeys.LINE_SPACING, DEFAULT_SETTINGS.lineSpacing);
-  await setStorage(StorageKeys.LETTER_SPACING, DEFAULT_SETTINGS.letterSpacing);
-  await setStorage(StorageKeys.PAGE_WIDTH, DEFAULT_SETTINGS.pageWidth);
   await setStorage(StorageKeys.TEXT_ALIGN, DEFAULT_SETTINGS.textAlign);
-  await setStorage(StorageKeys.FIRST_LINE_INDENT, DEFAULT_SETTINGS.firstLineIndent);
   await setStorage(StorageKeys.SHOW_IMAGES, DEFAULT_SETTINGS.showImages);
-  await setStorage(StorageKeys.SHOW_DIRECTORY, DEFAULT_SETTINGS.showDirectory);
   await setStorage(StorageKeys.FONT_FAMILY, DEFAULT_SETTINGS.fontFamily);
   await setStorage(StorageKeys.BACKGROUND_COLOR, DEFAULT_SETTINGS.backgroundColor);
   await setStorage(StorageKeys.PARAGRAPH_SPACING, DEFAULT_SETTINGS.paragraphSpacing);
-  await setStorage(StorageKeys.DEBUG, DEFAULT_SETTINGS.debug);
+  // activePreset 和 customPresets 不在 DEFAULT_SETTINGS 中，由 presetManager 初始化
 }
 
 export interface ReadingPreset {
@@ -120,13 +109,8 @@ export interface ReadingPreset {
     codeFontSize?: number;
     codeTheme?: keyof typeof CODE_THEMES;
     lineHeight?: number;
-    lineSpacing?: number;
-    letterSpacing?: number;
-    pageWidth?: number;
     textAlign?: 'left' | 'center' | 'right' | 'justify';
-    firstLineIndent?: boolean;
     showImages?: boolean;
-    showDirectory?: boolean;
     fontFamily?: keyof typeof FONT_FAMILIES;
     backgroundColor?: keyof typeof BACKGROUND_COLORS;
     paragraphSpacing?: number;
@@ -135,14 +119,10 @@ export interface ReadingPreset {
 
 export interface StorageData {
   lineHeight: number;
-  lineSpacing: number;
   activePreset?: string;
   customPresets?: ReadingPreset[];
-  // ... existing fields ...
 }
 
 export const defaultStorage: StorageData = {
   lineHeight: DEFAULT_LINE_HEIGHT,
-  lineSpacing: 0.5,
-  // ... existing fields ...
 };
