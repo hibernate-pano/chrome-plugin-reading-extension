@@ -382,25 +382,22 @@ document.head.appendChild(customCodeStyles);
 // 导入性能监控器和工具
 import { performanceMonitor } from '../utils/performance';
 // 不再使用资源加载器
-import { /* resourceLoader, LoadPriority */ } from '../utils/resourceLoader';
-import { getWorkerManager, releaseWorkerManager } from '../workers/workerManager';
+// import { /* resourceLoader, LoadPriority */ } from '../utils/resourceLoader';
 import { Toast } from '../ui/components/Toast';
 import { createFloatingButton, removeFloatingButton } from './ui/readerFloatingButton';
 import { handleMediaElements } from './processors/mediaProcessor';
 
 // 导入增强提取器
 import {
+  ExtractorFactory,
   contentExtractor,
-  defuddleExtractor,
-  tableExtractor,
-  mediaExtractor,
-  enhancedMediaExtractor,
-  codeExtractor,
-  listExtractor
+  // defuddleExtractor, // 移除此行
+  // tableExtractor, // 移除此行
+  // mediaExtractor, // 移除此行
+  // enhancedMediaExtractor, // 移除此行
+  // codeExtractor, // 移除此行
+  // listExtractor // 移除此行
 } from './extractors';
-
-// 导入 GitHub 风格代码块提取器
-import { githubCodeExtractor } from './extractors/githubCodeExtractor';
 
 // 导入基础变量系统
 import './styles/variables.css';
@@ -562,12 +559,8 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
 
     console.log(`应用代码块主题: ${codeTheme}`);
 
-    // 使用 GitHub 风格代码块提取器增强所有代码块
-    console.log('开始增强代码块');
-    await githubCodeExtractor.enhanceAllCodeBlocks(container, codeTheme);
-
-    // 增强内联代码
-    githubCodeExtractor.enhanceInlineCode(container);
+    // 统一处理所有代码块
+    await handleCodeBlocks(container, settings, true);
 
     // 设置代码字体大小
     if (settings.codeFontSize) {
