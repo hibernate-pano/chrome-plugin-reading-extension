@@ -22,6 +22,10 @@ export class ReaderError extends Error {
   ) {
     super(message);
     this.name = 'ReaderError';
+    // Capture stack trace in a way that is compatible with different JS environments
+    if (Error.captureStackTrace) {
+        Error.captureStackTrace(this, ReaderError);
+    }
   }
 }
 

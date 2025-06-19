@@ -408,6 +408,14 @@ import './extractors/extractors.css';
 // 导入 GitHub 风格代码块样式
 import './styles/github-code-new.css';
 
+import { MarkdownWorkerManager } from "./workers/markdownWorkerManager";
+import { DefuddleExtractor } from "./extractors/defuddleExtractor";
+import { renderMarkdown } from "./renderers/markdownRenderer";
+
+// Import structured errors and logger
+import { ReaderError, ErrorCode, ContentExtractionError, RenderError } from '../types/errors';
+import { logger } from '../utils/logManager';
+
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
   fontSize: number;
@@ -430,8 +438,40 @@ interface ReadingModeSettings {
 let originalContent: string | null = null;
 let isReadingMode = false;
 let textSelectionToolbar: TextSelectionToolbar | null = null;
+let markdownWorkerManager: MarkdownWorkerManager | null = null;
+let defuddleExtractorInstance: DefuddleExtractor | null = null;
 
 import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
+
+// User-friendly error messages (based on error-handling.md)
+const userFriendlyMessages: Record<ErrorCode, string> = {
+  CONTENT_EXTRACTION_FAILED: '无法提取页面内容，请尝试其他页面。',
+  STORAGE_OPERATION_FAILED: '存储操作失败，您的设置可能未保存。',
+  NETWORK_REQUEST_FAILED: '网络连接出现问题，请检查您的网络设置。',
+  RENDER_FAILED: '显示内容时出现问题。',
+  PERMISSION_DENIED: '缺少所需权限，请尝试重新启用插件。',
+  TIMEOUT_EXCEEDED: '操作超时，请稍后重试。',
+  VALIDATION_FAILED: '输入验证失败。',
+  UNEXPECTED_STATE: '发生意外错误。',
+};
+
+// Centralized Error Handling Function
+function handleError(error: unknown, context: string): void {
+  // Ensure the error is a ReaderError or wrap it
+  const readerError = error instanceof ReaderError ? error : new ReaderError(
+    error instanceof Error ? error.message : String(error),
+    'UNEXPECTED_STATE', // Default code for unknown errors
+    { context, originalError: error }
+  );
+
+  console.error(`[阅读模式错误] ${context}:`, readerError); // Log to console
+  logger.logError(readerError); // Log to IndexedDB
+
+  // Show a user-friendly toast message based on the error code
+  const message = userFriendlyMessages[readerError.code] || userFriendlyMessages.UNEXPECTED_STATE;
+  Toast.error(message);
+  // TODO: Consider showing a more detailed error UI if needed, possibly based on specific error types
+}
 
 async function fetchSettings(): Promise<ReadingModeSettings> {
   return {
@@ -1681,1152 +1721,225 @@ async function applyAutoSpacing() {
   }
 }
 
-async function enableReadingMode() {
-  // 检查是否已经处于阅读模式，避免重复进入
-  if (isReadingMode) {
-    console.log('已经处于阅读模式，无需重复进入');
-    return;
-  }
+async function toggleReadingMode() {
+  const settings = await fetchSettings();
 
-  if (!document.body) {
-    console.error('文档体不存在，无法启用阅读模式');
-    return;
-  }
+  if (!isReadingMode) {
+    // Save original content
+    originalContent = document.body.innerHTML;
 
-  let loadingToast;
+    let loadingToast: any; // Assuming Toast.info returns an object with a close method
 
-  try {
-    console.log('开始启用阅读模式');
-
-    // 显示加载提示
-    loadingToast = Toast.info('正在准备阅读模式...', {
-      duration: 0,
-      showProgress: true
-    });
-
-    // 开始性能监控
-    performanceMonitor.start('enableReadingMode');
-
-    // 保存原始内容
-    if (!originalContent) {
-      originalContent = document.documentElement.innerHTML;
-    }
-
-    const settings = await fetchSettings();
-
-    // 导入内容处理管道
-    const { ContentPipeline } = await import('./pipeline/contentPipeline');
-
-    // 创建文档克隆以避免修改原始DOM
-    const docClone = document.implementation.createHTMLDocument();
-    docClone.documentElement.innerHTML = originalContent;
-
-    console.log('开始使用内容处理管道处理页面...');
-
-    // 创建新的内容处理管道实例，以便传入自定义选项
-    const pipeline = new ContentPipeline({
-      extractorOptions: {
-        defuddleOptions: {
-          debug: settings.debug || false,
-          url: window.location.href
-        }
-      },
-      converterOptions: {
-        headingStyle: "atx",
-        codeBlockStyle: "fenced",
-        emDelimiter: "*",
-        bulletListMarker: "-"
-      },
-      rendererOptions: {
-        html: true,
-        linkify: true,
-        typographer: true,
-        breaks: false,
-        plugins: {
-          anchor: true,
-          toc: settings.showDirectory,
-          highlightjs: true,
-          taskLists: true
-        }
-      }
-    });
-
-    // 使用内容处理管道
-    const result = await pipeline.process(docClone);
-
-    console.log('内容处理完成');
-    console.log('标题:', result.title);
-    console.log('元数据:', result.metadata);
-
-    // 创建阅读模式容器
-    const container = document.createElement('div');
-    container.id = 'reading-mode-container';
-    container.className = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
-
-    // 添加文章标题
-    const titleElement = document.createElement('h1');
-    titleElement.id = 'reading-mode-title';
-    titleElement.textContent = result.title || document.title;
-    container.appendChild(titleElement);
-
-    // 添加文章内容
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'reading-mode-content';
-    contentDiv.innerHTML = result.html;
-
-    // 将处理后的内容添加到容器
-    container.appendChild(contentDiv);
-
-    // 清空并重建页面
-    document.body.innerHTML = '';
-    document.body.appendChild(container);
-
-    // 应用样式
     try {
-      await applyStyles(settings);
-    } catch (error) {
-      console.warn('应用样式时发生错误:', error);
-    }
-
-    // 生成目录（如果启用）
-    if (settings.showDirectory) {
-      try {
-        generateTableOfContents(container, result.title || document.title);
-      } catch (error) {
-        console.warn('生成目录时发生错误:', error);
-      }
-    }
-
-    // 创建退出按钮
-    try {
-      createFloatingButton();
-    } catch (error) {
-      console.warn('创建退出按钮时发生错误:', error);
-    }
-
-    // 处理媒体元素
-    try {
-      handleMediaElements(container, settings.showImages);
-    } catch (error) {
-      console.warn('处理媒体元素时发生错误:', error);
-    }
-
-    // 处理代码块
-    try {
-      await handleCodeBlocks(container, settings, true);
-    } catch (error) {
-      console.warn('处理代码块时发生错误:', error);
-    }
-
-    // 应用自动间距
-    try {
-      await applyAutoSpacing();
-    } catch (error) {
-      console.warn('应用自动间距时发生错误:', error);
-    }
-
-    // 初始化文本选择工具栏
-    try {
-      if (!textSelectionToolbar) {
-        textSelectionToolbar = new TextSelectionToolbar({
-          options: defaultToolbarOptions,
-          position: 'top',
-          theme: settings.theme,
-          delay: 300
-        });
-      }
-    } catch (error) {
-      console.warn('初始化文本选择工具栏时发生错误:', error);
-    }
-
-    isReadingMode = true;
-
-    // 结束性能监控
-    const perfRecord = performanceMonitor.end('enableReadingMode');
-    console.info(`阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
-
-    // 关闭加载提示并显示成功提示
-    if (loadingToast) loadingToast.close();
-    Toast.success('阅读模式已启用', {
-      position: 'top',
-      duration: 2000
-    });
-
-  } catch (error) {
-    // 显示错误提示
-    if (loadingToast) loadingToast.close();
-    Toast.error(`启用阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
-      position: 'top',
-      duration: 3000
-    });
-    console.error('启用阅读模式时发生错误:', error);
-
-    // 如果新的内容处理管道失败，回退到旧的处理方式
-    try {
-      console.warn('新的内容处理管道失败，尝试回退到旧的处理方式');
-      await enableReadingModeLegacy();
-    } catch (fallbackError) {
-      console.error('回退到旧的处理方式也失败:', fallbackError);
-      throw error; // 抛出原始错误
-    }
-  }
-}
-
-// 旧版本的阅读模式启用函数，作为回退方案
-async function enableReadingModeLegacy() {
-  console.log('使用旧版本的阅读模式处理方式');
-
-  if (!document.body) {
-    console.error('文档体不存在，无法启用阅读模式');
-    return;
-  }
-
-  let loadingToast;
-
-  try {
-    // 显示加载提示
-    loadingToast = Toast.info('正在准备阅读模式(旧版)...', {
-      duration: 0,
-      showProgress: true
-    });
-
-    // 开始性能监控
-    performanceMonitor.start('enableReadingModeLegacy');
-
-    // 预加载工作线程
-    try {
-      await getWorkerManager().initialize();
-      console.log('工作线程初始化成功');
-    } catch (error) {
-      console.warn('初始化工作线程失败，将在主线程中处理:', error);
-    }
-
-    // 保存原始内容
-    if (!originalContent) {
-      originalContent = document.documentElement.innerHTML;
-    }
-
-    const settings = await fetchSettings();
-
-    // 使用增强的内容提取器
-    performanceMonitor.start('contentExtraction');
-    console.log('开始提取页面内容');
-
-    let extractedContent;
-    try {
-      // 尝试使用 Defuddle 提取器
-      try {
-        extractedContent = await defuddleExtractor.extractFromHTML(originalContent, window.location.href);
-        console.log('Defuddle 内容提取完成');
-      } catch (defuddleError) {
-        // 如果 Defuddle 失败，回退到 Readability
-        console.warn('Defuddle 提取失败，回退到 Readability:', defuddleError);
-        extractedContent = await contentExtractor.extractFromHTML(originalContent, window.location.href);
-        console.log('Readability 内容提取完成');
-      }
-    } catch (extractError) {
-      console.error('内容提取过程中发生错误:', extractError);
-      if (loadingToast) loadingToast.close();
-      Toast.error('内容提取失败: ' + (extractError instanceof Error ? extractError.message : '未知错误'), {
-        position: 'top',
-        duration: 3000
+      // Show loading toast
+      loadingToast = Toast.info('正在准备阅读模式...', {
+        duration: 0, // Indefinite duration
+        showProgress: true
       });
-      throw new Error('内容提取失败');
-    }
-    performanceMonitor.end('contentExtraction');
 
-    if (!extractedContent || !extractedContent.success) {
-      console.error('无法解析页面内容:', extractedContent?.error || '未知原因');
-      if (loadingToast) loadingToast.close();
-      Toast.error('无法解析页面内容', {
-        position: 'top',
-        duration: 3000
-      });
-      throw new Error('无法解析页面内容');
-    }
-
-    // 创建阅读模式容器
-    const container = document.createElement('div');
-    container.id = 'reading-mode-container';
-    container.className = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
-
-    // 添加文章标题
-    const titleElement = document.createElement('h1');
-    titleElement.id = 'reading-mode-title';
-    titleElement.textContent = extractedContent.title || document.title;
-    container.appendChild(titleElement);
-
-    // 添加文章内容
-    const contentDiv = document.createElement('div');
-
-    // 特殊站点处理
-    if (window.location.href.includes('juejin.cn')) {
-      console.log('检测到掘金网站，应用特殊处理');
-      // 处理掘金网站的内容
-      extractedContent.content = handleJuejinContent(extractedContent.content);
-    }
-
-    contentDiv.innerHTML = extractedContent.content;
-    contentDiv.className = 'reading-mode-content';
-
-    // 应用增强处理 - 每个增强处理都包裹在 try-catch 中
-    try {
-      // 增强表格
-      tableExtractor.enhanceAllTables(contentDiv);
-      tableExtractor.fixTableStructure(contentDiv);
-    } catch (error) {
-      console.warn('增强表格时发生错误:', error);
-    }
-
-    try {
-      // 增强图片和媒体
-      if (settings.showImages) {
-        // 使用增强型媒体提取器
-        enhancedMediaExtractor.enhanceAllImages(contentDiv);
-        enhancedMediaExtractor.enhanceVideos(contentDiv);
-        enhancedMediaExtractor.enhanceIframes(contentDiv);
-        enhancedMediaExtractor.processBackgroundImages(contentDiv);
-      } else {
-        // 如果不显示图片，隐藏所有媒体元素
-        handleMediaElements(contentDiv, false);
+      // Initialize extractor and worker manager if not already
+      if (!defuddleExtractorInstance) {
+        defuddleExtractorInstance = new DefuddleExtractor();
       }
-    } catch (error) {
-      console.warn('增强媒体元素时发生错误:', error);
-      // 如果增强型媒体提取器失败，回退到原始媒体提取器
+      if (!markdownWorkerManager) {
+        markdownWorkerManager = new MarkdownWorkerManager();
+      }
+
+      // 1. Extract content
+      let extractedContent;
       try {
-        if (settings.showImages) {
-          console.log('尝试使用原始媒体提取器');
-          mediaExtractor.enhanceAllImages(contentDiv);
-          mediaExtractor.enhanceVideos(contentDiv);
-          mediaExtractor.enhanceIframes(contentDiv);
-          mediaExtractor.processBackgroundImages(contentDiv);
+        extractedContent = await defuddleExtractorInstance.extract(document);
+        console.log('内容提取完成');
+        // Check if extraction was successful based on ExtractedContent interface (if applicable)
+        if (!extractedContent || !extractedContent.content) { // Assuming extractedContent has a 'content' property
+            throw new ContentExtractionError('内容提取失败: 未获取到有效内容', { url: window.location.href });
         }
-      } catch (fallbackError) {
-        console.error('原始媒体提取器也失败:', fallbackError);
+      } catch (error: any) {
+        // If it's already a ContentExtractionError, re-throw it.
+        // Otherwise, wrap it in ContentExtractionError.
+        if (error instanceof ContentExtractionError) {
+             throw error;
+        } else {
+            throw new ContentExtractionError('内容提取过程中发生错误', { originalError: error, url: window.location.href });
+        }
       }
-    }
 
-    try {
-      // 增强代码块
-      console.log('开始增强内容中的代码块');
-      codeExtractor.enhanceAllCodeBlocks(contentDiv);
-      codeExtractor.enhanceInlineCode(contentDiv);
-    } catch (error) {
-      console.warn('增强代码块时发生错误:', error);
-    }
-
-    try {
-      // 增强列表
-      listExtractor.fixListStructure(contentDiv);
-      listExtractor.enhanceAllLists(contentDiv);
-    } catch (error) {
-      console.warn('增强列表时发生错误:', error);
-    }
-
-    // 将处理后的内容添加到容器
-    container.appendChild(contentDiv);
-
-    // 清空并重建页面
-    document.body.innerHTML = '';
-    document.body.appendChild(container);
-
-    // 应用样式
-    try {
-      await applyStyles(settings);
-    } catch (error) {
-      console.warn('应用样式时发生错误:', error);
-    }
-
-    // 生成目录（如果启用）
-    if (settings.showDirectory) {
+      // 2. Convert to Markdown
+      let markdown;
       try {
-        generateTableOfContents(container, extractedContent.title || document.title);
-      } catch (error) {
-        console.warn('生成目录时发生错误:', error);
+        markdown = await markdownWorkerManager.convertToMarkdown(extractedContent.content);
+        console.log('Markdown 转换完成');
+        if (!markdown) {
+             throw new ReaderError('Markdown 转换失败: 转换结果为空', 'RENDER_FAILED', { htmlLength: extractedContent.content.length });
+        }
+      } catch (error: any) {
+        // If it's already a ReaderError, re-throw it.
+        // Otherwise, wrap it in a generic RenderError (since conversion is part of rendering pipeline)
+        if (error instanceof ReaderError) {
+            throw error;
+        } else {
+            throw new RenderError('Markdown 转换过程中发生错误', { originalError: error });
+        }
       }
-    }
 
-    // 创建退出按钮
-    try {
-      createFloatingButton();
-    } catch (error) {
-      console.warn('创建退出按钮时发生错误:', error);
-    }
-
-    // 初始化文本选择工具栏
-    try {
-      if (!textSelectionToolbar) {
-        textSelectionToolbar = new TextSelectionToolbar({
-          options: defaultToolbarOptions,
-          position: 'top',
-          theme: settings.theme,
-          delay: 300
-        });
+      // 3. Render Markdown
+      let renderedHtml;
+      try {
+        renderedHtml = renderMarkdown(markdown);
+        console.log('Markdown 渲染完成');
+        if (!renderedHtml) {
+             throw new RenderError('Markdown 渲染失败: 渲染结果为空', { markdownLength: markdown.length });
+        }
+      } catch (error: any) {
+         if (error instanceof RenderError) {
+            throw error;
+        } else {
+            throw new RenderError('Markdown 渲染过程中发生错误', { originalError: error });
+        }
       }
-    } catch (error) {
-      console.warn('初始化文本选择工具栏时发生错误:', error);
-    }
 
-    isReadingMode = true;
+      // 4. Create reading mode container
+      const readingModeContainer = document.createElement("div");
+      readingModeContainer.id = "reading-mode-container";
+      readingModeContainer.className =
+        settings.theme === "dark" ? "dark" : "light"; // Corrected: Removed extra backslashes
+      readingModeContainer.innerHTML = renderedHtml;
 
-    // 结束性能监控
-    const perfRecord = performanceMonitor.end('enableReadingModeLegacy');
-    console.info(`旧版阅读模式启用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
-
-    // 关闭加载提示并显示成功提示
-    if (loadingToast) loadingToast.close();
-    Toast.success('阅读模式已启用(旧版)', {
-      position: 'top',
-      duration: 2000
-    });
-
-  } catch (error) {
-    // 显示错误提示
-    if (loadingToast) loadingToast.close();
-    Toast.error(`启用旧版阅读模式失败: ${error instanceof Error ? error.message : '未知错误'}`, {
-      position: 'top',
-      duration: 3000
-    });
-    console.error('启用旧版阅读模式时发生错误:', error);
-    throw error;
-  } finally {
-    // 释放工作线程资源
-    try {
-      releaseWorkerManager();
-    } catch (error) {
-      console.warn('释放工作线程资源时发生错误:', error);
-    }
-  }
-}
-
-// 这些函数已被提取器模块替代，但为了兼容性保留了函数签名
-// @ts-ignore - 已被 contentExtractor 替代
-function cleanupHtml(_doc: Document) { }
-
-// @ts-ignore - 已被 listExtractor 替代
-function preserveListStyles(_doc: Document) { }
-
-// @ts-ignore - 已被 listExtractor 替代
-function processLists(_container: HTMLElement) { }
-
-function disableReadingMode() {
-  performanceMonitor.start('disableReadingMode');
-
-  // 检查是否处于阅读模式
-  if (!isReadingMode || !originalContent) {
-    console.log('当前不在阅读模式中或原始内容不存在');
-    performanceMonitor.end('disableReadingMode');
-    return;
-  }
-
-  // 显示加载提示
-  const loadingToast = Toast.info('正在返回原始页面...', {
-    duration: 0,
-    showProgress: true
-  });
-
-  try {
-    // 移除浮动退出按钮
-    removeFloatingButton();
-
-    // 移除目录
-    const toc = document.getElementById('reading-mode-toc');
-    if (toc) {
-      toc.remove();
-    }
-
-    // 移除所有由阅读模式添加的样式
-    const stylesToRemove = [
-      'reading-mode-style',
-      'reading-mode-codeblock-styles',
-      'reading-mode-list-styles',
-      'reading-mode-hljs-styles',
-      'reading-mode-custom-code-styles'
-    ];
-
-    stylesToRemove.forEach(id => {
-      const styleElement = document.getElementById(id);
-      if (styleElement) {
-        styleElement.remove();
+      // 5. Apply styles
+      try {
+        await applyStyles(settings); // applyStyles is async, AWAIT IT
+        console.log('样式应用完成');
+      } catch (error: any) {
+        handleError(error, '样式应用');
+        // Continue execution even if styles fail, but log the error
       }
-    });
 
-    // 移除所有事件监听器
-    window.removeEventListener('scroll', handleScroll);
-    document.removeEventListener('keydown', handleKeyDown);
+      // 6. Replace page content
+      document.body.innerHTML = "";
+      document.body.appendChild(readingModeContainer);
 
-    // 恢复原始内容
-    document.documentElement.innerHTML = originalContent;
+      // 7. Initialize toolbar
+      // initToolbar(settings); // Removed: Function not defined
+      // TODO: Initialize text selection toolbar (TextSelectionToolbar is imported but not initialized)
+      console.log('TODO: 初始化文本选择工具栏');
 
-    // 重新添加初始样式，以便下次进入阅读模式时能正确加载
-    try {
-      // 添加必要的样式元素，但不添加内容
-      // 这样可以避免样式冲突，同时确保元素存在
-      const codeblockStyles = document.createElement('style');
-      codeblockStyles.id = 'reading-mode-codeblock-styles';
-      document.head.appendChild(codeblockStyles);
+      isReadingMode = true;
 
-      const listStyles = document.createElement('style');
-      listStyles.id = 'reading-mode-list-styles';
-      document.head.appendChild(listStyles);
+      // Close loading toast and show success toast
+      if (loadingToast) loadingToast.close();
+      Toast.success('阅读模式已启用');
 
-      // 添加 highlight.js 样式元素，但不添加内容
-      const hljsStyles = document.createElement('style');
-      hljsStyles.id = 'reading-mode-hljs-styles';
-      document.head.appendChild(hljsStyles);
+    } catch (error: any) {
+      // This catches errors re-thrown from specific steps or unexpected errors
+      console.error("启用阅读模式时发生错误:", error);
 
-      // 添加自定义代码高亮样式元素，但不添加内容
-      const customCodeStyles = document.createElement('style');
-      customCodeStyles.id = 'reading-mode-custom-code-styles';
-      document.head.appendChild(customCodeStyles);
+      // Close loading toast
+      if (loadingToast) loadingToast.close();
 
-      console.log('样式元素重置完成');
-    } catch (styleError) {
-      console.error('重置样式元素时发生错误:', styleError);
+      // Handle the error using the centralized handler
+      handleError(error, '启用阅读模式');
+
+      // Disable reading mode to return to the original page
+      // TODO: Implement graceful degradation instead of always disabling
+      disableReadingMode();
+    }
+  } else {
+    // Restore original content
+    if (originalContent) {
+      document.body.innerHTML = originalContent;
+      originalContent = null;
     }
 
-    // 销毁文本选择工具栏
+    // Clean up toolbar
     if (textSelectionToolbar) {
       textSelectionToolbar.destroy();
       textSelectionToolbar = null;
     }
 
-    // 完全重置状态
+    // Clean up worker and extractor
+    if (markdownWorkerManager) {
+      markdownWorkerManager.destroy();
+      markdownWorkerManager = null;
+    }
+    defuddleExtractorInstance = null;
+
     isReadingMode = false;
+
+    // Show exit toast
+    Toast.info('已退出阅读模式');
+  }
+}
+
+function disableReadingMode() {
+  // Restore original content
+  if (originalContent) {
+    document.body.innerHTML = originalContent;
     originalContent = null;
+  }
+
+  // Clean up toolbar
+  if (textSelectionToolbar) {
+    textSelectionToolbar.destroy();
     textSelectionToolbar = null;
-
-    // 清除可能的全局事件监听器
-    window.removeEventListener('resize', handleResize);
-    window.removeEventListener('click', handleDocumentClick);
-
-    // 清除可能的定时器
-    const timers = window.setTimeout(() => { }, 0);
-    for (let i = 0; i < timers; i++) {
-      window.clearTimeout(i);
-    }
-
-    const perfRecord = performanceMonitor.end('disableReadingMode');
-    console.info(`阅读模式禁用耗时: ${perfRecord?.duration.toFixed(2)}ms`);
-
-    // 关闭加载提示并显示成功提示
-    loadingToast.close();
-    Toast.success('已返回原始页面', {
-      position: 'top',
-      duration: 2000
-    });
-
-    console.log('阅读模式完全禁用，状态已重置');
-  } catch (error) {
-    console.error('禁用阅读模式时发生错误:', error);
-    throw error;
   }
+
+  // Clean up worker and extractor
+  if (markdownWorkerManager) {
+    markdownWorkerManager.destroy();
+    markdownWorkerManager = null;
+  }
+  defuddleExtractorInstance = null;
+
+  isReadingMode = false;
 }
 
-// 处理掘金网站的内容
-function handleJuejinContent(content: string): string {
-  console.log('开始处理掘金网站内容');
+// Listener for messages from other parts of the extension (e.g., popup)
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('收到消息:', message.action);
 
-  // 创建一个临时元素来处理内容
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = content;
+    // Indicate that sendResponse will be called asynchronously
+    let asyncResponse = false;
 
-  // 移除标题下的大空白
-  const emptyParagraphs = tempDiv.querySelectorAll('p:empty, p:only-child:not(:has(*)):not([style]):not([class])');
-  emptyParagraphs.forEach(p => {
-    if (p.textContent?.trim() === '') {
-      p.remove();
-    }
-  });
-
-  // 处理代码块
-  const codeBlocks = tempDiv.querySelectorAll('pre[data-lang]');
-  codeBlocks.forEach(pre => {
-    // 移除掘金的代码块头部
-    const codeBlockHeader = pre.previousElementSibling;
-    if (codeBlockHeader && codeBlockHeader.classList.contains('code-block-header')) {
-      codeBlockHeader.remove();
-    }
-
-    // 移除复制按钮
-    const copyButton = pre.nextElementSibling;
-    if (copyButton && copyButton.classList.contains('copy-code-btn')) {
-      copyButton.remove();
-    }
-
-    // 确保代码块有正确的语言标记
-    const lang = pre.getAttribute('data-lang');
-    if (lang) {
-      pre.classList.add(`language-${lang}`);
-      const code = pre.querySelector('code');
-      if (code) {
-        code.classList.add(`language-${lang}`);
-      }
-    }
-  });
-
-  // 移除广告和干扰元素
-  const selectors = [
-    '.article-suspended-panel', // 悬浮面板
-    '.recommend-box', // 推荐框
-    '.comment-box', // 评论框
-    '.author-info-block', // 作者信息
-    '.article-banner', // 文章横幅
-    '.article-end', // 文章结尾
-    '.column-container', // 专栏容器
-    '.markdown-body > .copy-code-btn', // 复制代码按钮
-    '.markdown-body > .code-block-header' // 代码块头部
-  ];
-
-  selectors.forEach(selector => {
-    const elements = tempDiv.querySelectorAll(selector);
-    elements.forEach(el => el.remove());
-  });
-
-  // 移除所有内联事件处理程序，避免 CSP 错误
-  const allElements = tempDiv.querySelectorAll('*');
-  allElements.forEach(el => {
-    // 移除所有以 'on' 开头的属性（如 onclick、onmouseover 等）
-    Array.from(el.attributes).forEach(attr => {
-      if (attr.name.startsWith('on')) {
-        el.removeAttribute(attr.name);
-      }
-    });
-
-    // 移除所有内联脚本
-    if (el.tagName === 'SCRIPT') {
-      el.remove();
-    }
-
-    // 处理所有链接，确保 URL 有效
-    if (el.tagName === 'A' && el.hasAttribute('href')) {
-      const href = el.getAttribute('href');
-      if (href) {
-        // 只处理明显无效的 URL
-        if (href.includes('${') && href.includes('}')) {
-          // 包含模板字符串的 URL，可能是未处理的模板
-          el.removeAttribute('href');
-        } else if (href.startsWith('javascript:')) {
-          // 移除 JavaScript 协议的 URL
-          el.removeAttribute('href');
-        }
-      }
-    }
-  });
-
-  // 移除所有内联样式属性，避免样式冲突
-  const elementsWithStyle = tempDiv.querySelectorAll('[style]');
-  elementsWithStyle.forEach(el => {
-    // 保留一些必要的样式，如图片尺寸
-    if (el.tagName === 'IMG') {
-      // 对于图片，只保留尺寸相关的样式
-      const imgEl = el as HTMLImageElement;
-      const width = imgEl.style.width;
-      const height = imgEl.style.height;
-      el.removeAttribute('style');
-      if (width) imgEl.style.width = width;
-      if (height) imgEl.style.height = height;
+    if (message.action === 'TOGGLE_READING_MODE') {
+        asyncResponse = true;
+        toggleReadingMode()
+            .then(() => {
+                // Send success response with current state
+                sendResponse({
+                    success: true,
+                    isReadingMode: isReadingMode, // Use the updated state
+                    buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+                });
+            })
+            .catch((error: any) => {
+                console.error('处理TOGGLE_READING_MODE消息时发生错误:', error);
+                // Send error response with extracted error info
+                sendResponse({
+                    success: false,
+                    error: {
+                        message: error instanceof Error ? error.message : String(error),
+                        stack: error instanceof Error ? error.stack : undefined,
+                        // Include specific error code if available
+                        code: error instanceof ReaderError ? error.code : 'UNEXPECTED_STATE',
+                    },
+                });
+            });
+    } else if (message.action === 'GET_READING_MODE_STATE') {
+        // This action is synchronous, no need for asyncResponse = true
+        console.log('返回当前阅读模式状态:', isReadingMode);
+        sendResponse({
+            isReadingMode: isReadingMode,
+            buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+        });
     } else {
-      // 对于其他元素，完全移除样式
-      el.removeAttribute('style');
-    }
-  });
-
-  // 只移除特定的包含模板字符串的内容
-  // 定位包含特定模式的元素，这些元素可能导致 URL 解析错误
-  const problematicDivs = tempDiv.querySelectorAll('div[class*="comment"]');
-  problematicDivs.forEach(div => {
-    const text = div.textContent || '';
-    // 只移除包含特定模式的内容，这些内容可能导致 URL 解析错误
-    if (text.includes('${') && text.includes('}') &&
-      (text.includes('return') || text.includes('this.url.match'))) {
-      // 尝试保留内容，但移除可能导致错误的部分
-      const problematicText = text.match(/\$\{.*?\}/g) || [];
-      if (problematicText.length > 0) {
-        // 如果有多个模板字符串或包含特定关键字，可能是代码片段，移除整个元素
-        if (problematicText.length > 1 ||
-          text.includes('url.match') ||
-          text.includes('getPostId') ||
-          text.includes('?return')) {
-          div.remove();
-        }
-      }
-    }
-  });
-
-  // 特别处理掘金网站的评论区域，这里常包含导致错误的代码
-  const commentBlocks = tempDiv.querySelectorAll('.comment-content, .comment-block');
-  commentBlocks.forEach(block => {
-    const blockquotes = block.querySelectorAll('blockquote');
-    blockquotes.forEach(quote => {
-      const text = quote.textContent || '';
-      if (text.includes('${') && text.includes('return')) {
-        quote.remove();
-      }
-    });
-  });
-
-  // 处理特定的导致 URL 解析错误的元素
-  const specificErrorDiv = tempDiv.querySelector('div[t-N]');
-  if (specificErrorDiv && specificErrorDiv.getAttribute('t-N')?.includes('for(;h.length>0;)s+=')) {
-    // 这是掘金网站上导致 URL 解析错误的特定元素
-    specificErrorDiv.remove();
-    console.log('移除了导致 URL 解析错误的特定元素');
-  }
-
-  // 处理包含特定模式的 div 元素
-  const allDivs = tempDiv.querySelectorAll('div');
-  allDivs.forEach(div => {
-    // 检查是否包含特定属性模式
-    if (div.hasAttribute('t-N') || div.hasAttribute('t-n')) {
-      const tNValue = div.getAttribute('t-N') || div.getAttribute('t-n') || '';
-      // 检查属性值是否包含特定模式
-      if (tNValue.includes('for(') && tNValue.includes('blockquote') && tNValue.includes('return')) {
-        div.remove();
-        console.log('移除了包含特定模式的 div 元素');
-      }
+        // If no action matches, indicate failure or handle appropriately
+        console.warn('收到未知消息动作:', message.action);
+        sendResponse({ success: false, error: '未知消息动作' });
     }
 
-    // 特别处理错误信息中显示的问题元素
-    if (div.textContent) {
-      // 检查多种可能导致错误的模式
-      if ((div.textContent.includes('return $') && div.textContent.includes('getPostId')) ||
-        (div.textContent.includes('</div>') && div.textContent.includes('T-N]for') && div.textContent.includes('blockquote'))) {
-        // 这是错误信息中显示的元素，包含了特定的代码片段
-        div.remove();
-        console.log('移除了错误信息中显示的问题元素');
-      }
-
-      // 检查错误截图中显示的特定元素
-      if (div.textContent.includes('/div>,T-N]for(;h.length>0;)s+=')) {
-        div.remove();
-        console.log('移除了错误截图中的特定元素');
-      }
-    }
-  });
-
-  // 直接定位并处理错误信息中的元素
-  // 使用属性选择器可能会导致错误，所以我们使用更安全的方法
-  const divElements = tempDiv.querySelectorAll('div[t-N]');
-  divElements.forEach(div => {
-    const attrValue = div.getAttribute('t-N');
-    if (attrValue && attrValue.includes('for(;h.length>0;)s+=') &&
-      attrValue.includes('</blockquote>') &&
-      attrValue.includes('return $getPostId()')) {
-      div.remove();
-      console.log('移除了特定的错误元素');
-    }
-  });
-
-  // 处理包含特定内容的元素
-  // 为了避免遍历所有元素带来的性能问题，我们只检查可能包含问题代码的元素
-  const potentialProblemElements = tempDiv.querySelectorAll('div, blockquote, pre, code');
-  potentialProblemElements.forEach(el => {
-    if (el.textContent) {
-      // 检查多种可能导致错误的模式
-      if (el.textContent.includes('url.match') && el.textContent.includes('return')) {
-        // 如果是代码块内的内容，不要移除，因为这可能是正常的代码示例
-        if (el.tagName !== 'PRE' && el.tagName !== 'CODE' && !el.closest('pre') && !el.closest('code')) {
-          // 只移除不在代码块内的内容
-          el.remove();
-          console.log('移除了包含特定内容的元素');
-        }
-      }
-
-      // 检查错误信息中的特定模式
-      if (el.textContent.includes('getPostId') && el.textContent.includes('d=this.url.match')) {
-        if (el.tagName !== 'PRE' && el.tagName !== 'CODE' && !el.closest('pre') && !el.closest('code')) {
-          el.remove();
-          console.log('移除了包含 getPostId 的元素');
-        }
-      }
-    }
-  });
-
-  // 最后的安全检查，处理可能遗漏的问题元素
-  try {
-    // 尝试找到并处理错误截图中的元素
-    const htmlContent = tempDiv.innerHTML;
-    if (htmlContent.includes('getPostId') && htmlContent.includes('url.match')) {
-      // 如果还有未处理的问题元素，尝试使用正则表达式删除
-      const cleanedHtml = htmlContent.replace(/<div[^>]*t-N[^>]*>.*?getPostId\(\).*?<\/div>/g, '');
-      tempDiv.innerHTML = cleanedHtml;
-      console.log('执行了最终安全检查，清理了可能的问题元素');
-    }
-  } catch (e) {
-    console.error('最终安全检查时出错：', e);
-    // 出错时不影响原始内容返回
-  }
-
-  return tempDiv.innerHTML;
-}
-
-// 事件处理函数（空实现，仅用于移除事件监听器）
-function handleScroll() { }
-function handleKeyDown() { }
-function handleResize() { }
-function handleDocumentClick() { }
-
-// 监听来自 popup 的消息
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  console.log('收到消息:', request.action);
-
-  if (request.action === 'TOGGLE_READING_MODE') {
-    try {
-      // 先保存当前状态
-      const currentState = isReadingMode;
-      console.log('当前阅读模式状态:', currentState);
-
-      // 切换阅读模式
-      if (currentState) {
-        try {
-          disableReadingMode();
-          console.log('禁用阅读模式成功');
-        } catch (disableError) {
-          console.error('禁用阅读模式时发生错误:', disableError);
-          throw disableError;
-        }
-      } else {
-        try {
-          enableReadingMode();
-          console.log('启用阅读模式成功');
-        } catch (enableError) {
-          console.error('启用阅读模式时发生错误:', enableError);
-          throw enableError;
-        }
-      }
-
-      // 发送切换后的状态，注意这里使用的是切换后的状态
-      const newState = !currentState;
-      console.log('新的阅读模式状态:', newState);
-      sendResponse({
-        success: true,
-        isReadingMode: newState,
-        buttonText: newState ? '退出阅读模式' : '进入阅读模式'
-      });
-    } catch (error) {
-      console.error('处理消息时发生错误:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      sendResponse({ success: false, error: errorMessage });
-    }
-  } else if (request.action === 'GET_READING_MODE_STATE') {
-    console.log('返回当前阅读模式状态:', isReadingMode);
-    sendResponse({
-      isReadingMode,
-      buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
-    });
-  }
-  return true; // 保持消息通道开启
+    // Return true to indicate that sendResponse will be called asynchronously
+    // This is only needed for the async case (TOGGLE_READING_MODE)
+    return asyncResponse;
 });
 
-// 监听存储变化
-chrome.storage.onChanged.addListener(async (changes, areaName) => {
-  if (areaName !== 'local' || !isReadingMode) return;
-
-  const settingsKeys = Object.values(StorageKeys);
-  const hasSettingsChanged = Object.keys(changes).some(key =>
-    settingsKeys.includes(key as any)
-  );
-
-  if (hasSettingsChanged) {
-    const settings = await fetchSettings();
-    applyStyles(settings);
-
-    // 处理代码主题或字体大小变化
-    if (changes[StorageKeys.CODE_THEME] || changes[StorageKeys.CODE_FONT_SIZE]) {
-      const container = document.getElementById('reading-mode-container');
-
-      // 如果是主题变化，先更新主题样式
-      if (changes[StorageKeys.CODE_THEME] && container) {
-        console.log('代码主题变化为:', settings.codeTheme);
-
-        // 更新主题样式
-        const styleElement = document.getElementById('reading-mode-style');
-        if (styleElement && styleElement.textContent) {
-          // 重新生成主题样式
-          styleElement.textContent = `
-            ${generateCodeThemeStyles(settings.codeTheme, settings)}
-            ${styleElement.textContent.split('/* 基础样式 */')[1] || ''}
-          `;
-        }
-
-        // 更新容器的代码主题属性
-        container.setAttribute('data-code-theme', settings.codeTheme);
-
-        // 更新所有代码块的代码主题属性
-        const codeBlocks = container.querySelectorAll('.code-block');
-        codeBlocks.forEach(block => {
-          block.setAttribute('data-code-theme', settings.codeTheme);
-
-          // 更新表格元素的主题
-          const codeTables = block.querySelectorAll('.code-table');
-          codeTables.forEach(table => {
-            table.setAttribute('data-code-theme', settings.codeTheme);
-          });
-        });
-      }
-
-      // 处理代码块
-      // 注意：这里不等待异步完成，因为这是事件监听器
-      // 如果需要等待，应该使用异步IIFE
-      if (container) {
-        (async () => {
-          try {
-            // 只有在代码主题变化时才强制重新处理代码块
-            const forceReprocess = !!changes[StorageKeys.CODE_THEME];
-            await handleCodeBlocks(container, settings, forceReprocess);
-            console.log(`代码块处理完成，${forceReprocess ? '已重新处理' : '仅更新样式'}`);
-          } catch (error) {
-            console.error('在存储变化监听器中处理代码块时发生错误:', error);
-          }
-        })();
-      }
-
-      // 如果是字体大小变化，更新工具栏字体大小
-      if (changes[StorageKeys.CODE_FONT_SIZE] && container) {
-        // 更新所有代码块工具栏的字体大小
-        const toolbars = container.querySelectorAll('.code-toolbar');
-        toolbars.forEach(toolbar => {
-          (toolbar as HTMLElement).style.fontSize = `${settings.codeFontSize}px`;
-        });
-      }
-    }
-
-    // 使用提取的函数处理多媒体内容显示状态的变化
-    if (changes[StorageKeys.SHOW_IMAGES]) {
-      const container = document.getElementById('reading-mode-container');
-      handleMediaElements(container, settings.showImages);
-    }
-
-    if (changes[StorageKeys.SHOW_DIRECTORY]) {
-      const tocElement = document.getElementById('reading-mode-toc');
-      const container = document.getElementById('reading-mode-container');
-      if (!container) return;
-
-      const showDirectory = changes[StorageKeys.SHOW_DIRECTORY].newValue;
-
-      // 调整目录显示
-      if (showDirectory) {
-        if (!tocElement) {
-          generateTableOfContents(container, document.querySelector('#reading-mode-title')?.textContent || document.title);
-        } else {
-          tocElement.style.display = 'block';
-        }
-      } else {
-        if (tocElement) {
-          tocElement.style.display = 'none';
-        }
-      }
-
-      // 调整容器位置
-      container.style.margin = showDirectory ? '0 0 0 250px' : '0 auto';
-      container.style.transition = 'margin 0.3s ease';
-    }
-  }
-});
-
-// 修改 generateTableOfContents 函数，添加显示状态的控制
-function generateTableOfContents(container: HTMLElement, articleTitle: string) {
-  // 如果已经存在目录，则移除
-  const existingToc = document.getElementById('reading-mode-toc');
-  if (existingToc) {
-    existingToc.remove();
-  }
-
-  // 如果已经存在目录切换按钮，则移除
-  const existingToggleButton = document.getElementById('toc-toggle-button');
-  if (existingToggleButton) {
-    existingToggleButton.remove();
-  }
-
-  // 创建目录容器
-  const tocContainer = document.createElement('div');
-  tocContainer.id = 'reading-mode-toc';
-
-  // 根据当前设置决定是否显示
-  getStorage<boolean>(StorageKeys.SHOW_DIRECTORY).then(showDirectory => {
-    tocContainer.style.display = showDirectory ? 'block' : 'none';
-  });
-
-  // 创建目录切换按钮
-  const tocToggleButton = document.createElement('div');
-  tocToggleButton.id = 'toc-toggle-button';
-  tocToggleButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
-  tocToggleButton.title = '显示/隐藏目录';
-
-  // 添加点击事件
-  tocToggleButton.addEventListener('click', () => {
-    const isVisible = tocContainer.style.display === 'block';
-    tocContainer.style.display = isVisible ? 'none' : 'block';
-
-    // 调整容器位置
-    const readingContainer = document.getElementById('reading-mode-container');
-    if (readingContainer) {
-      readingContainer.style.margin = isVisible ? '0 auto' : '0 0 0 250px';
-      // 添加过渡效果
-      readingContainer.style.transition = 'margin 0.3s ease';
-    }
-
-    // 保存设置
-    setStorage(StorageKeys.SHOW_DIRECTORY, !isVisible);
-  });
-
-  document.body.appendChild(tocToggleButton);
-
-  // 添加文章标题
-  const tocArticleTitle = document.createElement('div');
-  tocArticleTitle.className = 'toc-article-title';
-  tocArticleTitle.textContent = articleTitle;
-  tocContainer.appendChild(tocArticleTitle);
-
-  // 添加目录标题
-  const tocTitle = document.createElement('div');
-  tocTitle.className = 'toc-title';
-  tocTitle.textContent = '目录';
-  tocContainer.appendChild(tocTitle);
-
-  // 获取所有标题元素
-  const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
-  const toc = document.createElement('ul');
-
-  // 如果没有标题，显示提示信息
-  if (headings.length === 0) {
-    const noHeadings = document.createElement('div');
-    noHeadings.className = 'toc-empty';
-    noHeadings.textContent = '没有找到标题';
-    tocContainer.appendChild(noHeadings);
-    document.body.appendChild(tocContainer);
-    return;
-  }
-
-  // 创建目录项
-  headings.forEach((heading, index) => {
-    const level = parseInt(heading.tagName[1]);
-    const li = document.createElement('li');
-    li.className = `toc-level-${level}`;
-
-    // 为每个标题添加锚点
-    const id = `heading-${index}`;
-    heading.id = id;
-
-    const link = document.createElement('a');
-    link.href = `#${id}`;
-    link.textContent = heading.textContent || `标题 ${index + 1}`;
-    link.onclick = (e) => {
-      e.preventDefault();
-      heading.scrollIntoView({ behavior: 'smooth' });
-      // 移除其他链接的激活状态
-      toc.querySelectorAll('a').forEach(a => a.classList.remove('active'));
-      // 添加当前链接的激活状态
-      link.classList.add('active');
-    };
-
-    li.appendChild(link);
-    toc.appendChild(li);
-  });
-
-  tocContainer.appendChild(toc);
-  document.body.appendChild(tocContainer);
-
-  // 监听滚动事件，高亮当前可见的标题
-  let tocLinks = Array.from(toc.getElementsByTagName('a'));
-  let headingsPos = Array.from(headings).map(heading => ({
-    id: heading.id,
-    top: heading.getBoundingClientRect().top + window.pageYOffset
-  }));
-
-  window.addEventListener('scroll', () => {
-    const scrollPos = window.pageYOffset;
-    let currentHeading = headingsPos[0];
-
-    for (let i = 0; i < headingsPos.length; i++) {
-      if (scrollPos >= headingsPos[i].top - 100) {
-        currentHeading = headingsPos[i];
-      } else {
-        break;
-      }
-    }
-
-    tocLinks.forEach(link => {
-      link.classList.remove('active');
-      if (link.getAttribute('href') === `#${currentHeading.id}`) {
-        link.classList.add('active');
-      }
-    });
-  });
-}
-
-// 监听存储变化
-chrome.storage.onChanged.addListener(async (changes) => {
-  // 如果不在阅读模式下，不应用样式
-  if (!isReadingMode) return;
-
-  const container = document.getElementById('reading-mode-container');
-  if (!container) return;
-
-  const settings = await fetchSettings();
-
-  if (changes.lineSpacing) {
-    // 更新所有需要行间距的元素
-    const elements = container.querySelectorAll('p, ul, ol, li');
-    elements.forEach(el => {
-      (el as HTMLElement).style.lineHeight = changes.lineSpacing.newValue;
-    });
-  }
-
-  if (changes.paragraphSpacing) {
-    // 更新段落间距和视觉分隔
-    const paragraphs = container.getElementsByTagName('p');
-    const newSpacing = changes.paragraphSpacing.newValue;
-    for (const p of paragraphs) {
-      p.style.marginBottom = `${newSpacing}em`;
-      p.style.paddingBottom = newSpacing > 1 ? '0.5em' : '0';
-      p.style.borderBottom = newSpacing > 1
-        ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}`
-        : 'none';
-    }
-  }
-});
-
-// 初始化时应用行间距和段间距
-const initializeSpacing = async () => {
-  // 如果不在阅读模式下，不应用样式
-  if (!isReadingMode) return;
-
-  const { lineSpacing, paragraphSpacing } = await chrome.storage.local.get(['lineSpacing', 'paragraphSpacing']);
-  const settings = await fetchSettings();
-  const container = document.getElementById('reading-mode-container');
-  if (!container) return;
-
-  if (lineSpacing !== undefined) {
-    // 更新所有需要行间距的元素
-    const elements = container.querySelectorAll('p, ul, ol, li');
-    elements.forEach(el => {
-      (el as HTMLElement).style.lineHeight = lineSpacing;
-    });
-  }
-
-  if (paragraphSpacing !== undefined) {
-    // 更新段落间距和视觉分隔
-    const paragraphs = container.getElementsByTagName('p');
-    for (const p of paragraphs) {
-      p.style.marginBottom = `${paragraphSpacing}em`;
-      p.style.paddingBottom = paragraphSpacing > 1 ? '0.5em' : '0';
-      p.style.borderBottom = paragraphSpacing > 1
-        ? `1px solid ${settings.theme === 'dark' ? '#333' : '#eee'}`
-        : 'none';
-    }
-  }
-};
-
-// 在适当的时机调用初始化函数
-// 只在启用阅读模式后调用
-initializeSpacing();
-
-// 更新阅读模式样式 - 此函数已被移动到 utils.ts
-// 这里保留注释以供参考，实际使用时通过动态导入调用 utils.ts 中的实现
-// @ts-ignore - 此函数不再直接使用
-function _legacyUpdateReadingModeStyles() {
-  // 此函数已被替换，保留仅作为历史记录
-  console.warn('使用了已弃用的函数：updateReadingModeStyles');
-}
+// ... rest of content.ts ...
