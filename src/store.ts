@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { StorageKeys, getStorage, setStorage, CODE_THEMES, ReadingPreset } from './storage/storage';
-import { DEFAULT_LINE_HEIGHT, DEFAULT_PARAGRAPH_SPACING, DEFAULT_LINE_SPACING } from './constants/options';
+import { DEFAULT_LINE_HEIGHT, DEFAULT_PARAGRAPH_SPACING } from './constants/options';
 import { PresetManager } from './presets/presetManager';
 
 interface AppState {
@@ -10,14 +10,9 @@ interface AppState {
   codeTheme: keyof typeof CODE_THEMES;
   readingMode: boolean;
   lineHeight: number;
-  lineSpacing: number;
-  letterSpacing: number;
-  pageWidth: number;
-  textAlign: 'left' | 'center' | 'right' | 'justify';
-  firstLineIndent: boolean;
-  showImages: boolean;
-  showDirectory: boolean;
   paragraphSpacing: number;
+  textAlign: 'left' | 'center' | 'right' | 'justify';
+  showImages: boolean;
   activePreset: string | null;
   presets: ReadingPreset[];
   customPresets: ReadingPreset[];
@@ -27,14 +22,9 @@ interface AppState {
   setCodeTheme: (codeTheme: keyof typeof CODE_THEMES) => Promise<void>;
   setReadingMode: (readingMode: boolean) => Promise<void>;
   setLineHeight: (lineHeight: number) => Promise<void>;
-  setLineSpacing: (lineSpacing: number) => Promise<void>;
-  setLetterSpacing: (letterSpacing: number) => Promise<void>;
-  setPageWidth: (pageWidth: number) => Promise<void>;
-  setTextAlign: (textAlign: 'left' | 'center' | 'right' | 'justify') => Promise<void>;
-  setFirstLineIndent: (firstLineIndent: boolean) => Promise<void>;
-  setShowImages: (showImages: boolean) => Promise<void>;
-  setShowDirectory: (showDirectory: boolean) => Promise<void>;
   setParagraphSpacing: (paragraphSpacing: number) => Promise<void>;
+  setTextAlign: (textAlign: 'left' | 'center' | 'right' | 'justify') => Promise<void>;
+  setShowImages: (showImages: boolean) => Promise<void>;
   applyPreset: (presetId: string) => Promise<void>;
   createPreset: (name: string, description?: string) => Promise<ReadingPreset>;
   updatePreset: (id: string, updates: Partial<Omit<ReadingPreset, 'id' | 'isBuiltIn'>>) => Promise<ReadingPreset | null>;
@@ -56,14 +46,9 @@ const useAppStore = create<AppState>((set) => ({
   codeTheme: DEFAULT_SETTINGS.codeTheme,
   readingMode: false, // 这个不是持久化设置，始终默认为 false
   lineHeight: DEFAULT_SETTINGS.lineHeight,
-  lineSpacing: DEFAULT_SETTINGS.lineSpacing,
-  letterSpacing: DEFAULT_SETTINGS.letterSpacing,
-  pageWidth: DEFAULT_SETTINGS.pageWidth,
-  textAlign: DEFAULT_SETTINGS.textAlign,
-  firstLineIndent: DEFAULT_SETTINGS.firstLineIndent,
-  showImages: DEFAULT_SETTINGS.showImages,
-  showDirectory: DEFAULT_SETTINGS.showDirectory,
   paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
+  textAlign: DEFAULT_SETTINGS.textAlign,
+  showImages: DEFAULT_SETTINGS.showImages,
   activePreset: null,
   presets: [],
   customPresets: [],
@@ -97,19 +82,9 @@ const useAppStore = create<AppState>((set) => ({
     set({ lineHeight });
   },
 
-  setLineSpacing: async (lineSpacing) => {
-    await setStorage(StorageKeys.LINE_SPACING, lineSpacing);
-    set({ lineSpacing });
-  },
-
-  setLetterSpacing: async (letterSpacing) => {
-    await setStorage(StorageKeys.LETTER_SPACING, letterSpacing);
-    set({ letterSpacing });
-  },
-
-  setPageWidth: async (pageWidth) => {
-    await setStorage(StorageKeys.PAGE_WIDTH, pageWidth);
-    set({ pageWidth });
+  setParagraphSpacing: async (paragraphSpacing) => {
+    await setStorage(StorageKeys.PARAGRAPH_SPACING, paragraphSpacing);
+    set({ paragraphSpacing });
   },
 
   setTextAlign: async (textAlign) => {
@@ -117,24 +92,9 @@ const useAppStore = create<AppState>((set) => ({
     set({ textAlign });
   },
 
-  setFirstLineIndent: async (firstLineIndent) => {
-    await setStorage(StorageKeys.FIRST_LINE_INDENT, firstLineIndent);
-    set({ firstLineIndent });
-  },
-
   setShowImages: async (showImages) => {
     await setStorage(StorageKeys.SHOW_IMAGES, showImages);
     set({ showImages });
-  },
-
-  setShowDirectory: async (showDirectory) => {
-    await setStorage(StorageKeys.SHOW_DIRECTORY, showDirectory);
-    set({ showDirectory });
-  },
-
-  setParagraphSpacing: async (paragraphSpacing) => {
-    await setStorage(StorageKeys.PARAGRAPH_SPACING, paragraphSpacing);
-    set({ paragraphSpacing });
   },
 
   applyPreset: async (presetId) => {
@@ -151,13 +111,8 @@ const useAppStore = create<AppState>((set) => ({
         ...(settings.codeFontSize && { codeFontSize: settings.codeFontSize }),
         ...(settings.codeTheme && { codeTheme: settings.codeTheme }),
         ...(settings.lineHeight && { lineHeight: settings.lineHeight }),
-        ...(settings.lineSpacing && { lineSpacing: settings.lineSpacing }),
-        ...(settings.letterSpacing && { letterSpacing: settings.letterSpacing }),
-        ...(settings.pageWidth && { pageWidth: settings.pageWidth }),
         ...(settings.textAlign && { textAlign: settings.textAlign }),
-        ...(settings.firstLineIndent !== undefined && { firstLineIndent: settings.firstLineIndent }),
         ...(settings.showImages !== undefined && { showImages: settings.showImages }),
-        ...(settings.showDirectory !== undefined && { showDirectory: settings.showDirectory }),
         ...(settings.fontFamily && { fontFamily: settings.fontFamily }),
         ...(settings.backgroundColor && { backgroundColor: settings.backgroundColor }),
         ...(settings.paragraphSpacing && { paragraphSpacing: settings.paragraphSpacing }),
@@ -198,44 +153,35 @@ const useAppStore = create<AppState>((set) => ({
 }));
 
 // 初始化 store 的状态
-export const initializeStore = async () => {
-  // 初始化预设管理器
-  await presetManager.initialize();
-
-  // 获取所有预设
-  const allPresets = presetManager.getAllPresets();
-  const customPresets = presetManager.getCustomPresets();
-  const activePreset = presetManager.getActivePreset()?.id || null;
+export const initializeStateFromStorage = async () => {
   const theme = await getStorage<'light' | 'dark'>(StorageKeys.THEME);
   const fontSize = await getStorage<number>(StorageKeys.FONT_SIZE);
   const codeFontSize = await getStorage<number>(StorageKeys.CODE_FONT_SIZE);
   const codeTheme = await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME);
   const lineHeight = await getStorage<number>(StorageKeys.LINE_HEIGHT);
-  const letterSpacing = await getStorage<number>(StorageKeys.LETTER_SPACING);
-  const pageWidth = await getStorage<number>(StorageKeys.PAGE_WIDTH);
-  const textAlign = await getStorage<'left' | 'center' | 'right'>(StorageKeys.TEXT_ALIGN);
-  const firstLineIndent = await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT);
-  const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES);
-  const showDirectory = await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY);
   const paragraphSpacing = await getStorage<number>(StorageKeys.PARAGRAPH_SPACING);
+  const textAlign = await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN);
+  const showImages = await getStorage<boolean>(StorageKeys.SHOW_IMAGES);
+
+  // 加载预设，这应该在所有单项设置之后，因为预设会覆盖它们
+  await presetManager.loadPresets();
+  const activePresetId = await getStorage<string>(StorageKeys.ACTIVE_PRESET);
+  const customPresets = presetManager.getCustomPresets();
+  const activePreset = activePresetId ? presetManager.getPresetById(activePresetId) : null;
 
   useAppStore.setState({
-    presets: allPresets,
-    customPresets,
-    activePreset,
     theme: theme ?? DEFAULT_SETTINGS.theme,
     fontSize: fontSize ?? DEFAULT_SETTINGS.fontSize,
     codeFontSize: codeFontSize ?? DEFAULT_SETTINGS.codeFontSize,
     codeTheme: codeTheme ?? DEFAULT_SETTINGS.codeTheme,
     readingMode: false,
     lineHeight: lineHeight ?? DEFAULT_SETTINGS.lineHeight,
-    letterSpacing: letterSpacing ?? DEFAULT_SETTINGS.letterSpacing,
-    pageWidth: pageWidth ?? DEFAULT_SETTINGS.pageWidth,
-    textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
-    firstLineIndent: firstLineIndent ?? DEFAULT_SETTINGS.firstLineIndent,
-    showImages: showImages ?? DEFAULT_SETTINGS.showImages,
-    showDirectory: showDirectory ?? DEFAULT_SETTINGS.showDirectory,
     paragraphSpacing: paragraphSpacing ?? DEFAULT_SETTINGS.paragraphSpacing,
+    textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
+    showImages: showImages ?? DEFAULT_SETTINGS.showImages,
+    activePreset: activePresetId,
+    presets: presetManager.getAllPresets(), // 确保加载所有预设，包括内置和自定义
+    customPresets: customPresets,
   });
 };
 

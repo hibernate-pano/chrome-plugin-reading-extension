@@ -382,24 +382,22 @@ document.head.appendChild(customCodeStyles);
 // 导入性能监控器和工具
 import { performanceMonitor } from '../utils/performance';
 // 不再使用资源加载器
-import { /* resourceLoader, LoadPriority */ } from '../utils/resourceLoader';
-import { getWorkerManager, releaseWorkerManager } from '../workers/workerManager';
-import { TextSelectionToolbar, defaultToolbarOptions } from './components/TextSelectionToolbar';
+// import { /* resourceLoader, LoadPriority */ } from '../utils/resourceLoader';
 import { Toast } from '../ui/components/Toast';
+import { createFloatingButton, removeFloatingButton } from './ui/readerFloatingButton';
+import { handleMediaElements } from './processors/mediaProcessor';
 
 // 导入增强提取器
 import {
+  ExtractorFactory,
   contentExtractor,
-  defuddleExtractor,
-  tableExtractor,
-  mediaExtractor,
-  enhancedMediaExtractor,
-  codeExtractor,
-  listExtractor
+  // defuddleExtractor, // 移除此行
+  // tableExtractor, // 移除此行
+  // mediaExtractor, // 移除此行
+  // enhancedMediaExtractor, // 移除此行
+  // codeExtractor, // 移除此行
+  // listExtractor // 移除此行
 } from './extractors';
-
-// 导入 GitHub 风格代码块提取器
-import { githubCodeExtractor } from './extractors/githubCodeExtractor';
 
 // 导入基础变量系统
 import './styles/variables.css';
@@ -422,24 +420,21 @@ interface ReadingModeSettings {
   codeFontSize: number;
   codeTheme: keyof typeof CODE_THEMES;
   lineHeight: number;
-  letterSpacing: number;
-  lineSpacing: number;
-  pageWidth: number;
+  paragraphSpacing: number;
   textAlign: 'left' | 'center' | 'right' | 'justify';
-  firstLineIndent: boolean;
   showImages: boolean;
   fontFamily: keyof typeof FONT_FAMILIES;
   backgroundColor: keyof typeof BACKGROUND_COLORS;
-  showDirectory: boolean;
-  paragraphSpacing: number;
-  debug?: boolean;
 }
 
 let originalContent: string | null = null;
 let isReadingMode = false;
+<<<<<<< HEAD
 let textSelectionToolbar: TextSelectionToolbar | null = null;
 let markdownWorkerManager: MarkdownWorkerManager | null = null;
 let defuddleExtractorInstance: DefuddleExtractor | null = null;
+=======
+>>>>>>> af42e2b291b1de8d011835e89534b79ede3432bb
 
 import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
 
@@ -474,130 +469,31 @@ function handleError(error: unknown, context: string): void {
 }
 
 async function fetchSettings(): Promise<ReadingModeSettings> {
+  const [theme, fontSize, codeFontSize, codeTheme, lineHeight, paragraphSpacing, textAlign, showImages, fontFamily, backgroundColor] = await Promise.all([
+    getStorage<'light' | 'dark'>(StorageKeys.THEME),
+    getStorage<number>(StorageKeys.FONT_SIZE),
+    getStorage<number>(StorageKeys.CODE_FONT_SIZE),
+    getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME),
+    getStorage<number>(StorageKeys.LINE_HEIGHT),
+    getStorage<number>(StorageKeys.PARAGRAPH_SPACING),
+    getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN),
+    getStorage<boolean>(StorageKeys.SHOW_IMAGES),
+    getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY),
+    getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR),
+  ]);
+
   return {
-    theme: await getStorage<'light' | 'dark'>(StorageKeys.THEME) ?? DEFAULT_SETTINGS.theme,
-    fontSize: await getStorage<number>(StorageKeys.FONT_SIZE) ?? DEFAULT_SETTINGS.fontSize,
-    codeFontSize: await getStorage<number>(StorageKeys.CODE_FONT_SIZE) ?? DEFAULT_SETTINGS.codeFontSize,
-    codeTheme: await getStorage<keyof typeof CODE_THEMES>(StorageKeys.CODE_THEME) ?? DEFAULT_SETTINGS.codeTheme,
-    lineHeight: await getStorage<number>(StorageKeys.LINE_HEIGHT) ?? DEFAULT_SETTINGS.lineHeight,
-    letterSpacing: await getStorage<number>(StorageKeys.LETTER_SPACING) ?? DEFAULT_SETTINGS.letterSpacing,
-    lineSpacing: await getStorage<number>(StorageKeys.LINE_SPACING) ?? DEFAULT_SETTINGS.lineSpacing,
-    pageWidth: await getStorage<number>(StorageKeys.PAGE_WIDTH) ?? DEFAULT_SETTINGS.pageWidth,
-    textAlign: await getStorage<'left' | 'center' | 'right' | 'justify'>(StorageKeys.TEXT_ALIGN) ?? DEFAULT_SETTINGS.textAlign,
-    firstLineIndent: await getStorage<boolean>(StorageKeys.FIRST_LINE_INDENT) ?? DEFAULT_SETTINGS.firstLineIndent,
-    showImages: await getStorage<boolean>(StorageKeys.SHOW_IMAGES) ?? DEFAULT_SETTINGS.showImages,
-    fontFamily: await getStorage<keyof typeof FONT_FAMILIES>(StorageKeys.FONT_FAMILY) ?? DEFAULT_SETTINGS.fontFamily,
-    backgroundColor: await getStorage<keyof typeof BACKGROUND_COLORS>(StorageKeys.BACKGROUND_COLOR) ?? DEFAULT_SETTINGS.backgroundColor,
-    showDirectory: await getStorage<boolean>(StorageKeys.SHOW_DIRECTORY) ?? DEFAULT_SETTINGS.showDirectory,
-    paragraphSpacing: await getStorage<number>(StorageKeys.PARAGRAPH_SPACING) ?? DEFAULT_SETTINGS.paragraphSpacing,
-    debug: await getStorage<boolean>(StorageKeys.DEBUG) ?? DEFAULT_SETTINGS.debug,
+    theme: theme ?? DEFAULT_SETTINGS.theme,
+    fontSize: fontSize ?? DEFAULT_SETTINGS.fontSize,
+    codeFontSize: codeFontSize ?? DEFAULT_SETTINGS.codeFontSize,
+    codeTheme: codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+    lineHeight: lineHeight ?? DEFAULT_SETTINGS.lineHeight,
+    paragraphSpacing: paragraphSpacing ?? DEFAULT_SETTINGS.paragraphSpacing,
+    textAlign: textAlign ?? DEFAULT_SETTINGS.textAlign,
+    showImages: showImages ?? DEFAULT_SETTINGS.showImages,
+    fontFamily: fontFamily ?? DEFAULT_SETTINGS.fontFamily,
+    backgroundColor: backgroundColor ?? DEFAULT_SETTINGS.backgroundColor,
   };
-}
-
-function handleMediaElements(container: HTMLElement | null, showImages: boolean) {
-  if (!container) return;
-
-  // 首先处理所有图片容器
-  const imageContainers = container.querySelectorAll('.enhanced-image-container, .background-image-container, figure');
-  imageContainers.forEach(container => {
-    const containerElement = container as HTMLElement;
-    containerElement.style.display = showImages ? 'block' : 'none';
-  });
-
-  // 处理所有图片标题
-  const imageCaptions = container.querySelectorAll('.image-caption, figcaption');
-  imageCaptions.forEach(caption => {
-    const captionElement = caption as HTMLElement;
-    captionElement.style.display = showImages ? 'block' : 'none';
-  });
-
-  const mediaSelectors = [
-    'img', 'svg', 'video', 'audio', 'iframe',
-    'canvas', 'object', 'embed', 'picture', 'source'
-  ];
-  mediaSelectors.forEach(selector => {
-    const elements = container.getElementsByTagName(selector);
-    for (const element of elements) {
-      const htmlElement = element as HTMLElement;
-      htmlElement.style.display = showImages ? 'block' : 'none';
-
-      if (showImages && element instanceof HTMLImageElement) {
-        // 处理懒加载图片
-        const lazyAttributes = [
-          'data-src', 'data-srcset', 'data-original', 'data-lazy-src',
-          'data-lazy', 'data-src-lazy', 'data-original-src', 'data-load-src',
-          'data-img-src', 'data-origin', 'data-lazyload', 'data-srcset-lazy',
-          'data-lazy-srcset', 'data-lazy-original'
-        ];
-
-        // 如果图片没有 src，尝试从懒加载属性中获取
-        if (!element.src || element.src.trim() === '' || element.src.includes('data:image/gif;base64')) {
-          for (const attr of lazyAttributes) {
-            const value = element.getAttribute(attr);
-            if (value) {
-              element.src = value;
-              break;
-            }
-          }
-        }
-
-        // 确保图片可见
-        element.removeAttribute('loading');
-        element.removeAttribute('decoding');
-        element.removeAttribute('importance');
-        element.removeAttribute('loading-strategy');
-        element.removeAttribute('fetchpriority');
-        htmlElement.style.visibility = 'visible';
-        htmlElement.style.opacity = '1';
-
-        // 如果图片在增强容器中，确保容器可见
-        const container = element.closest('.enhanced-image-container');
-        if (container) {
-          (container as HTMLElement).style.display = 'block';
-        }
-
-        // 如果图片有 srcset，确保它被正确加载
-        if (element.srcset === '' && element.getAttribute('data-srcset')) {
-          element.srcset = element.getAttribute('data-srcset')!;
-        }
-
-        // 触发图片加载
-        if (element.complete) {
-          const event = new Event('load');
-          element.dispatchEvent(event);
-        }
-      }
-    }
-  });
-
-  // 处理背景图片
-  const elementsWithBgImage = container.querySelectorAll('[style*="background-image"]');
-  elementsWithBgImage.forEach(element => {
-    if (!showImages) {
-      (element as HTMLElement).style.backgroundImage = 'none';
-    } else {
-      // 检查是否有懒加载的背景图片
-      const lazyAttributes = [
-        'data-background', 'data-bg', 'data-background-image',
-        'data-lazy-background', 'data-background-src'
-      ];
-
-      for (const attr of lazyAttributes) {
-        const value = element.getAttribute(attr);
-        if (value && element instanceof HTMLElement) {
-          element.style.backgroundImage = `url(${value})`;
-          break;
-        }
-      }
-    }
-  });
-
-  // 处理图片占位符
-  const placeholders = container.querySelectorAll('.image-placeholder');
-  placeholders.forEach(placeholder => {
-    const placeholderElement = placeholder as HTMLElement;
-    placeholderElement.style.display = showImages ? 'flex' : 'none';
-  });
 }
 
 async function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings, forceReprocess: boolean = false) {
@@ -707,12 +603,8 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
 
     console.log(`应用代码块主题: ${codeTheme}`);
 
-    // 使用 GitHub 风格代码块提取器增强所有代码块
-    console.log('开始增强代码块');
-    await githubCodeExtractor.enhanceAllCodeBlocks(container, codeTheme);
-
-    // 增强内联代码
-    githubCodeExtractor.enhanceInlineCode(container);
+    // 统一处理所有代码块
+    await handleCodeBlocks(container, settings, true);
 
     // 设置代码字体大小
     if (settings.codeFontSize) {
@@ -741,986 +633,70 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
   }
 }
 
-// 代码主题的样式映射
-const CODE_THEME_STYLES = {
-  'github': {
-    background: '#ffffff',
-    text: '#24292e',
-    selection: '#b3d4fc',
-    comment: '#6a737d',
-    punctuation: '#24292e',
-    keyword: '#d73a49',
-    function: '#6f42c1',
-    string: '#032f62',
-    number: '#005cc5',
-    class: '#22863a',
-    variable: '#24292e',
-  },
-  'one-dark': {
-    background: '#282c34',
-    text: '#abb2bf',
-    selection: '#3e4451',
-    comment: '#5c6370',
-    punctuation: '#abb2bf',
-    keyword: '#c678dd',
-    function: '#61afef',
-    string: '#98c379',
-    number: '#d19a66',
-    class: '#e5c07b',
-    variable: '#e06c75',
-  },
-  'one-light': {
-    background: '#fafafa',
-    text: '#383a42',
-    selection: '#e5e5e6',
-    comment: '#a0a1a7',
-    punctuation: '#383a42',
-    keyword: '#a626a4',
-    function: '#4078f2',
-    string: '#50a14f',
-    number: '#986801',
-    class: '#c18401',
-    variable: '#e45649',
-  },
-  'material-dark': {
-    background: '#263238',
-    text: '#eeffff',
-    selection: '#80cbc4',
-    comment: '#546e7a',
-    punctuation: '#89ddff',
-    keyword: '#c792ea',
-    function: '#82aaff',
-    string: '#c3e88d',
-    number: '#f78c6c',
-    class: '#ffcb6b',
-    variable: '#eeffff',
-  },
-  'material-light': {
-    background: '#fafafa',
-    text: '#90a4ae',
-    selection: '#80cbc4',
-    comment: '#90a4ae',
-    punctuation: '#39adb5',
-    keyword: '#7c4dff',
-    function: '#6182b8',
-    string: '#91b859',
-    number: '#f76d47',
-    class: '#f6a434',
-    variable: '#90a4ae',
-  },
-  'night-owl': {
-    background: '#011627',
-    text: '#d6deeb',
-    selection: '#1d3b53',
-    comment: '#637777',
-    punctuation: '#7fdbca',
-    keyword: '#c792ea',
-    function: '#82aaff',
-    string: '#ecc48d',
-    number: '#f78c6c',
-    class: '#ffcb8b',
-    variable: '#d7dbe0',
-  },
-  'dracula': {
-    background: '#282a36',
-    text: '#f8f8f2',
-    selection: '#44475a',
-    comment: '#6272a4',
-    punctuation: '#f8f8f2',
-    keyword: '#ff79c6',
-    function: '#50fa7b',
-    string: '#f1fa8c',
-    number: '#bd93f9',
-    class: '#8be9fd',
-    variable: '#f8f8f2',
-  },
-  'solarized-dark': {
-    background: '#002b36',
-    text: '#839496',
-    selection: '#073642',
-    comment: '#586e75',
-    punctuation: '#839496',
-    keyword: '#859900',
-    function: '#268bd2',
-    string: '#2aa198',
-    number: '#d33682',
-    class: '#b58900',
-    variable: '#b58900',
-  },
-  'solarized-light': {
-    background: '#fdf6e3',
-    text: '#657b83',
-    selection: '#eee8d5',
-    comment: '#93a1a1',
-    punctuation: '#657b83',
-    keyword: '#859900',
-    function: '#268bd2',
-    string: '#2aa198',
-    number: '#d33682',
-    class: '#b58900',
-    variable: '#b58900',
-  },
-} as const;
-
-// 生成代码主题的 CSS
-function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: ReadingModeSettings) {
-  const themeStyles = CODE_THEME_STYLES[theme] || CODE_THEME_STYLES['github'];
-
-  return `
-    /* 代码块主题变量 */
-    :root {
-      --code-bg-color: ${themeStyles.background};
-      --code-text-color: ${themeStyles.text};
-      --code-selection-color: ${themeStyles.selection};
-      --code-comment-color: ${themeStyles.comment};
-      --code-punctuation-color: ${themeStyles.punctuation};
-      --code-keyword-color: ${themeStyles.keyword};
-      --code-function-color: ${themeStyles.function};
-      --code-string-color: ${themeStyles.string};
-      --code-number-color: ${themeStyles.number};
-      --code-class-color: ${themeStyles.class};
-      --code-variable-color: ${themeStyles.variable};
-      --code-border-color: ${themeStyles.comment}40;
-      --code-shadow-color: ${themeStyles.comment}20;
-      --code-font-size: ${settings.codeFontSize}px;
-    }
-
-    /* 代码块基础样式 */
-    pre.line-numbers,
-    .enhanced-code-container pre,
-    .code-block pre {
-      background-color: var(--code-bg-color) !important;
-      color: var(--code-text-color) !important;
-      font-size: var(--code-font-size) !important;
-      line-height: 1.5;
-      padding: 1em;
-      margin: 1em 0;
-      border-radius: 8px;
-      overflow-x: auto;
-      position: relative;
-      padding-left: 3.8em !important;
-      counter-reset: linenumber;
-      border: 1px solid var(--code-border-color);
-      box-shadow: 0 2px 4px var(--code-shadow-color);
-    }
-
-    /* 代码工具栏样式 */
-    .code-toolbar {
-      background-color: var(--code-bg-color) !important;
-      color: var(--code-text-color) !important;
-      border-bottom: 1px solid var(--code-border-color);
-      font-size: var(--code-font-size) !important;
-    }
-
-    /* 行号容器样式 */
-    pre.line-numbers .line-numbers-rows,
-    .enhanced-code-container .line-numbers-rows,
-    .code-block .line-numbers-rows {
-      position: absolute;
-      pointer-events: none;
-      top: 1em;
-      font-size: var(--code-font-size) !important;
-      left: 0;
-      width: 3em;
-      letter-spacing: -1px;
-      border-right: 1px solid var(--code-border-color);
-      user-select: none;
-    }
-
-    /* 行号样式 */
-    .line-numbers-rows > span {
-      display: block;
-      counter-increment: linenumber;
-      pointer-events: none;
-    }
-
-    .line-numbers-rows > span:before {
-      content: counter(linenumber);
-      color: var(--code-comment-color)80;
-      display: block;
-      padding-right: 0.8em;
-      text-align: right;
-    }
-
-    /* 代码语法高亮 */
-    .token.comment,
-    .token.prolog,
-    .token.doctype,
-    .token.cdata {
-      color: var(--code-comment-color) !important;
-      font-style: italic;
-    }
-
-    .token.punctuation {
-      color: var(--code-punctuation-color) !important;
-    }
-
-    .token.keyword,
-    .token.operator {
-      color: var(--code-keyword-color) !important;
-    }
-
-    .token.function {
-      color: var(--code-function-color) !important;
-    }
-
-    .token.string {
-      color: var(--code-string-color) !important;
-    }
-
-    .token.number {
-      color: var(--code-number-color) !important;
-    }
-
-    .token.class-name {
-      color: var(--code-class-color) !important;
-    }
-
-    .token.variable {
-      color: var(--code-variable-color) !important;
-    }
-
-    /* 代码选择样式 */
-    pre.line-numbers ::selection,
-    pre.line-numbers ::-moz-selection,
-    .enhanced-code-container ::selection,
-    .enhanced-code-container ::-moz-selection,
-    .code-block ::selection,
-    .code-block ::-moz-selection {
-      background: var(--code-selection-color) !important;
-    }
-
-    /* 内联代码样式 */
-    #reading-mode-container code:not(pre code) {
-      background-color: var(--code-bg-color)40;
-      color: var(--code-keyword-color);
-      padding: 0.2em 0.4em;
-      border-radius: 3px;
-      font-size: var(--code-font-size) !important;
-      font-family: 'Fira Code', Consolas, Monaco, monospace;
-      border: 1px solid var(--code-border-color);
-    }
-
-    /* 确保代码块工具栏按钮样式正确 */
-    .code-toolbar .toolbar-item button {
-      color: var(--code-text-color) !important;
-      background-color: var(--code-bg-color) !important;
-      border: 1px solid var(--code-border-color) !important;
-      font-size: calc(var(--code-font-size) * 0.9) !important;
-    }
-
-    .code-toolbar .toolbar-item button:hover {
-      background-color: var(--code-selection-color) !important;
-    }
-  `;
-}
 
 async function applyStyles(settings: ReadingModeSettings) {
-  const styleId = 'reading-mode-style';
-  let style = document.getElementById(styleId);
+  const rootElement = document.documentElement;
+  const bodyElement = document.body;
 
-  if (!style) {
-    style = document.createElement('style');
-    style.id = styleId;
-    document.head.appendChild(style);
-  }
+  // 应用主题
+  rootElement.setAttribute('data-theme', settings.theme);
+  bodyElement.setAttribute('data-theme', settings.theme);
 
-  // 应用代码块样式
-  const codeblockStyles = document.getElementById('reading-mode-codeblock-styles');
-  if (codeblockStyles) {
-    // 设置代码块主题
-    const themeClass = settings.theme === 'dark' ? 'dark-theme' : 'light-theme';
+  // 应用字体大小
+  rootElement.style.setProperty('--reader-font-size', `${settings.fontSize}px`);
 
-    // 添加主题类到容器
-    const container = document.getElementById('reading-mode-container');
-    if (container) {
-      container.classList.remove('dark-theme', 'light-theme');
-      container.classList.add(themeClass);
-    }
+  // 应用行高
+  rootElement.style.setProperty('--reader-line-height', `${settings.lineHeight}`);
 
-    // 设置代码字体大小变量
-    codeblockStyles.textContent = `
-      :root {
-        --code-font-size: ${settings.codeFontSize}px;
+  // 应用段间距
+  rootElement.style.setProperty('--reader-paragraph-spacing', `${settings.paragraphSpacing}em`);
+
+  // 应用文本对齐
+  rootElement.style.setProperty('--reader-text-align', settings.textAlign);
+
+  // 应用字体家族
+  rootElement.style.setProperty('--reader-font-family', FONT_FAMILIES[settings.fontFamily] || FONT_FAMILIES.default);
+
+  // 应用背景颜色
+  rootElement.style.setProperty('--reader-background-color', BACKGROUND_COLORS[settings.backgroundColor] || BACKGROUND_COLORS.white);
+
+  // 处理媒体元素（图片等）的显示
+  handleMediaElements(bodyElement, settings.showImages);
+
+  // 处理代码块样式
+  await handleCodeBlocks(bodyElement, settings);
+
+  // 更新阅读模式下特定元素的样式
+  const readerContent = document.querySelector('.reader-content-container');
+  if (readerContent) {
+    const readerStyles = document.createElement('style');
+    readerStyles.id = 'reading-mode-dynamic-styles';
+    readerStyles.textContent = `
+      .reader-content-container p,
+      .reader-content-container li,
+      .reader-content-container blockquote,
+      .reader-content-container pre {
+        line-height: var(--reader-line-height);
+        margin-bottom: var(--reader-paragraph-spacing);
+        text-align: var(--reader-text-align);
       }
-
-      /* 确保工具栏字体大小与代码内容一致 */
-      .code-toolbar {
-        font-size: var(--code-font-size, ${settings.codeFontSize}px);
+      .reader-content-container {
+        font-family: var(--reader-font-family);
+        font-size: var(--reader-font-size);
+        background-color: var(--reader-background-color);
+        color: var(--reader-text-color); /* 定义在 CSS Modules 中 */
       }
-
-      /* 确保代码块主题颜色统一 */
-      .code-toolbar, .line-numbers {
-        border-color: var(--code-border);
-      }
-
-      /* 行号字体大小特别调整 */
-      .line-number {
-        font-size: ${Math.max(settings.codeFontSize - 2, 10)}px;
-      }
-    `;
-  }
-
-  // 应用列表样式
-  const listStyles = document.getElementById('reading-mode-list-styles');
-  if (listStyles) {
-    // 设置列表样式
-    listStyles.textContent = `
-      /* 列表样式 */
-      .enhanced-list {
-        margin: 1.5em 0;
-        padding-left: 2em;
-        list-style-position: outside;
-        font-size: ${settings.fontSize - 1}px;
-        color: ${settings.theme === 'dark' ? '#adbac7' : '#24292f'};
-      }
-
-      .enhanced-list-item {
-        margin: 0.75em 0;
-        padding-left: 0.5em;
-        position: relative;
-        line-height: ${settings.lineHeight + 0.1};
-      }
-
-      /* 无序列表样式 */
-      .enhanced-unordered-list {
-        list-style: none;
-      }
-
-      .enhanced-unordered-list > .enhanced-list-item {
-        padding-left: 1.75em;
-        position: relative;
-      }
-
-      .enhanced-unordered-list > .enhanced-list-item::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 0.65em;
-        width: 8px;
-        height: 8px;
-        background-color: ${settings.theme === 'dark' ? '#539bf5' : '#0969da'};
-        border-radius: 50%;
-        transform: scale(0.8);
-        transition: transform 0.2s ease, background-color 0.2s ease;
-      }
-
-      .enhanced-unordered-list > .enhanced-list-item:hover::before {
-        transform: scale(1);
-        background-color: ${settings.theme === 'dark' ? '#6cb6ff' : '#0550ae'};
-      }
-
-      /* 有序列表样式 */
-      .enhanced-ordered-list {
-        list-style: none;
-        counter-reset: item;
-      }
-
-      .enhanced-ordered-list > .enhanced-list-item {
-        counter-increment: item;
-        padding-left: 0.5em;
-      }
-
-      .enhanced-ordered-list > .enhanced-list-item::before {
-        content: counter(item) ".";
-        position: absolute;
-        left: -1.75em;
-        top: 0;
-        color: ${settings.theme === 'dark' ? '#539bf5' : '#0969da'};
-        font-weight: 600;
-        transition: color 0.2s ease;
-      }
-
-      .enhanced-ordered-list > .enhanced-list-item:hover::before {
-        color: ${settings.theme === 'dark' ? '#6cb6ff' : '#0550ae'};
-      }
-
-      /* 嵌套列表样式 */
-      .enhanced-list .enhanced-list {
-        margin: 0.75em 0 0.75em 0.5em;
+      .dark .reader-content-container {
+        color: var(--reader-dark-text-color);
       }
     `;
-  }
-
-  const container = document.getElementById('reading-mode-container');
-
-  // 处理媒体元素
-  handleMediaElements(container, settings.showImages);
-
-  // 处理代码块 - 初始化时需要完全处理
-  await handleCodeBlocks(container, settings, true);
-
-  // 使用工具模块中的函数更新 CSS 变量
-  // 从 utils.ts 导入的 updateReadingModeStyles 函数
-  import('./utils').then(({ updateReadingModeStyles }) => {
-    updateReadingModeStyles(settings, isReadingMode);
-  }).catch(error => {
-    console.error('加载样式工具时发生错误:', error);
-  });
-
-  // 合并基础样式和代码主题样式
-  style.textContent = `
-    ${generateCodeThemeStyles(settings.codeTheme, settings)}
-
-    /* 基础样式 */
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: var(--reading-bg-color) !important;
-      color: var(--reading-text-color);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start; /* 确保内容从顶部开始 */
-      font-size: var(--reading-font-size) !important;
-    }
-
-    /* 阅读容器样式 */
-    #reading-mode-container {
-      box-sizing: border-box;
-      width: var(--reading-page-width);
-      padding: 2rem;
-      margin: ${settings.showDirectory ? '0 0 0 250px' : '0 auto'};
-      font-size: var(--reading-font-size) !important;
-      line-height: var(--reading-line-height);
-      letter-spacing: var(--reading-letter-spacing);
-      text-align: ${settings.textAlign};
-      font-family: var(--reading-font-family);
-      background-color: var(--reading-content-bg-color) !important;
-      color: var(--reading-text-color);
-      transition: all 0.3s ease;
-      box-shadow: var(--reading-content-shadow);
-      border-radius: 8px;
-    }
-
-    /* 确保所有文本元素都使用正确的字体大小 */
-    #reading-mode-container * {
-      font-size: inherit;
-    }
-
-    /* 响应式布局 */
-    @media screen and (max-width: ${settings.pageWidth + 250}px) {
-      #reading-mode-toc {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-      }
-
-      #reading-mode-toc:hover {
-        transform: translateX(0);
-      }
-
-      #reading-mode-container {
-        width: min(${settings.pageWidth}px, 100vw - 4rem);
-        margin: 0 auto !important; /* 强制居中，覆盖之前的设置 */
-        padding: 2rem;
-      }
-    }
-
-    @media screen and (max-width: 600px) {
-      #reading-mode-container {
-        width: calc(100vw - 2rem);
-        margin: 0 auto;
-        padding: 1rem;
-      }
-    }
-
-    /* 文章标题样式 */
-    #reading-mode-container h1:first-child {
-      font-size: calc(var(--reading-font-size) * 1.8) !important;
-      font-weight: 700;
-      margin: 0 0 1em;
-      line-height: 1.2;
-      color: var(--reading-heading-color);
-      letter-spacing: -0.02em;
-    }
-
-    /* 标题层级样式 */
-    #reading-mode-container h2 {
-      font-size: calc(var(--reading-font-size) * 1.5) !important;
-      font-weight: 600;
-      margin: 2em 0 0.8em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-      letter-spacing: -0.01em;
-      border-bottom: 1px solid var(--reading-border-color);
-      padding-bottom: 0.3em;
-    }
-
-    #reading-mode-container h3 {
-      font-size: calc(var(--reading-font-size) * 1.3) !important;
-      font-weight: 600;
-      margin: 1.8em 0 0.7em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-    }
-
-    #reading-mode-container h4 {
-      font-size: calc(var(--reading-font-size) * 1.1) !important;
-      font-weight: 600;
-      margin: 1.5em 0 0.7em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-    }
-
-    #reading-mode-container h5, #reading-mode-container h6 {
-      font-size: calc(var(--reading-font-size) * 1.05) !important;
-      font-weight: 600;
-      margin: 1.2em 0 0.5em;
-      line-height: 1.3;
-      color: var(--reading-heading-color);
-    }
-
-    /* 段落样式 */
-    #reading-mode-container p {
-      margin: 0;
-      margin-bottom: ${settings.paragraphSpacing}em;
-      line-height: ${settings.lineSpacing};
-      letter-spacing: ${settings.letterSpacing}px;
-      opacity: 0.95;
-      text-indent: ${settings.firstLineIndent ? '2em' : '0'};
-      font-size: var(--reading-font-size) !important;
-    }
-
-    /* 覆盖特殊段落的缩进 */
-    #reading-mode-container blockquote p,
-    #reading-mode-container li p,
-    #reading-mode-container .no-indent {
-      text-indent: 0;
-    }
-
-    /* 列表样式优化 */
-    #reading-mode-container ul,
-    #reading-mode-container ol {
-      margin: 1.2em 0;
-      padding-left: 2.5em;
-      line-height: ${settings.lineSpacing}; /* 与段落保持一致的行间距 */
-      list-style-position: outside;
-      font-size: var(--reading-font-size) !important;
-    }
-
-    #reading-mode-container li {
-      margin: 0.6em 0;
-      padding-left: 0.3em;
-      position: relative;
-      font-size: var(--reading-font-size) !important;
-    }
-
-    #reading-mode-container ul {
-      list-style: none;
-    }
-
-    #reading-mode-container ul > li {
-      padding-left: 1.5em;
-    }
-
-    #reading-mode-container ul > li::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0.6em;
-      width: 6px;
-      height: 6px;
-      background-color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-      border-radius: 50%;
-      transform: scale(0.75);
-    }
-
-    #reading-mode-container ol {
-      list-style: none;
-      counter-reset: item;
-    }
-
-    #reading-mode-container ol > li {
-      counter-increment: item;
-    }
-
-    #reading-mode-container ol > li::before {
-      content: counter(item) ".";
-      position: absolute;
-      left: -1.5em;
-      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-      font-weight: 600;
-    }
-
-    #reading-mode-container ul ul,
-    #reading-mode-container ul ol,
-    #reading-mode-container ol ul,
-    #reading-mode-container ol ol {
-      margin: 0.5em 0 0.5em 1em;
-    }
-
-    #reading-mode-container ol ol {
-      counter-reset: subitem;
-    }
-
-    #reading-mode-container ol ol > li {
-      counter-increment: subitem;
-    }
-
-    #reading-mode-container ol ol > li::before {
-      content: counter(subitem, lower-alpha) ".";
-      color: ${settings.theme === 'dark' ? '#93c5fd' : '#60a5fa'};
-    }
-
-    #reading-mode-container li > p {
-      margin: 0.25em 0 !important;
-      text-indent: 0 !important;
-    }
-
-    #reading-mode-container li::marker {
-      color: ${settings.theme === 'dark' ? '#808080' : '#666666'};
-    }
-
-    /* 引用块样式优化 */
-    #reading-mode-container blockquote {
-      margin: 2em 0;
-      padding: 1em 2em;
-      border-left: 4px solid var(--reading-blockquote-border);
-      background-color: var(--reading-code-bg-color);
-      color: var(--reading-blockquote-color);
-      font-style: italic;
-      border-radius: 0.25em;
-      transition: all 0.3s ease;
-      font-size: var(--reading-font-size) !important;
-    }
-
-    #reading-mode-container blockquote p {
-      margin: 0.5em 0;
-      text-indent: 0;
-    }
-
-    /* 链接样式优化 */
-    #reading-mode-container a {
-      color: var(--reading-link-color);
-      text-decoration: none;
-      transition: all 0.2s ease;
-      border-bottom: 1px solid transparent;
-      font-size: inherit !important;
-    }
-
-    #reading-mode-container a:hover {
-      color: ${settings.theme === 'dark' ? '#93c5fd' : '#2563eb'};
-      border-bottom-color: currentColor;
-    }
-
-    /* 图片容器样式 */
-    #reading-mode-container figure {
-      margin: 2em 0;
-      text-align: center;
-    }
-
-    #reading-mode-container figcaption {
-      margin-top: 0.8em;
-      font-size: 0.9em;
-      color: ${settings.theme === 'dark' ? '#9ca3af' : '#6b7280'};
-      font-style: italic;
-    }
-
-    /* 图片样式优化 */
-    #reading-mode-container img {
-      max-width: 100%;
-      height: auto;
-      margin: 0 auto;
-      display: block;
-      border-radius: 0.5em;
-      box-shadow: ${settings.theme === 'dark' ?
-      '0 4px 6px rgba(0, 0, 0, 0.3)' :
-      '0 4px 6px rgba(0, 0, 0, 0.1)'};
-      transition: all 0.3s ease;
-    }
-
-    /* 水平分割线样式 */
-    #reading-mode-container hr {
-      margin: 2.5em 0;
-      border: none;
-      height: 1px;
-      background: ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
-      transition: background-color 0.3s ease;
-    }
-
-    /* 文字选择样式 */
-    #reading-mode-container ::selection {
-      background-color: ${settings.theme === 'dark' ? '#4a5d7c' : '#bfdbfe'};
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#1e40af'};
-    }
-
-    /* 滚动条样式 */
-    #reading-mode-container::-webkit-scrollbar {
-      width: 12px;
-    }
-
-    #reading-mode-container::-webkit-scrollbar-track {
-      background: ${settings.theme === 'dark' ? '#2d2d2d' : '#f1f1f1'};
-      border-radius: 6px;
-    }
-
-    #reading-mode-container::-webkit-scrollbar-thumb {
-      background: ${settings.theme === 'dark' ? '#404040' : '#c1c1c1'};
-      border-radius: 6px;
-      border: 3px solid ${settings.theme === 'dark' ? '#2d2d2d' : '#f1f1f1'};
-    }
-
-    #reading-mode-container::-webkit-scrollbar-thumb:hover {
-      background: ${settings.theme === 'dark' ? '#4a4a4a' : '#a1a1a1'};
-    }
-
-    /* 目录样式 */
-    #reading-mode-toc {
-      position: fixed;
-      left: 0;
-      top: 0;
-      height: 100vh;
-      width: 250px;
-      overflow-y: auto;
-      background-color: ${settings.theme === 'dark' ? '#2a2a2a' : '#ffffff'};
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-      padding: 20px;
-      font-size: 14px;
-      z-index: 1000;
-      transition: all 0.3s ease;
-      border-right: 1px solid ${settings.theme === 'dark' ? '#404040' : '#e5e7eb'};
-    }
-
-    #reading-mode-toc .toc-title {
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid ${settings.theme === 'dark' ? '#404040' : '#eee'};
-      color: ${settings.theme === 'dark' ? '#fff' : '#333'};
-    }
-
-    #reading-mode-toc .toc-empty {
-      color: ${settings.theme === 'dark' ? '#888' : '#999'};
-      font-style: italic;
-      text-align: center;
-      padding: 20px 0;
-    }
-
-    #reading-mode-toc::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    #reading-mode-toc::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.2);
-      border-radius: 2px;
-    }
-
-    #reading-mode-toc ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    #reading-mode-toc li {
-      margin: 4px 0;
-      line-height: 1.4;
-    }
-
-    #reading-mode-toc a {
-      color: ${settings.theme === 'dark' ? '#e0e0e0' : '#333'};
-      text-decoration: none;
-      display: block;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-      border-left: 2px solid transparent;
-    }
-
-    #reading-mode-toc a:hover {
-      background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
-      border-left-color: ${settings.theme === 'dark' ? '#666' : '#ddd'};
-    }
-
-    #reading-mode-toc a.active {
-      background-color: ${settings.theme === 'dark' ? '#3a3a3a' : '#f0f0f0'};
-      border-left-color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-      color: ${settings.theme === 'dark' ? '#60a5fa' : '#3b82f6'};
-    }
-
-    #reading-mode-toc .toc-level-1 { margin-left: 0; }
-    #reading-mode-toc .toc-level-2 { margin-left: 12px; }
-    #reading-mode-toc .toc-level-3 { margin-left: 24px; }
-    #reading-mode-toc .toc-level-4 { margin-left: 36px; }
-    #reading-mode-toc .toc-level-5 { margin-left: 48px; }
-    #reading-mode-toc .toc-level-6 { margin-left: 60px; }
-
-    /* 调整阅读容器的边距，为目录留出空间 */
-    #reading-mode-container {
-      margin-left: 250px !important;
-      width: calc(${settings.pageWidth}px - 250px) !important;
-    }
-
-    @media screen and (max-width: ${settings.pageWidth + 250}px) {
-      #reading-mode-toc {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-      }
-
-      #reading-mode-toc:hover {
-        transform: translateX(0);
-      }
-
-      #reading-mode-container {
-        margin-left: 0 !important;
-        width: ${settings.pageWidth}px !important;
-      }
-    }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background-color: ${BACKGROUND_COLORS[settings.backgroundColor]};
-    }
-
-    #reading-mode-title {
-      font-size: 2em;
-      font-weight: bold;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
-      margin: 1em 0 1.5em;
-      padding: 0;
-      text-align: center;
-      font-family: ${FONT_FAMILIES[settings.fontFamily]};
-    }
-
-    .toc-article-title {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
-      margin: 0 0 1em;
-      padding: 0 1em;
-      text-align: center;
-      font-family: ${FONT_FAMILIES[settings.fontFamily]};
-      border-bottom: 1px solid ${settings.theme === 'dark' ? '#666666' : '#dddddd'};
-      padding-bottom: 0.5em;
-    }
-
-    .toc-title {
-      font-size: 1.2em;
-      font-weight: bold;
-      color: ${settings.theme === 'dark' ? '#ffffff' : '#333333'};
-      margin: 1em 0;
-      padding: 0 1em;
-      text-align: center;
-      font-family: ${FONT_FAMILIES[settings.fontFamily]};
-    }
-
-    /* 段落间距样式 */
-    #reading-mode-container p {
-      margin-bottom: ${settings.paragraphSpacing}em;
-    }
-
-    /* 首行缩进样式 */
-    #reading-mode-container p {
-      text-indent: ${settings.firstLineIndent ? '2em' : '0'};
-    }
-  `;
-
-  // 移除工具栏（如果存在）
-  const toolbar = document.getElementById('reading-mode-toolbar');
-  if (toolbar) {
-    toolbar.remove();
+    document.head.appendChild(readerStyles);
   }
 }
 
-function createFloatingButton() {
-  // 创建退出按钮
-  const button = document.createElement('button');
-  button.id = 'reading-mode-exit-button';
-  button.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 6L6 18"></path>
-      <path d="M6 6l12 12"></path>
-    </svg>
-    <span>退出阅读模式</span>
-  `;
-  button.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    padding: 10px 20px;
-    background-color: var(--reading-accent-color, #3b82f6);
-    color: white;
-    border: none;
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    opacity: 0.85;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    backdrop-filter: blur(4px);
-    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
-  `;
+// 将 createFloatingButton 和 removeFloatingButton 移动到 src/content/ui/readerFloatingButton.ts
 
-  // 添加动画样式
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translate(-50%, 20px);
-      }
-      to {
-        opacity: 0.85;
-        transform: translate(-50%, 0);
-      }
-    }
-  `;
-  document.head.appendChild(style);
-
-  // 添加事件监听器
-  button.addEventListener('mouseover', () => {
-    button.style.opacity = '1';
-    button.style.transform = 'translateX(-50%) scale(1.05)';
-    button.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-  });
-
-  button.addEventListener('mouseout', () => {
-    button.style.opacity = '0.85';
-    button.style.transform = 'translateX(-50%) scale(1)';
-    button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-  });
-
-  button.addEventListener('click', () => {
-    // 添加退出动画
-    document.getElementById('reading-mode-container')?.classList.add('exit-animation');
-
-    // 延迟退出，以便显示动画
-    setTimeout(() => {
-      disableReadingMode();
-    }, 300);
-  });
-
-  document.body.appendChild(button);
-}
-
-function removeFloatingButton() {
-  const button = document.getElementById('reading-mode-exit-button');
-  if (button) {
-    button.remove();
-  }
-}
-
-async function applyAutoSpacing() {
-  const container = document.getElementById('reading-mode-container');
-  if (!container) return;
-
-  try {
-    // 暂时禁用 pangu 自动间距功能
-    // 后续可以重新实现或使用其他方法
-    return true;
-  } catch (error) {
-    console.error('应用自动间距时发生错误:', error);
-    return false;
-  }
-}
-
+<<<<<<< HEAD
 async function toggleReadingMode() {
   const settings = await fetchSettings();
 
@@ -1867,10 +843,217 @@ async function toggleReadingMode() {
 
     // Show exit toast
     Toast.info('已退出阅读模式');
+=======
+async function enableReadingMode() {
+  if (isReadingMode) return;
+
+  const originalBodyClassName = document.body.className;
+  const originalHtmlClassName = document.documentElement.className;
+  const originalBodyStyle = document.body.style.cssText;
+  const originalHtmlStyle = document.documentElement.style.cssText;
+
+  // 存储原始HTML
+  originalContent = document.documentElement.outerHTML;
+
+  // 恢复到初始的overflow状态
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+
+  // 动态导入 Readability，减少初始加载体积
+  const { Readability } = await import('@mozilla/readability');
+  const { ExtractorFactory } = await import('./extractors');
+
+  // 使用 JSDOM 解析原始 HTML，避免直接操作活动 DOM
+  // const dom = new JSDOM(originalContent);
+  // const documentClone = dom.window.document;
+
+  // 尝试提取主要内容
+  const reader = new Readability(document);
+  const article = reader.parse();
+
+  if (article) {
+    // 获取用户设置
+    const settings = await fetchSettings();
+
+    // 创建阅读模式容器
+    const readerContainer = document.createElement('div');
+    readerContainer.id = 'panbo-reader-view';
+    readerContainer.className = 'panbo-reader-view-container'; // 添加类名以便样式控制
+    readerContainer.setAttribute('data-theme', settings.theme); // 应用主题类
+    document.body.appendChild(readerContainer);
+
+    // 注入阅读模式CSS
+    const readerModeCss = document.createElement('style');
+    readerModeCss.id = 'panbo-reader-mode-css';
+    readerModeCss.textContent = `
+      html.reader-mode-active, body.reader-mode-active {
+        overflow: hidden !important;
+      }
+      .panbo-reader-view-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 99999;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background-color: var(--reader-background-color); /* 使用CSS变量 */
+        color: var(--reader-text-color);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      /* 针对滚动条的样式，使其更美观 */
+      .panbo-reader-view-container::-webkit-scrollbar {
+        width: 8px;
+        background-color: transparent;
+      }
+      .panbo-reader-view-container::-webkit-scrollbar-thumb {
+        background-color: #ccc;
+        border-radius: 4px;
+      }
+      .panbo-reader-view-container::-webkit-scrollbar-thumb:hover {
+        background-color: #aaa;
+      }
+
+      .panbo-reader-view-container .reader-content-wrapper {
+        max-width: 800px; /* 限制内容宽度，提供舒适阅读体验 */
+        margin: 0 auto;
+        padding: 40px 20px; /* 增加内边距 */
+        box-sizing: border-box;
+      }
+
+      .panbo-reader-view-container h1, .panbo-reader-view-container h2, .panbo-reader-view-container h3, .panbo-reader-view-container h4, .panbo-reader-view-container h5, .panbo-reader-view-container h6 {
+        font-family: var(--reader-font-family);
+        color: inherit;
+        line-height: 1.3;
+        margin-top: 1.5em;
+        margin-bottom: 0.8em;
+      }
+      .panbo-reader-view-container h1 { font-size: 2.2em; }
+      .panbo-reader-view-container h2 { font-size: 1.8em; }
+      .panbo-reader-view-container h3 { font-size: 1.5em; }
+      .panbo-reader-view-container h4 { font-size: 1.2em; }
+
+      .panbo-reader-view-container p, .panbo-reader-view-container li {
+        font-size: var(--reader-font-size);
+        line-height: var(--reader-line-height);
+        margin-bottom: var(--reader-paragraph-spacing);
+        text-align: var(--reader-text-align);
+        font-family: var(--reader-font-family);
+        color: inherit;
+      }
+
+      .panbo-reader-view-container a {
+        color: var(--reader-link-color);
+        text-decoration: none;
+        border-bottom: 1px solid var(--reader-link-color);
+        transition: border-color 0.2s ease;
+      }
+      .panbo-reader-view-container a:hover {
+        border-bottom-color: transparent;
+      }
+
+      .panbo-reader-view-container blockquote {
+        border-left: 4px solid var(--reader-quote-border-color);
+        padding-left: 1em;
+        margin: 1em 0;
+        color: var(--reader-quote-text-color);
+        font-style: italic;
+      }
+
+      .panbo-reader-view-container img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.5em auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+
+      .panbo-reader-view-container pre {
+        background-color: var(--reader-code-background-color);
+        padding: 1em;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: var(--reader-code-font-family);
+        font-size: var(--reader-code-font-size);
+        line-height: 1.5;
+        color: var(--reader-code-text-color);
+        margin-bottom: var(--reader-paragraph-spacing);
+      }
+      .panbo-reader-view-container pre code {
+        font-size: var(--reader-code-font-size);
+        line-height: 1.5;
+      }
+
+      /* 暗色模式变量 */
+      .dark {
+        --reader-text-color: #e0e0e0;
+        --reader-link-color: #90caf9;
+        --reader-quote-border-color: #616161;
+        --reader-quote-text-color: #bdbdbd;
+        --reader-code-background-color: #282c34;
+        --reader-code-text-color: #abb2bf;
+      }
+
+      /* 亮色模式变量 */
+      .light {
+        --reader-text-color: #333;
+        --reader-link-color: #1a73e8;
+        --reader-quote-border-color: #e0e0e0;
+        --reader-quote-text-color: #666;
+        --reader-code-background-color: #f6f8fa;
+        --reader-code-text-color: #24292e;
+      }
+    `;
+    document.head.appendChild(readerModeCss);
+
+    // 禁用页面原有滚动，只允许阅读模式容器滚动
+    document.documentElement.classList.add('reader-mode-active');
+    document.body.classList.add('reader-mode-active');
+
+    // 生成并插入 HTML
+    const extractor = await ExtractorFactory.createExtractor(window.location.href);
+    const extractedArticle = await extractor.extract(document, window.location.href);
+
+    if (extractedArticle && extractedArticle.content) {
+      const contentWrapper = document.createElement('div');
+      contentWrapper.className = 'reader-content-wrapper';
+      contentWrapper.innerHTML = `
+        <h1 class="reader-article-title">${extractedArticle.title || document.title}</h1>
+        <div class="reader-article-meta">
+          ${extractedArticle.author ? `<span>作者: ${extractedArticle.author}</span>` : ''}
+        </div>
+        <div class="reader-article-content">${extractedArticle.content}</div>
+      `;
+      readerContainer.appendChild(contentWrapper);
+
+      // 应用设置
+      await applyStyles(settings);
+
+      // 自动高亮代码块
+      await handleCodeBlocks(readerContainer, settings);
+
+      createFloatingButton();
+
+      isReadingMode = true;
+      console.log('阅读模式已开启');
+    } else {
+      console.error('未能成功提取文章内容。');
+      disableReadingMode(); // 提取失败则关闭阅读模式
+      alert('无法进入阅读模式，请刷新页面后重试。');
+    }
+  } else {
+    console.error('Readability 无法解析当前页面。');
+    disableReadingMode(); // 解析失败则关闭阅读模式
+    alert('无法进入阅读模式，请刷新页面后重试。');
+>>>>>>> af42e2b291b1de8d011835e89534b79ede3432bb
   }
 }
 
 function disableReadingMode() {
+<<<<<<< HEAD
   // Restore original content
   if (originalContent) {
     document.body.innerHTML = originalContent;
@@ -1943,3 +1126,64 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // ... rest of content.ts ...
+=======
+  if (!isReadingMode) return;
+
+  // 恢复原始HTML内容
+  if (originalContent) {
+    document.documentElement.outerHTML = originalContent;
+    originalContent = null;
+  }
+
+  // 移除阅读模式的CSS和容器
+  const readerModeCss = document.getElementById('panbo-reader-mode-css');
+  if (readerModeCss) {
+    readerModeCss.remove();
+  }
+
+  const readerContainer = document.getElementById('panbo-reader-view');
+  if (readerContainer) {
+    readerContainer.remove();
+  }
+
+  // 移除全局类名
+  document.documentElement.classList.remove('reader-mode-active');
+  document.body.classList.remove('reader-mode-active');
+
+  // 清理 highlight.js 的样式
+  const hljsStyles = document.getElementById('reading-mode-hljs-styles');
+  if (hljsStyles) {
+    hljsStyles.remove();
+  }
+  const customCodeStyles = document.getElementById('reading-mode-custom-code-styles');
+  if (customCodeStyles) {
+    customCodeStyles.remove();
+  }
+  const readerViewDynamicStyles = document.getElementById('reading-mode-dynamic-styles');
+  if (readerViewDynamicStyles) {
+    readerViewDynamicStyles.remove();
+  }
+
+  removeFloatingButton();
+
+  // 恢复原始溢出状态 (如果需要的话，但通常 enableReadingMode 已经处理了)
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+
+  isReadingMode = false;
+  console.log('阅读模式已关闭');
+}
+
+// 监听存储变化
+chrome.storage.onChanged.addListener(async (changes) => {
+  // 如果不在阅读模式下，不应用样式
+  if (!isReadingMode) return;
+
+  const container = document.getElementById('panbo-reader-view');
+  if (!container) return;
+
+  const settings = await fetchSettings();
+
+  await applyStyles(settings);
+});
+>>>>>>> af42e2b291b1de8d011835e89534b79ede3432bb

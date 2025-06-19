@@ -1,5 +1,5 @@
-import { ReadingModeSettings } from './types';
-import { FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
+// import { ReadingModeSettings } from './types'; // 删除此行，ReadingModeSettings 不再在此文件使用
+// import { FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage'; // 删除此行
 
 /**
  * 更新阅读模式样式 - 使用 CSS 变量
@@ -105,3 +105,6 @@ export function updateReadingModeStyles(settings: ReadingModeSettings, isReading
   // 设置首行缩进
   root.style.setProperty('--reading-first-line-indent', settings.firstLineIndent ? '2em' : '0');
 }
+
+// 这个文件现在应该只包含通用的、不与特定阅读模式功能绑定的工具函数
+// 暂时留空，后续可能会添加其他通用工具函数

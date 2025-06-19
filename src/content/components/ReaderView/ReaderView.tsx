@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import styles from './ReaderView.module.css';
-import { extractContent } from '../../extractors';
+// import { extractContent } from '../../extractors'; // 删除此行
 import { ExtractedContent } from '../../types';
 
 interface ReaderViewProps {
@@ -12,24 +12,25 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   const [content, setContent] = useState<ExtractedContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  // const [theme, setTheme] = useState<'light' | 'dark'>('light'); // 删除此行
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
-  // 处理初始主题设置
-  useEffect(() => {
-    // 根据系统偏好设置初始主题
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setTheme(prefersDark ? 'dark' : 'light');
-  }, []);
+  // 处理初始主题设置 (不再需要，因为主题由 content.ts 统一管理)
+  // useEffect(() => {
+  //   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  //   setTheme(prefersDark ? 'dark' : 'light');
+  // }, []);
 
-  // 内容提取
+  // 内容提取 (现在应通过消息传递或 Web Worker 处理)
   useEffect(() => {
     const extractPageContent = async () => {
       setIsLoading(true);
       try {
-        const extractedContent = await extractContent(document);
-        setContent(extractedContent);
-        setError(null);
+        // 假设内容通过其他机制获取，这里仅模拟
+        // const extractedContent = await extractContent(document); // 移除直接调用
+        // setContent(extractedContent);
+        // setError(null);
+        setContent({ title: '无法自动提取，请切换到阅读模式', content: '<p>请确保您已点击插件图标启用阅读模式。</p>' });
       } catch (err) {
         console.error('内容提取失败:', err);
         setError('无法提取页面内容');
@@ -54,37 +55,41 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
       }
     });
 
-  }, [content, isLoading, theme]);
+  }, [content, isLoading]); // 移除 theme 依赖
 
-  // 切换主题
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+  // 切换主题 (不再需要，因为主题由 content.ts 统一管理)
+  // const toggleTheme = () => {
+  //   setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  // };
 
   const handleRetry = () => {
     setError(null);
     setIsLoading(true);
-    extractContent(document)
-      .then(extractedContent => {
-        setContent(extractedContent);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error('内容提取重试失败:', err);
-        setError('重试失败，请尝试刷新页面');
-        setIsLoading(false);
-      });
+    // 模拟重试逻辑，实际应通过消息传递或 Web Worker
+    // extractContent(document)
+    //   .then(extractedContent => {
+    //     setContent(extractedContent);
+    //     setIsLoading(false);
+    //   })
+    //   .catch(err => {
+    //     console.error('内容提取重试失败:', err);
+    //     setError('重试失败，请尝试刷新页面');
+    //     setIsLoading(false);
+    //   });
+    setContent({ title: '无法自动提取，请切换到阅读模式', content: '<p>请确保您已点击插件图标启用阅读模式。</p>' });
+    setIsLoading(false);
   };
 
   return (
-    <div className={styles.readerView} data-theme={theme}>
+    <div className={styles.readerView}> {/* 移除 data-theme={theme} */}
       <div className={styles.toolbar}>
         <button className={styles.closeButton} onClick={onClose} aria-label="关闭阅读模式">
           ✕
         </button>
-        <button className={styles.themeButton} onClick={toggleTheme} aria-label="切换主题">
+        {/* 移除主题切换按钮 */}
+        {/* <button className={styles.themeButton} onClick={toggleTheme} aria-label="切换主题">
           {theme === 'light' ? '🌙' : '☀️'}
-        </button>
+        </button> */}
       </div>
 
       <div className={styles.contentContainer} ref={contentContainerRef}>
@@ -113,8 +118,6 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
             <h1 className={styles.articleTitle}>{content.title}</h1>
             <div className={styles.articleMeta}>
               {content.author && <span>作者: {content.author}</span>}
-              {content.date && <span>日期: {new Date(content.date).toLocaleDateString()}</span>}
-              {content.readingTime && <span>阅读时间: {content.readingTime} 分钟</span>}
             </div>
             <div 
               className={styles.articleContent}
@@ -154,6 +157,7 @@ export function createReaderView(): void {
   const readerContainer = document.createElement('div');
   readerContainer.id = readerViewId;
   readerContainer.setAttribute('class', 'reader-view-container');
+  // readerContainer.setAttribute('data-theme', settings.theme); // Theme is now handled by content.ts
   document.body.appendChild(readerContainer);
 
   // 渲染组件

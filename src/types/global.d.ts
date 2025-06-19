@@ -7,13 +7,13 @@ declare module '@mozilla/readability' {
     parse(): {
       title: string;
       content: string;
-      textContent: string;
-      length: number;
-      excerpt: string;
       byline: string;
-      dir: string;
-      siteName: string;
-      lang: string;
+      // textContent: string;
+      // length: number;
+      // excerpt: string;
+      // dir: string;
+      // siteName: string;
+      // lang: string;
     } | null;
   }
 } 

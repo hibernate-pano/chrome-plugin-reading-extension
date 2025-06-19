@@ -10,18 +10,22 @@ export interface ReadingModeSettings {
 
   // 显示设置
   showImages: boolean;
-  showDirectory: boolean;
 
   // 样式设置
   lineHeight: number;
-  lineSpacing: number;
   paragraphSpacing: number;
-  letterSpacing: number;
-  pageWidth: number;
   textAlign: 'left' | 'center' | 'right' | 'justify';
-  firstLineIndent: boolean;
 
   // 代码设置
   codeTheme: string;
   codeFontSize: number;
+}
+
+/**
+ * 提取后的文章内容接口
+ */
+export interface ExtractedContent {
+  title: string | null;
+  author?: string | null;
+  content: string;
 }

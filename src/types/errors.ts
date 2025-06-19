@@ -4,8 +4,6 @@
 export type ErrorCode = 
   | 'CONTENT_EXTRACTION_FAILED'
   | 'STORAGE_OPERATION_FAILED'
-  | 'NETWORK_REQUEST_FAILED'
-  | 'RENDER_FAILED'
   | 'PERMISSION_DENIED'
   | 'TIMEOUT_EXCEEDED'
   | 'VALIDATION_FAILED'
@@ -49,22 +47,22 @@ export class StorageError extends ReaderError {
   }
 }
 
-/**
- * 网络错误
- */
-export class NetworkError extends ReaderError {
-  constructor(message: string, context?: unknown) {
-    super(message, 'NETWORK_REQUEST_FAILED', context);
-    this.name = 'NetworkError';
-  }
-}
+// /**
+//  * 网络错误
+//  */
+// export class NetworkError extends ReaderError {
+//   constructor(message: string, context?: unknown) {
+//     super(message, 'NETWORK_REQUEST_FAILED', context);
+//     this.name = 'NetworkError';
+//   }
+// }
 
-/**
- * 渲染错误
- */
-export class RenderError extends ReaderError {
-  constructor(message: string, context?: unknown) {
-    super(message, 'RENDER_FAILED', context);
-    this.name = 'RenderError';
-  }
-} 
+// /**
+//  * 渲染错误
+//  */
+// export class RenderError extends ReaderError {
+//   constructor(message: string, context?: unknown) {
+//     super(message, 'RENDER_FAILED', context);
+//     this.name = 'RenderError';
+//   }
+// } 
