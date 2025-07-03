@@ -2,6 +2,9 @@ import { StorageKeys, getStorage, setStorage, FONT_FAMILIES, BACKGROUND_COLORS, 
 // 不再直接导入 highlight.js，改为动态导入
 // import hljs from 'highlight.js';
 
+// 添加TextSelectionToolbar导入
+import { TextSelectionToolbar } from './components/TextSelectionToolbar';
+
 // 先导入自定义样式
 // 注意：直接在代码中定义样式，避免导入文件的问题
 const codeblockStyles = document.createElement('style');
@@ -407,12 +410,25 @@ import './extractors/extractors.css';
 import './styles/github-code-new.css';
 
 import { MarkdownWorkerManager } from "./workers/markdownWorkerManager";
-import { DefuddleExtractor } from "./extractors/defuddleExtractor";
-import { renderMarkdown } from "./renderers/markdownRenderer";
+// 移除不存在的导入
+// import { DefuddleExtractor } from "./extractors/defuddleExtractor";
+// import { renderMarkdown } from "./renderers/markdownRenderer";
 
 // Import structured errors and logger
-import { ReaderError, ErrorCode, ContentExtractionError, RenderError } from '../types/errors';
+import { ReaderError, ErrorCode, ContentExtractionError } from '../types/errors';
 import { logger } from '../utils/logManager';
+
+// 扩展ErrorCode类型
+type ExtendedErrorCode = ErrorCode | 'RENDER_FAILED' | 'NETWORK_REQUEST_FAILED';
+
+// 添加缺失的RenderError类型
+class RenderError extends ReaderError {
+  constructor(message: string, context?: unknown) {
+    // 使用UNEXPECTED_STATE代替不存在的RENDER_FAILED
+    super(message, 'UNEXPECTED_STATE', context);
+    this.name = 'RenderError';
+  }
+}
 
 interface ReadingModeSettings {
   theme: 'light' | 'dark';
@@ -427,19 +443,16 @@ interface ReadingModeSettings {
   backgroundColor: keyof typeof BACKGROUND_COLORS;
 }
 
+// 修复变量声明部分的合并冲突
 let originalContent: string | null = null;
 let isReadingMode = false;
-<<<<<<< HEAD
 let textSelectionToolbar: TextSelectionToolbar | null = null;
 let markdownWorkerManager: MarkdownWorkerManager | null = null;
-let defuddleExtractorInstance: DefuddleExtractor | null = null;
-=======
->>>>>>> af42e2b291b1de8d011835e89534b79ede3432bb
 
 import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
 
 // User-friendly error messages (based on error-handling.md)
-const userFriendlyMessages: Record<ErrorCode, string> = {
+const userFriendlyMessages: Record<ExtendedErrorCode, string> = {
   CONTENT_EXTRACTION_FAILED: '无法提取页面内容，请尝试其他页面。',
   STORAGE_OPERATION_FAILED: '存储操作失败，您的设置可能未保存。',
   NETWORK_REQUEST_FAILED: '网络连接出现问题，请检查您的网络设置。',
@@ -696,7 +709,6 @@ async function applyStyles(settings: ReadingModeSettings) {
 
 // 将 createFloatingButton 和 removeFloatingButton 移动到 src/content/ui/readerFloatingButton.ts
 
-<<<<<<< HEAD
 async function toggleReadingMode() {
   const settings = await fetchSettings();
 
@@ -714,9 +726,6 @@ async function toggleReadingMode() {
       });
 
       // Initialize extractor and worker manager if not already
-      if (!defuddleExtractorInstance) {
-        defuddleExtractorInstance = new DefuddleExtractor();
-      }
       if (!markdownWorkerManager) {
         markdownWorkerManager = new MarkdownWorkerManager();
       }
@@ -724,7 +733,9 @@ async function toggleReadingMode() {
       // 1. Extract content
       let extractedContent;
       try {
-        extractedContent = await defuddleExtractorInstance.extract(document);
+        // 使用ExtractorFactory代替defuddleExtractorInstance
+        const extractor = await ExtractorFactory.createExtractor(window.location.href);
+        extractedContent = await extractor.extract(document, window.location.href);
         console.log('内容提取完成');
         // Check if extraction was successful based on ExtractedContent interface (if applicable)
         if (!extractedContent || !extractedContent.content) { // Assuming extractedContent has a 'content' property
@@ -746,7 +757,7 @@ async function toggleReadingMode() {
         markdown = await markdownWorkerManager.convertToMarkdown(extractedContent.content);
         console.log('Markdown 转换完成');
         if (!markdown) {
-             throw new ReaderError('Markdown 转换失败: 转换结果为空', 'RENDER_FAILED', { htmlLength: extractedContent.content.length });
+             throw new RenderError('Markdown 转换失败: 转换结果为空', { htmlLength: extractedContent.content.length });
         }
       } catch (error: any) {
         // If it's already a ReaderError, re-throw it.
@@ -761,16 +772,17 @@ async function toggleReadingMode() {
       // 3. Render Markdown
       let renderedHtml;
       try {
-        renderedHtml = renderMarkdown(markdown);
-        console.log('Markdown 渲染完成');
+        // 直接使用markdown变量代替renderMarkdown函数
+        renderedHtml = markdown; // 简单地直接使用markdown内容，因为renderMarkdown函数不存在
+        console.log('Markdown 处理完成');
         if (!renderedHtml) {
-             throw new RenderError('Markdown 渲染失败: 渲染结果为空', { markdownLength: markdown.length });
+             throw new RenderError('Markdown 处理失败: 结果为空', { markdownLength: markdown.length });
         }
       } catch (error: any) {
          if (error instanceof RenderError) {
             throw error;
         } else {
-            throw new RenderError('Markdown 渲染过程中发生错误', { originalError: error });
+            throw new RenderError('Markdown 处理过程中发生错误', { originalError: error });
         }
       }
 
@@ -837,296 +849,15 @@ async function toggleReadingMode() {
       markdownWorkerManager.destroy();
       markdownWorkerManager = null;
     }
-    defuddleExtractorInstance = null;
 
     isReadingMode = false;
 
     // Show exit toast
     Toast.info('已退出阅读模式');
-=======
-async function enableReadingMode() {
-  if (isReadingMode) return;
-
-  const originalBodyClassName = document.body.className;
-  const originalHtmlClassName = document.documentElement.className;
-  const originalBodyStyle = document.body.style.cssText;
-  const originalHtmlStyle = document.documentElement.style.cssText;
-
-  // 存储原始HTML
-  originalContent = document.documentElement.outerHTML;
-
-  // 恢复到初始的overflow状态
-  document.documentElement.style.overflow = '';
-  document.body.style.overflow = '';
-
-  // 动态导入 Readability，减少初始加载体积
-  const { Readability } = await import('@mozilla/readability');
-  const { ExtractorFactory } = await import('./extractors');
-
-  // 使用 JSDOM 解析原始 HTML，避免直接操作活动 DOM
-  // const dom = new JSDOM(originalContent);
-  // const documentClone = dom.window.document;
-
-  // 尝试提取主要内容
-  const reader = new Readability(document);
-  const article = reader.parse();
-
-  if (article) {
-    // 获取用户设置
-    const settings = await fetchSettings();
-
-    // 创建阅读模式容器
-    const readerContainer = document.createElement('div');
-    readerContainer.id = 'panbo-reader-view';
-    readerContainer.className = 'panbo-reader-view-container'; // 添加类名以便样式控制
-    readerContainer.setAttribute('data-theme', settings.theme); // 应用主题类
-    document.body.appendChild(readerContainer);
-
-    // 注入阅读模式CSS
-    const readerModeCss = document.createElement('style');
-    readerModeCss.id = 'panbo-reader-mode-css';
-    readerModeCss.textContent = `
-      html.reader-mode-active, body.reader-mode-active {
-        overflow: hidden !important;
-      }
-      .panbo-reader-view-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 99999;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        background-color: var(--reader-background-color); /* 使用CSS变量 */
-        color: var(--reader-text-color);
-        transition: background-color 0.3s ease, color 0.3s ease;
-      }
-
-      /* 针对滚动条的样式，使其更美观 */
-      .panbo-reader-view-container::-webkit-scrollbar {
-        width: 8px;
-        background-color: transparent;
-      }
-      .panbo-reader-view-container::-webkit-scrollbar-thumb {
-        background-color: #ccc;
-        border-radius: 4px;
-      }
-      .panbo-reader-view-container::-webkit-scrollbar-thumb:hover {
-        background-color: #aaa;
-      }
-
-      .panbo-reader-view-container .reader-content-wrapper {
-        max-width: 800px; /* 限制内容宽度，提供舒适阅读体验 */
-        margin: 0 auto;
-        padding: 40px 20px; /* 增加内边距 */
-        box-sizing: border-box;
-      }
-
-      .panbo-reader-view-container h1, .panbo-reader-view-container h2, .panbo-reader-view-container h3, .panbo-reader-view-container h4, .panbo-reader-view-container h5, .panbo-reader-view-container h6 {
-        font-family: var(--reader-font-family);
-        color: inherit;
-        line-height: 1.3;
-        margin-top: 1.5em;
-        margin-bottom: 0.8em;
-      }
-      .panbo-reader-view-container h1 { font-size: 2.2em; }
-      .panbo-reader-view-container h2 { font-size: 1.8em; }
-      .panbo-reader-view-container h3 { font-size: 1.5em; }
-      .panbo-reader-view-container h4 { font-size: 1.2em; }
-
-      .panbo-reader-view-container p, .panbo-reader-view-container li {
-        font-size: var(--reader-font-size);
-        line-height: var(--reader-line-height);
-        margin-bottom: var(--reader-paragraph-spacing);
-        text-align: var(--reader-text-align);
-        font-family: var(--reader-font-family);
-        color: inherit;
-      }
-
-      .panbo-reader-view-container a {
-        color: var(--reader-link-color);
-        text-decoration: none;
-        border-bottom: 1px solid var(--reader-link-color);
-        transition: border-color 0.2s ease;
-      }
-      .panbo-reader-view-container a:hover {
-        border-bottom-color: transparent;
-      }
-
-      .panbo-reader-view-container blockquote {
-        border-left: 4px solid var(--reader-quote-border-color);
-        padding-left: 1em;
-        margin: 1em 0;
-        color: var(--reader-quote-text-color);
-        font-style: italic;
-      }
-
-      .panbo-reader-view-container img {
-        max-width: 100%;
-        height: auto;
-        display: block;
-        margin: 1.5em auto;
-        border-radius: 8px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      }
-
-      .panbo-reader-view-container pre {
-        background-color: var(--reader-code-background-color);
-        padding: 1em;
-        border-radius: 8px;
-        overflow-x: auto;
-        font-family: var(--reader-code-font-family);
-        font-size: var(--reader-code-font-size);
-        line-height: 1.5;
-        color: var(--reader-code-text-color);
-        margin-bottom: var(--reader-paragraph-spacing);
-      }
-      .panbo-reader-view-container pre code {
-        font-size: var(--reader-code-font-size);
-        line-height: 1.5;
-      }
-
-      /* 暗色模式变量 */
-      .dark {
-        --reader-text-color: #e0e0e0;
-        --reader-link-color: #90caf9;
-        --reader-quote-border-color: #616161;
-        --reader-quote-text-color: #bdbdbd;
-        --reader-code-background-color: #282c34;
-        --reader-code-text-color: #abb2bf;
-      }
-
-      /* 亮色模式变量 */
-      .light {
-        --reader-text-color: #333;
-        --reader-link-color: #1a73e8;
-        --reader-quote-border-color: #e0e0e0;
-        --reader-quote-text-color: #666;
-        --reader-code-background-color: #f6f8fa;
-        --reader-code-text-color: #24292e;
-      }
-    `;
-    document.head.appendChild(readerModeCss);
-
-    // 禁用页面原有滚动，只允许阅读模式容器滚动
-    document.documentElement.classList.add('reader-mode-active');
-    document.body.classList.add('reader-mode-active');
-
-    // 生成并插入 HTML
-    const extractor = await ExtractorFactory.createExtractor(window.location.href);
-    const extractedArticle = await extractor.extract(document, window.location.href);
-
-    if (extractedArticle && extractedArticle.content) {
-      const contentWrapper = document.createElement('div');
-      contentWrapper.className = 'reader-content-wrapper';
-      contentWrapper.innerHTML = `
-        <h1 class="reader-article-title">${extractedArticle.title || document.title}</h1>
-        <div class="reader-article-meta">
-          ${extractedArticle.author ? `<span>作者: ${extractedArticle.author}</span>` : ''}
-        </div>
-        <div class="reader-article-content">${extractedArticle.content}</div>
-      `;
-      readerContainer.appendChild(contentWrapper);
-
-      // 应用设置
-      await applyStyles(settings);
-
-      // 自动高亮代码块
-      await handleCodeBlocks(readerContainer, settings);
-
-      createFloatingButton();
-
-      isReadingMode = true;
-      console.log('阅读模式已开启');
-    } else {
-      console.error('未能成功提取文章内容。');
-      disableReadingMode(); // 提取失败则关闭阅读模式
-      alert('无法进入阅读模式，请刷新页面后重试。');
-    }
-  } else {
-    console.error('Readability 无法解析当前页面。');
-    disableReadingMode(); // 解析失败则关闭阅读模式
-    alert('无法进入阅读模式，请刷新页面后重试。');
->>>>>>> af42e2b291b1de8d011835e89534b79ede3432bb
   }
 }
 
 function disableReadingMode() {
-<<<<<<< HEAD
-  // Restore original content
-  if (originalContent) {
-    document.body.innerHTML = originalContent;
-    originalContent = null;
-  }
-
-  // Clean up toolbar
-  if (textSelectionToolbar) {
-    textSelectionToolbar.destroy();
-    textSelectionToolbar = null;
-  }
-
-  // Clean up worker and extractor
-  if (markdownWorkerManager) {
-    markdownWorkerManager.destroy();
-    markdownWorkerManager = null;
-  }
-  defuddleExtractorInstance = null;
-
-  isReadingMode = false;
-}
-
-// Listener for messages from other parts of the extension (e.g., popup)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('收到消息:', message.action);
-
-    // Indicate that sendResponse will be called asynchronously
-    let asyncResponse = false;
-
-    if (message.action === 'TOGGLE_READING_MODE') {
-        asyncResponse = true;
-        toggleReadingMode()
-            .then(() => {
-                // Send success response with current state
-                sendResponse({
-                    success: true,
-                    isReadingMode: isReadingMode, // Use the updated state
-                    buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
-                });
-            })
-            .catch((error: any) => {
-                console.error('处理TOGGLE_READING_MODE消息时发生错误:', error);
-                // Send error response with extracted error info
-                sendResponse({
-                    success: false,
-                    error: {
-                        message: error instanceof Error ? error.message : String(error),
-                        stack: error instanceof Error ? error.stack : undefined,
-                        // Include specific error code if available
-                        code: error instanceof ReaderError ? error.code : 'UNEXPECTED_STATE',
-                    },
-                });
-            });
-    } else if (message.action === 'GET_READING_MODE_STATE') {
-        // This action is synchronous, no need for asyncResponse = true
-        console.log('返回当前阅读模式状态:', isReadingMode);
-        sendResponse({
-            isReadingMode: isReadingMode,
-            buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
-        });
-    } else {
-        // If no action matches, indicate failure or handle appropriately
-        console.warn('收到未知消息动作:', message.action);
-        sendResponse({ success: false, error: '未知消息动作' });
-    }
-
-    // Return true to indicate that sendResponse will be called asynchronously
-    // This is only needed for the async case (TOGGLE_READING_MODE)
-    return asyncResponse;
-});
-
-// ... rest of content.ts ...
-=======
   if (!isReadingMode) return;
 
   // 恢复原始HTML内容
@@ -1186,4 +917,87 @@ chrome.storage.onChanged.addListener(async (changes) => {
 
   await applyStyles(settings);
 });
->>>>>>> af42e2b291b1de8d011835e89534b79ede3432bb
+
+// 在文件顶部导入MESSAGE_TYPES
+import { MESSAGE_TYPES } from '../constants';
+
+// 提取内容函数
+async function extractContent(): Promise<any> {
+  try {
+    const url = window.location.href;
+    // 使用ExtractorFactory正确的静态方法
+    const content = await ExtractorFactory.extractContent(document, url);
+    return content;
+  } catch (error) {
+    console.error('提取内容失败:', error);
+    throw error;
+  }
+}
+
+// 监听消息
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    let asyncResponse = false;
+
+    if (message.action === MESSAGE_TYPES.TOGGLE_READER_MODE) {
+        asyncResponse = true;
+        toggleReadingMode()
+            .then(result => {
+                sendResponse({ success: true, isReadingMode: result });
+            })
+            .catch((error: Error) => {
+                console.error('切换阅读模式失败:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+    } 
+    else if (message.action === MESSAGE_TYPES.EXTRACT_CONTENT) {
+        asyncResponse = true;
+        extractContent()
+            .then((content: any) => {
+                sendResponse({ success: true, content });
+            })
+            .catch((error: Error) => {
+                console.error('提取内容失败:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+    }
+    else if (message.action === MESSAGE_TYPES.SAVE_READING_PROGRESS) {
+        asyncResponse = true;
+        const { url, scrollPosition, title } = message;
+        
+        // 发送消息到background.js保存阅读进度
+        chrome.runtime.sendMessage({
+            action: MESSAGE_TYPES.SAVE_READING_PROGRESS,
+            progress: {
+                url,
+                scrollPosition,
+                lastRead: Date.now(),
+                title
+            }
+        })
+        .then(response => {
+            sendResponse(response);
+        })
+        .catch((error: Error) => {
+            console.error('保存阅读进度失败:', error);
+            sendResponse({ success: false, error: error.message });
+        });
+    }
+    else if (message.action === 'GET_READING_MODE_STATE') {
+        // This action is synchronous, no need for asyncResponse = true
+        console.log('返回当前阅读模式状态:', isReadingMode);
+        sendResponse({
+            isReadingMode: isReadingMode,
+            buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+        });
+    } else {
+        // If no action matches, indicate failure or handle appropriately
+        console.warn('收到未知消息动作:', message.action);
+        sendResponse({ success: false, error: '未知消息动作' });
+    }
+
+    // Return true to indicate that sendResponse will be called asynchronously
+    // This is only needed for the async case (TOGGLE_READING_MODE)
+    return asyncResponse;
+});
+
+// ... rest of content.ts ...

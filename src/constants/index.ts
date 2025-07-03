@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   HISTORY: 'history',
   ANNOTATIONS: 'annotations',
   EXTRACTOR_RULES: 'extractorRules',
+  READING_PROGRESS: 'readingProgress',
 };
 
 /**

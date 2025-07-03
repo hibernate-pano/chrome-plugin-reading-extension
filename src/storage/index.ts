@@ -69,6 +69,12 @@ class Storage {
     if (!db.objectStoreNames.contains(STORAGE_KEYS.EXTRACTOR_RULES)) {
       db.createObjectStore(STORAGE_KEYS.EXTRACTOR_RULES, { keyPath: 'domain' });
     }
+
+    // 阅读进度存储
+    if (!db.objectStoreNames.contains(STORAGE_KEYS.READING_PROGRESS)) {
+      const progressStore = db.createObjectStore(STORAGE_KEYS.READING_PROGRESS, { keyPath: 'url' });
+      progressStore.createIndex('lastRead', 'lastRead', { unique: false });
+    }
   }
 
   /**

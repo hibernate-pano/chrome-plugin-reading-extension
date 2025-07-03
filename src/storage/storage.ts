@@ -12,7 +12,8 @@ export enum StorageKeys {
   CODE_THEME = 'codeTheme',
   PARAGRAPH_SPACING = 'paragraphSpacing',
   ACTIVE_PRESET = 'activePreset',
-  CUSTOM_PRESETS = 'customPresets'
+  CUSTOM_PRESETS = 'customPresets',
+  READING_PROGRESS = 'readingProgress'
 }
 
 export type StorageKeysType = `${StorageKeys}`;

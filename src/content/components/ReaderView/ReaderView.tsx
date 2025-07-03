@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import styles from './ReaderView.module.css';
 // import { extractContent } from '../../extractors'; // 删除此行
 import { ExtractedContent } from '../../types';
+import { readingProgressModel } from '../../../storage/models/ReadingProgressModel';
+import { ReadingProgress } from './types';
 
 interface ReaderViewProps {
   onClose: () => void;
@@ -10,10 +12,13 @@ interface ReaderViewProps {
 
 const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   const [content, setContent] = useState<ExtractedContent | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   // const [theme, setTheme] = useState<'light' | 'dark'>('light'); // 删除此行
   const contentContainerRef = useRef<HTMLDivElement>(null);
+  const currentUrl = window.location.href;
+  const saveProgressIntervalRef = useRef<number | null>(null);
+  const [initialScrollApplied, setInitialScrollApplied] = useState<boolean>(false);
 
   // 处理初始主题设置 (不再需要，因为主题由 content.ts 统一管理)
   // useEffect(() => {
@@ -21,25 +26,111 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   //   setTheme(prefersDark ? 'dark' : 'light');
   // }, []);
 
-  // 内容提取 (现在应通过消息传递或 Web Worker 处理)
-  useEffect(() => {
-    const extractPageContent = async () => {
-      setIsLoading(true);
-      try {
-        // 假设内容通过其他机制获取，这里仅模拟
-        // const extractedContent = await extractContent(document); // 移除直接调用
-        // setContent(extractedContent);
-        // setError(null);
-        setContent({ title: '无法自动提取，请切换到阅读模式', content: '<p>请确保您已点击插件图标启用阅读模式。</p>' });
-      } catch (err) {
-        console.error('内容提取失败:', err);
-        setError('无法提取页面内容');
-      } finally {
-        setIsLoading(false);
+  // 提取内容的函数
+  const extractContent = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 使用chrome.runtime.sendMessage发送消息给background.js
+      const response = await chrome.runtime.sendMessage({
+        action: 'EXTRACT_CONTENT',
+        url: window.location.href
+      });
+
+      if (response.success) {
+        setContent(response.content);
+      } else {
+        setError(response.error || '提取内容失败');
       }
+    } catch (err) {
+      setError('提取内容时发生错误');
+      console.error('提取内容错误:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 重试提取内容
+  const handleRetry = () => {
+    extractContent();
+  };
+
+  // 保存阅读进度
+  const saveReadingProgress = () => {
+    if (!contentContainerRef.current || !content) return;
+
+    const scrollPosition = contentContainerRef.current.scrollTop;
+    const progress: ReadingProgress = {
+      url: currentUrl,
+      scrollPosition,
+      lastRead: Date.now(),
+      title: content.title || document.title
     };
 
-    extractPageContent();
+    readingProgressModel.saveProgress(progress)
+      .catch(err => console.error('保存阅读进度失败:', err));
+  };
+
+  // 恢复阅读进度
+  const restoreReadingProgress = async () => {
+    if (!contentContainerRef.current || !content || initialScrollApplied) return;
+
+    try {
+      const progress = await readingProgressModel.getProgress(currentUrl);
+      if (progress && progress.scrollPosition) {
+        contentContainerRef.current.scrollTop = progress.scrollPosition;
+        setInitialScrollApplied(true);
+      }
+    } catch (err) {
+      console.error('恢复阅读进度失败:', err);
+    }
+  };
+
+  // 组件挂载时提取内容
+  useEffect(() => {
+    extractContent();
+
+    // 组件卸载时保存阅读进度
+    return () => {
+      if (saveProgressIntervalRef.current) {
+        window.clearInterval(saveProgressIntervalRef.current);
+      }
+      saveReadingProgress();
+    };
+  }, []);
+
+  // 内容加载完成后恢复阅读进度
+  useEffect(() => {
+    if (content && !isLoading) {
+      restoreReadingProgress();
+    }
+  }, [content, isLoading]);
+
+  // 设置定期保存阅读进度的定时器
+  useEffect(() => {
+    if (content && !isLoading) {
+      // 每30秒保存一次阅读进度
+      saveProgressIntervalRef.current = window.setInterval(saveReadingProgress, 30000);
+    }
+
+    return () => {
+      if (saveProgressIntervalRef.current) {
+        window.clearInterval(saveProgressIntervalRef.current);
+      }
+    };
+  }, [content, isLoading]);
+
+  // 监听beforeunload事件，在页面关闭前保存阅读进度
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveReadingProgress();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   // 应用样式到代码块
@@ -61,24 +152,6 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   // const toggleTheme = () => {
   //   setTheme(prev => prev === 'light' ? 'dark' : 'light');
   // };
-
-  const handleRetry = () => {
-    setError(null);
-    setIsLoading(true);
-    // 模拟重试逻辑，实际应通过消息传递或 Web Worker
-    // extractContent(document)
-    //   .then(extractedContent => {
-    //     setContent(extractedContent);
-    //     setIsLoading(false);
-    //   })
-    //   .catch(err => {
-    //     console.error('内容提取重试失败:', err);
-    //     setError('重试失败，请尝试刷新页面');
-    //     setIsLoading(false);
-    //   });
-    setContent({ title: '无法自动提取，请切换到阅读模式', content: '<p>请确保您已点击插件图标启用阅读模式。</p>' });
-    setIsLoading(false);
-  };
 
   return (
     <div className={styles.readerView}> {/* 移除 data-theme={theme} */}
@@ -181,7 +254,7 @@ export function cleanupReaderView(): void {
 
   if (existingContainer) {
     // 卸载React组件
-    const root = existingContainer._reactRootContainer;
+    const root = (existingContainer as any)._reactRootContainer;
     if (root) {
       // @ts-ignore - 尝试使用未公开的卸载方法
       if (typeof root.unmount === 'function') root.unmount();

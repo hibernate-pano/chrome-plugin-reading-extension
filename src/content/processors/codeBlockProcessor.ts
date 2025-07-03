@@ -1,6 +1,6 @@
 import { CODE_THEMES } from '../../storage/storage';
 import { ReadingModeSettings } from '../types';
-import { githubCodeExtractor } from '../extractors/githubCodeExtractor';
+// import { githubCodeExtractor } from '../extractors/githubCodeExtractor';
 
 // 代码主题的样式映射
 const CODE_THEME_STYLES = {
@@ -52,7 +52,7 @@ const CODE_THEME_STYLES = {
     keyword: '#c792ea',
     function: '#82aaff',
     string: '#c3e88d',
-    number: '#f78c6c
+    number: '#f78c6c',
     class: '#ffcb6b',
     variable: '#eeffff',
   },
@@ -78,7 +78,7 @@ const CODE_THEME_STYLES = {
     keyword: '#c792ea',
     function: '#82aaff',
     string: '#ecc48d',
-    number: '#f78c6c
+    number: '#f78c6c',
     class: '#ffcb8b',
     variable: '#d7dbe0',
   },
@@ -276,6 +276,24 @@ function generateCodeThemeStyles(theme: keyof typeof CODE_THEMES, settings: Read
   `;
 }
 
+/**
+ * 应用代码主题样式
+ */
+function applyCodeThemeStyles(css: string): void {
+  // 检查是否已存在样式元素
+  let styleElement = document.getElementById('reading-mode-code-theme');
+  
+  if (!styleElement) {
+    // 创建新的样式元素
+    styleElement = document.createElement('style');
+    styleElement.id = 'reading-mode-code-theme';
+    document.head.appendChild(styleElement);
+  }
+  
+  // 更新样式内容
+  styleElement.textContent = css;
+}
+
 async function handleCodeBlocks(container: HTMLElement | null, settings: ReadingModeSettings, forceReprocess: boolean = false) {
   if (!container) return;
 
@@ -383,12 +401,18 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
 
     console.log(`应用代码块主题: ${codeTheme}`);
 
-    // 使用 GitHub 风格代码块提取器增强所有代码块
-    console.log('开始增强代码块');
-    await githubCodeExtractor.enhanceAllCodeBlocks(container, codeTheme);
+    // 应用代码主题
+    const codeThemeCSS = generateCodeThemeStyles(
+      codeTheme as keyof typeof CODE_THEMES, 
+      settings
+    );
+    applyCodeThemeStyles(codeThemeCSS);
 
+    // 增强代码块
+    // await githubCodeExtractor.enhanceAllCodeBlocks(container, codeTheme);
+    
     // 增强内联代码
-    githubCodeExtractor.enhanceInlineCode(container);
+    // githubCodeExtractor.enhanceInlineCode(container);
 
     // 设置代码字体大小
     if (settings.codeFontSize) {

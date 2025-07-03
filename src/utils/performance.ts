@@ -3,6 +3,18 @@
  * 用于测量和记录各种操作的性能指标
  */
 
+// 为 Chrome 的 Performance 扩展接口定义
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+// 扩展 Performance 接口
+interface ExtendedPerformance extends Performance {
+  memory?: PerformanceMemory;
+}
+
 // 性能记录项接口
 export interface PerformanceRecord {
   name: string;
@@ -34,8 +46,9 @@ export class PerformanceMonitor {
     let memoryUsage: number | undefined = undefined;
 
     // 尝试获取内存使用情况（如果浏览器支持）
-    if (performance.memory) {
-      memoryUsage = (performance as any).memory.usedJSHeapSize;
+    const extendedPerf = performance as ExtendedPerformance;
+    if (extendedPerf.memory) {
+      memoryUsage = extendedPerf.memory.usedJSHeapSize;
     }
 
     this.records.set(name, {
@@ -65,8 +78,9 @@ export class PerformanceMonitor {
     const duration = endTime - record.startTime;
 
     let memoryUsageDiff: number | undefined = undefined;
-    if (performance.memory && record.memoryUsage) {
-      const currentMemory = (performance as any).memory.usedJSHeapSize;
+    const extendedPerf = performance as ExtendedPerformance;
+    if (extendedPerf.memory && record.memoryUsage) {
+      const currentMemory = extendedPerf.memory.usedJSHeapSize;
       memoryUsageDiff = currentMemory - record.memoryUsage;
     }
 
