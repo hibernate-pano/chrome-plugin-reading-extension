@@ -28,6 +28,9 @@ export interface PerformanceRecord {
 export class PerformanceMonitor {
   private records: Map<string, PerformanceRecord> = new Map();
   private enabled: boolean = true;
+  private measurements: Record<string, { start: number; end?: number }> = {};
+  private cpuMeasurements: number[] = [];
+  private cpuMeasurementInterval: number | null = null;
 
   /**
    * 启用或禁用性能监控
@@ -211,6 +214,112 @@ export class PerformanceMonitor {
     });
 
     return report;
+  }
+
+  /**
+   * 开始测量
+   * @param name 测量名称
+   */
+  public startMeasuring(name: string): void {
+    this.measurements[name] = {
+      start: performance.now()
+    };
+  }
+
+  /**
+   * 结束测量
+   * @param name 测量名称
+   * @returns 测量时间（毫秒）
+   */
+  public endMeasuring(name: string): number | undefined {
+    const measurement = this.measurements[name];
+    if (!measurement) {
+      console.warn(`[PerformanceMonitor] 未找到测量: ${name}`);
+      return undefined;
+    }
+
+    measurement.end = performance.now();
+    const duration = measurement.end - measurement.start;
+    
+    console.log(`[PerformanceMonitor] ${name}: ${duration.toFixed(2)}ms`);
+    return duration;
+  }
+
+  /**
+   * 获取测量结果
+   * @param name 测量名称
+   */
+  public getMeasurement(name: string): number | undefined {
+    const measurement = this.measurements[name];
+    if (!measurement || measurement.end === undefined) {
+      return undefined;
+    }
+    return measurement.end - measurement.start;
+  }
+
+  /**
+   * 开始测量CPU使用率
+   * 每秒采样一次
+   */
+  public startCPUMeasurement(): void {
+    // 清除之前的测量
+    this.stopCPUMeasurement();
+    this.cpuMeasurements = [];
+    
+    // 开始新的测量
+    if ('memory' in performance) {
+      this.cpuMeasurementInterval = window.setInterval(() => {
+        // 使用简单的启发式方法估算CPU使用率
+        const startTime = performance.now();
+        let counter = 0;
+        
+        // 执行一些计算密集型操作
+        for (let i = 0; i < 1000000; i++) {
+          counter += i * i;
+        }
+        
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        
+        // 基于基准时间计算相对CPU负载
+        // 这只是一个粗略的估计，实际上Chrome扩展无法直接获取精确的CPU使用率
+        const baselineDuration = 50; // 假设的基准时间（毫秒）
+        const cpuUsage = Math.min(100, (baselineDuration / duration) * 100);
+        
+        this.cpuMeasurements.push(cpuUsage);
+      }, 1000);
+    }
+  }
+
+  /**
+   * 停止测量CPU使用率
+   */
+  public stopCPUMeasurement(): void {
+    if (this.cpuMeasurementInterval !== null) {
+      clearInterval(this.cpuMeasurementInterval);
+      this.cpuMeasurementInterval = null;
+    }
+  }
+
+  /**
+   * 获取平均CPU使用率
+   */
+  public getAverageCPUUsage(): number {
+    if (this.cpuMeasurements.length === 0) {
+      return 0;
+    }
+    
+    const sum = this.cpuMeasurements.reduce((a, b) => a + b, 0);
+    return sum / this.cpuMeasurements.length;
+  }
+
+  /**
+   * 清除所有测量
+   */
+  public clearMeasurements(): void {
+    this.measurements = {};
+    this.stopCPUMeasurement();
+    this.cpuMeasurements = [];
   }
 }
 
