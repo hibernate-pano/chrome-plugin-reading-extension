@@ -8,7 +8,8 @@
       "16": "icon16.png",
       "48": "icon48.png",
       "128": "icon128.png"
-    }
+    },
+    "default_popup": "index.html"
   },
   "permissions": [
     "storage",
@@ -18,7 +19,11 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "workers/*"
+        "src/content/chunks/*",
+        "workers/*",
+        "content/styles/*",
+        "content/content.css",
+        "assets/*"
       ],
       "matches": [
         "<all_urls>"
