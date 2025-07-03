@@ -1,3 +1,4 @@
+import { UserSettings } from '../types';
 import { StorageKeys, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 import { 
   DEFAULT_LINE_HEIGHT, 
@@ -5,20 +6,20 @@ import {
 } from './options';
 
 /**
- * 统一的默认设置对象
- * 作为所有设置的单一来源
+ * 默认设置
  */
-export const DEFAULT_SETTINGS = {
-  theme: 'light' as 'light' | 'dark',
-  fontSize: 17,
-  codeFontSize: 14,
-  codeTheme: 'github' as keyof typeof CODE_THEMES,
-  lineHeight: DEFAULT_LINE_HEIGHT,
-  textAlign: 'left' as 'left' | 'center' | 'right' | 'justify',
-  showImages: true,
-  fontFamily: 'default' as keyof typeof FONT_FAMILIES,
-  backgroundColor: 'white' as keyof typeof BACKGROUND_COLORS,
-  paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
+export const DEFAULT_SETTINGS: UserSettings = {
+  // 显示设置
+  theme: 'light',
+  fontSize: 18,
+  lineHeight: 1.6,
+  fontFamily: 'default',
+  paragraphSpacing: 1.2,
+  pageWidth: 800,
+  
+  // 预设相关
+  presets: [],
+  activePreset: null,
 };
 
 /**

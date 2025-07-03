@@ -10,22 +10,18 @@ import {
   MAX_PARAGRAPH_SPACING,
   PARAGRAPH_SPACING_STEP,
 } from '../../constants/options';
-import useAppStore from '../../store';
+import { useSettingsStore } from '../../store/settingsStore';
 
 export const SettingsPanel: React.FC = () => {
-  const {
-    lineHeight,
-    setLineHeight,
-    paragraphSpacing,
-    setParagraphSpacing,
-  } = useAppStore();
+  const { settings, updateSetting } = useSettingsStore();
+  const { lineHeight, paragraphSpacing } = settings;
 
   const handleLineHeightChange = async (value: number) => {
-    await setLineHeight(value);
+    await updateSetting('lineHeight', value);
   };
 
   const handleParagraphSpacingChange = async (value: number) => {
-    await setParagraphSpacing(value);
+    await updateSetting('paragraphSpacing', value);
   };
 
   return (

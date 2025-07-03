@@ -20,6 +20,11 @@ export interface UserSettings {
   fontFamily: string;   // 字体族
   theme: ThemeOption;   // 主题选择
   paragraphSpacing: number; // 段落间距
+  pageWidth: number;    // 页面宽度
+  
+  // 预设相关
+  presets: any[];       // 预设列表
+  activePreset: string | null; // 当前激活的预设ID
 }
 
 /**

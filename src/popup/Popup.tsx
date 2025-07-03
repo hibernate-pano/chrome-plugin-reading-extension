@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import useAppStore, { initializeStateFromStorage } from '../store';
+import { useSettingsStore } from '../store/settingsStore';
 import Button from '../ui/components/Button';
 import { Slider } from '../ui/components/Slider';
 import Switch from '../ui/components/Switch';
@@ -17,23 +17,12 @@ import {
 } from '../constants/options';
 
 export const Popup = () => {
-  const {
-    theme,
-    fontSize,
-    codeFontSize,
-    readingMode,
-    lineHeight,
-    paragraphSpacing,
-    showImages,
-    setTheme,
-    setFontSize,
-    setCodeFontSize,
-    setReadingMode,
-    setLineHeight,
-    setParagraphSpacing,
-    setShowImages,
-  } = useAppStore();
-
+  const { settings, updateSetting, initSettings } = useSettingsStore();
+  const { theme, fontSize, lineHeight, paragraphSpacing, presets, activePreset } = settings;
+  
+  const [readingMode, setReadingMode] = useState(false);
+  const [codeFontSize, setCodeFontSize] = useState(14);
+  const [showImages, setShowImages] = useState(true);
   const [fontFamily, setFontFamily] = useState<keyof typeof FONT_FAMILIES>('default');
   const [backgroundColor, setBackgroundColor] = useState<keyof typeof BACKGROUND_COLORS>('white');
   const [codeTheme, setCodeTheme] = useState<keyof typeof CODE_THEMES>('github');
@@ -41,7 +30,8 @@ export const Popup = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    initializeStateFromStorage();
+    // 初始化设置
+    initSettings();
 
     const initializeSettings = async () => {
       setIsLoading(true);
@@ -241,24 +231,21 @@ export const Popup = () => {
         <div className="flex gap-2">
           <Switch
             checked={theme === 'dark'}
-            onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+            onChange={(checked) => updateSetting('theme', checked ? 'dark' : 'light')}
             size="small"
           />
           <Button
             variant={readingMode ? 'primary' : 'outline'}
             size="sm"
             onClick={toggleReadingMode}
-            iconLeft={readingMode ? '📖' : '📃'}
-            rounded="full"
-            className="ml-2"
           >
-            {readingMode ? '退出阅读模式' : '进入阅读模式'}
+            {readingMode ? '退出阅读' : '阅读模式'}
           </Button>
         </div>
       </div>
 
-      <div className="px-6 py-4 overflow-y-auto h-[calc(100%-66px)] pb-16 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
-        {/* 标签页导航 */}
+      {/* 主体内容 */}
+      <div className="p-6 overflow-y-auto h-[calc(100%-70px)]">
         <Tabs
           tabs={tabs}
           activeTab={selectedTab}
@@ -275,281 +262,183 @@ export const Popup = () => {
 
           {/* 基础设置面板 */}
           <TabPanel id="basic">
-            <div className="space-y-5">
-              <Card variant="paper" className="animate-float">
-                <CardHeader
-                  title="阅读模式设置"
-                  subtitle="自定义阅读体验"
+            <div className="space-y-6">
+              {/* 字体大小 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  字体大小
+                </label>
+                <Slider
+                  value={fontSize}
+                  onChange={(value) => updateSetting('fontSize', value)}
+                  min={12}
+                  max={24}
+                  step={1}
+                  className="w-full"
                 />
-                <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    请使用页面顶部的“阅读模式”按钮来切换阅读模式。在这里您可以调整阅读模式的各种设置。
-                  </p>
-                </CardContent>
-              </Card>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  当前值: {fontSize}px
+                </div>
+              </div>
 
-              <Card>
-                <CardHeader title="字体大小" />
-                <CardContent>
-                  <Slider
-                    min={12}
-                    max={24}
-                    step={1}
-                    value={fontSize}
-                    onChange={setFontSize}
-                    valueFormat={(value) => `${value}px`}
-                    variant="gradient"
-                    size="md"
-                  />
-                </CardContent>
-              </Card>
+              {/* 行高 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  行高
+                </label>
+                <Slider
+                  value={lineHeight}
+                  onChange={(value) => updateSetting('lineHeight', value)}
+                  min={MIN_LINE_HEIGHT}
+                  max={MAX_LINE_HEIGHT}
+                  step={LINE_HEIGHT_STEP}
+                  className="w-full"
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  当前值: {lineHeight.toFixed(1)}
+                </div>
+              </div>
 
-              <Card>
-                <CardHeader title="背景颜色" />
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-3">
-                    {Object.entries(BACKGROUND_COLORS).map(([key, color]) => (
-                      <button
-                        key={key}
-                        className={`
-                          w-full aspect-square rounded-lg transition-all duration-200
-                          ${getBackgroundColorClasses(key as keyof typeof BACKGROUND_COLORS)}
-                          ${backgroundColor === key ? 'ring-2 ring-brand-500 ring-offset-2 scale-105' : 'ring-1 ring-gray-200 hover:scale-105'}
-                        `}
-                        onClick={() => handleBackgroundColorChange(key as keyof typeof BACKGROUND_COLORS)}
-                        aria-label={getBackgroundColorLabel(key as keyof typeof BACKGROUND_COLORS)}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-center mt-3">
-                    <span className="text-xs text-gray-500">
-                      当前: {getBackgroundColorLabel(backgroundColor)}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* 段落间距 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  段落间距
+                </label>
+                <Slider
+                  value={paragraphSpacing}
+                  onChange={(value) => updateSetting('paragraphSpacing', value)}
+                  min={MIN_PARAGRAPH_SPACING}
+                  max={MAX_PARAGRAPH_SPACING}
+                  step={PARAGRAPH_SPACING_STEP}
+                  className="w-full"
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  当前值: {paragraphSpacing.toFixed(1)}
+                </div>
+              </div>
 
-              <Card>
-                <CardHeader title="字体选择" />
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.keys(FONT_FAMILIES).map((key) => (
-                      <button
-                        key={key}
-                        className={`
-                          py-2 px-3 rounded-lg text-sm transition-all duration-200
-                          ${fontFamily === key
-                            ? 'bg-brand-600 text-white font-medium'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                          }
-                        `}
-                        onClick={() => handleFontFamilyChange(key as keyof typeof FONT_FAMILIES)}
-                      >
-                        {getFontFamilyLabel(key as keyof typeof FONT_FAMILIES)}
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader title="内容显示" />
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">显示图片</span>
-                    <Switch
-                      checked={showImages}
-                      onChange={setShowImages}
-                      size="small"
-                    />
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">显示目录</span>
-                    <Switch
-                      checked={showDirectory}
-                      onChange={setShowDirectory}
-                      size="small"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              {/* 显示图片 */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  显示图片
+                </label>
+                <Switch
+                  checked={showImages}
+                  onChange={(checked) => setShowImages(checked)}
+                  size="small"
+                />
+              </div>
             </div>
           </TabPanel>
 
           {/* 样式设置面板 */}
           <TabPanel id="style">
-            <div className="space-y-5">
-              <Card>
-                <CardHeader title="字体间距" />
-                <CardContent className="space-y-6">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">行高</p>
-                    <Slider
-                      min={MIN_LINE_HEIGHT}
-                      max={MAX_LINE_HEIGHT}
-                      step={LINE_HEIGHT_STEP}
-                      value={lineHeight}
-                      onChange={setLineHeight}
-                      variant="default"
-                      size="md"
-                    />
-                  </div>
+            <div className="space-y-6">
+              {/* 字体选择 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  字体
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(FONT_FAMILIES).map(([key, value]) => {
+                    const isActive = fontFamily === key;
+                    return (
+                      <Button
+                        key={key}
+                        variant={isActive ? 'primary' : 'outline'}
+                        size="sm"
+                        onClick={() => handleFontFamilyChange(key as keyof typeof FONT_FAMILIES)}
+                      >
+                        {key === 'default' ? '默认' : key}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
 
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">行间距</p>
-                    <Slider
-                      min={MIN_LINE_SPACING}
-                      max={MAX_LINE_SPACING}
-                      step={LINE_SPACING_STEP}
-                      value={lineSpacing}
-                      onChange={setLineSpacing}
-                      variant="accent"
-                      size="md"
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">段落间距</p>
-                    <Slider
-                      min={MIN_PARAGRAPH_SPACING}
-                      max={MAX_PARAGRAPH_SPACING}
-                      step={PARAGRAPH_SPACING_STEP}
-                      value={paragraphSpacing}
-                      onChange={setParagraphSpacing}
-                      variant="default"
-                      size="md"
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">字间距</p>
-                    <Slider
-                      min={0}
-                      max={10}
-                      step={0.5}
-                      value={letterSpacing}
-                      onChange={setLetterSpacing}
-                      variant="gradient"
-                      size="md"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader title="页面布局" />
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">内容宽度</p>
-                    <Slider
-                      min={600}
-                      max={1800}
-                      step={100}
-                      value={pageWidth}
-                      onChange={setPageWidth}
-                      valueFormat={(value) => `${value}px`}
-                      variant="accent"
-                      size="md"
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">文本对齐</p>
-                    <div className="grid grid-cols-3 gap-2 mt-3">
-                      {['left', 'center', 'justify'].map((align) => (
-                        <button
-                          key={align}
-                          className={`
-                            py-2 px-3 rounded-lg text-sm transition-all duration-200
-                            ${textAlign === align
-                              ? 'bg-brand-600 text-white font-medium'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                            }
-                          `}
-                          onClick={() => setTextAlign(align as 'left' | 'center' | 'justify')}
-                        >
-                          {align === 'left' ? '左对齐' : align === 'center' ? '居中' : '两端对齐'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center pt-3">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">首行缩进</span>
-                    <Switch
-                      checked={firstLineIndent}
-                      onChange={setFirstLineIndent}
-                      size="small"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              {/* 背景颜色 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  背景颜色
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(BACKGROUND_COLORS).map(([key, value]) => {
+                    const isActive = backgroundColor === key;
+                    return (
+                      <div
+                        key={key}
+                        className={`
+                          w-8 h-8 rounded-full cursor-pointer
+                          ${isActive ? 'ring-2 ring-brand-500 ring-offset-2' : ''}
+                        `}
+                        style={{ backgroundColor: value }}
+                        onClick={() => handleBackgroundColorChange(key as keyof typeof BACKGROUND_COLORS)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </TabPanel>
 
           {/* 高级设置面板 */}
           <TabPanel id="advanced">
-            <div className="space-y-5">
-              <Card>
-                <CardHeader title="代码显示" />
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">代码字体大小</p>
-                    <Slider
-                      min={10}
-                      max={20}
-                      step={1}
-                      value={codeFontSize}
-                      onChange={setCodeFontSize}
-                      valueFormat={(value) => `${value}px`}
-                      variant="gradient"
-                      size="md"
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">代码主题</p>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {Object.keys(CODE_THEMES).map((theme) => (
-                        <button
-                          key={theme}
-                          className={`
-                            py-2 px-3 rounded-lg text-sm transition-all duration-200
-                            ${codeTheme === theme
-                              ? 'bg-brand-600 text-white font-medium'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                            }
-                          `}
-                          onClick={() => handleCodeThemeChange(theme as keyof typeof CODE_THEMES)}
-                        >
-                          {theme}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card variant="hover">
-                <CardHeader
-                  title="关于"
-                  subtitle="AI 阅读助手 v1.4.3"
+            <div className="space-y-6">
+              {/* 代码字体大小 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  代码字体大小
+                </label>
+                <Slider
+                  value={codeFontSize}
+                  onChange={(value) => setCodeFontSize(value)}
+                  min={10}
+                  max={20}
+                  step={1}
+                  className="w-full"
                 />
-                <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    一个基于 AI 的 Chrome 阅读扩展，旨在提供更好的网页阅读体验。
-                  </p>
-                </CardContent>
-                <CardFooter className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open('https://github.com/your-repo', '_blank')}
-                  >
-                    反馈问题
-                  </Button>
-                </CardFooter>
-              </Card>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  当前值: {codeFontSize}px
+                </div>
+              </div>
+
+              {/* 代码主题 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  代码主题
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(CODE_THEMES).map(([key, label]) => {
+                    const isActive = codeTheme === key;
+                    return (
+                      <Button
+                        key={key}
+                        variant={isActive ? 'primary' : 'outline'}
+                        size="sm"
+                        onClick={() => handleCodeThemeChange(key as keyof typeof CODE_THEMES)}
+                      >
+                        {label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 重置按钮 */}
+              <div className="pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm('确定要重置所有设置吗？')) {
+                      initSettings();
+                    }
+                  }}
+                  className="w-full"
+                >
+                  重置所有设置
+                </Button>
+              </div>
             </div>
           </TabPanel>
         </TabPanels>

@@ -1,20 +1,19 @@
 import React from 'react';
-import useAppStore from '../../store';
+import { useSettingsStore } from '../../store/settingsStore';
 import { Card, CardContent } from '../../ui/components/Card';
+import { ReadingPreset } from '../../storage/storage';
 
 /**
  * 预设选择器组件
  */
 const PresetSelector: React.FC = () => {
-  const {
-    presets,
-    activePreset,
-    applyPreset,
-  } = useAppStore();
+  const { settings, updateSetting } = useSettingsStore();
+  const { presets, activePreset } = settings;
 
   // 处理预设选择
   const handlePresetSelect = (presetId: string) => {
-    applyPreset(presetId);
+    // 更新activePreset设置
+    updateSetting('activePreset', presetId);
   };
 
   // 渲染预设项
@@ -24,7 +23,7 @@ const PresetSelector: React.FC = () => {
     return (
       <div key={preset.id} className="mb-3">
         <Card
-          variant={isActive ? 'active' : 'hover'}
+          variant={isActive ? 'default' : 'hover'}
           className={`transition-all duration-200 ${isActive ? 'border-brand-500' : ''}`}
           onClick={() => handlePresetSelect(preset.id)}
         >
@@ -55,7 +54,7 @@ const PresetSelector: React.FC = () => {
       {/* 内置预设 */}
       <Card>
         <CardContent className="space-y-3">
-          {presets.filter(p => p.isBuiltIn).map(renderPresetItem)}
+          {presets?.filter((p: ReadingPreset) => p.isBuiltIn).map(renderPresetItem)}
         </CardContent>
       </Card>
     </div>
