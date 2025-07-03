@@ -1,22 +1,15 @@
 import { Readability } from '@mozilla/readability';
 import { performanceMonitor } from '../../utils/performance';
-import { extractionCache } from '../../utils/cache';
-import { getWorkerManager } from '../../workers/workerManager';
-
-// 内容提取结果接口 (简化)
-export interface ExtractedContent {
-  title: string | null;
-  content: string;
-  author?: string | null;
-}
+import { ExtractedContent } from '../../types';
+import { BaseExtractor } from './BaseExtractor';
 
 /**
  * 增强型内容提取器
  * 使用 Readability 提取内容，并进行额外的预处理和后处理
  */
-export class ContentExtractor {
-  constructor(options: Partial<ExtractorOptions> = {}) {
-    // this.options = this.mergeOptions(defaultOptions, options);
+export class ContentExtractor extends BaseExtractor {
+  constructor() {
+    super();
   }
 
   /**
@@ -44,6 +37,15 @@ export class ContentExtractor {
         return { title: null, content: '<p>内容提取失败，请重试。</p>', author: null };
       }
     });
+  }
+
+  /**
+   * 获取提取器的优先级
+   * 优先级低于ReadabilityExtractor
+   */
+  public getPriority(): number {
+    // 默认优先级低于ReadabilityExtractor
+    return 40;
   }
 }
 

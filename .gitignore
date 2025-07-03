@@ -72,12 +72,12 @@ node_modules/
 .trae/
 .github/
 
-# Task files
-# tasks.json
-# tasks/ 
-
 .gemini/
 .cursor/
 
 AGENTS.md
 CLAUDE.md
+
+# Task files
+# tasks.json
+# tasks/ 
