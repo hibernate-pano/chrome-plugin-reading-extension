@@ -19,7 +19,7 @@ import { RenderError } from '../../types/errors';
 const Toast = {
   info: (message: string, options?: any) => {
     console.log(`[INFO] ${message}`);
-    return { close: () => {} };
+    return { close: () => { } };
   },
   success: (message: string, options?: any) => {
     console.log(`[SUCCESS] ${message}`);
@@ -202,21 +202,21 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
     const codeBlocks = container.querySelectorAll('pre code');
     if (codeBlocks.length > 0) {
       console.log(`发现${codeBlocks.length}个代码块需要高亮处理`);
-      
-              // 加载highlight.js的CDN脚本
+
+      // 加载highlight.js的CDN脚本
       if (!document.getElementById('highlight-js-cdn')) {
         const script = document.createElement('script');
         script.id = 'highlight-js-cdn';
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js';
         script.async = true;
-        
+
         // 添加CSS
         const style = document.createElement('link');
         style.rel = 'stylesheet';
         style.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css';
-        
+
         document.head.appendChild(style);
-        
+
         script.onload = () => {
           console.log('highlight.js加载成功');
           // 应用高亮
@@ -226,7 +226,7 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
             });
           }
         };
-        
+
         document.head.appendChild(script);
       } else if (window.hljs) {
         // 如果已加载，直接应用高亮
@@ -248,7 +248,7 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
           }
         };
         document.head.appendChild(script);
-        
+
         // 加载对应主题的CSS
         const linkCSS = document.createElement('link');
         linkCSS.rel = 'stylesheet';
@@ -282,14 +282,14 @@ async function applyStyles(settings: ReadingModeSettings) {
   // 创建新样式
   const readerStyles = document.createElement('style');
   readerStyles.id = 'reading-mode-dynamic-styles';
-  
+
   // 应用字体
   const fontFamily = FONT_FAMILIES[settings.fontFamily] || FONT_FAMILIES.system;
-  
+
   // 应用背景色
   const backgroundColor = BACKGROUND_COLORS[settings.backgroundColor] || BACKGROUND_COLORS.white;
   const darkBackgroundColor = BACKGROUND_COLORS.dark;
-  
+
   // 设置CSS变量
   readerStyles.textContent = `
     :root {
@@ -339,7 +339,7 @@ async function applyStyles(settings: ReadingModeSettings) {
       color: var(--reader-dark-text-color);
     }
   `;
-  
+
   document.head.appendChild(readerStyles);
 }
 
@@ -351,7 +351,7 @@ function createFloatingButton() {
   if (document.getElementById('reading-mode-floating-button')) {
     return;
   }
-  
+
   const button = document.createElement('button');
   button.id = 'reading-mode-floating-button';
   button.textContent = '阅读模式';
@@ -366,11 +366,11 @@ function createFloatingButton() {
   button.style.borderRadius = '4px';
   button.style.cursor = 'pointer';
   button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-  
+
   button.addEventListener('click', () => {
     toggleReadingMode();
   });
-  
+
   document.body.appendChild(button);
 }
 
@@ -413,14 +413,14 @@ export async function toggleReadingMode(): Promise<boolean> {
     // 处理错误
     isReaderMode = false;
     console.error('切换阅读模式时发生错误:', error);
-    
+
     // 记录详细错误信息以帮助调试
     if (error instanceof RenderError) {
       console.error('[阅读模式错误] 启用阅读模式:', error);
     } else if (error instanceof Error) {
       console.error('[阅读模式错误] 未捕获错误:', error.message, error.stack);
     }
-    
+
     // 确保在发生错误时恢复到原始状态
     try {
       if (originalContent.length > 0) {
@@ -429,7 +429,7 @@ export async function toggleReadingMode(): Promise<boolean> {
     } catch (cleanupError) {
       console.error('清理阅读模式失败:', cleanupError);
     }
-    
+
     // 返回当前状态（应该是false）
     return isReaderMode;
   }
@@ -443,31 +443,31 @@ async function enableReadingMode(): Promise<boolean> {
     // 保存当前滚动位置和内容
     originalScrollY = window.scrollY;
     originalContent = Array.from(document.body.childNodes);
-    
+
     // 提取内容
     const extractor = new ReadabilityExtractor();
     const extractionResult = await extractor.extract(document);
     console.log('内容提取完成');
-    
+
     if (!extractionResult || !extractionResult.content) {
       throw new ReaderError('内容提取失败', 'EXTRACTION_FAILED');
     }
-    
+
     extractedContent = extractionResult.content;
-    
+
     // 获取MarkdownWorkerManager实例
     const workerManager = getMarkdownWorkerManager();
-    
+
     try {
       // 转换为Markdown（异步）
       const markdown = await workerManager.convertToMarkdown(extractedContent);
-      
+
       // 渲染阅读模式
       renderReadingMode(markdown, extractionResult.title || document.title);
       return true;
     } catch (markdownError) {
       console.error('Markdown转换失败:', markdownError);
-      
+
       // 如果Markdown转换失败，尝试直接使用HTML内容作为降级方案
       console.log('尝试使用直接HTML渲染作为降级方案');
       renderReadingModeWithHtml(extractedContent, extractionResult.title || document.title);
@@ -489,15 +489,15 @@ async function enableReadingMode(): Promise<boolean> {
 function disableReadingMode(): void {
   // 清空body
   document.body.innerHTML = '';
-  
+
   // 恢复原始内容
   originalContent.forEach(node => {
     document.body.appendChild(node.cloneNode(true));
   });
-  
+
   // 恢复滚动位置
   window.scrollTo(0, originalScrollY);
-  
+
   // 重置变量
   originalContent = [];
   extractedContent = '';
@@ -507,33 +507,53 @@ function disableReadingMode(): void {
  * 渲染阅读模式（使用Markdown）
  */
 function renderReadingMode(markdown: string, title: string): void {
-  // 创建阅读视图容器
-  const container = document.createElement('div');
-  container.className = 'reader-view-container';
-  
+  // 添加Material Design 3样式
+  addReadingModeStyles();
+
+  // 创建阅读模式主容器
+  const mainContainer = document.createElement('div');
+  mainContainer.id = 'reading-mode-container';
+
+  // 创建顶部控制栏
+  const controlBar = createControlBar();
+  mainContainer.appendChild(controlBar);
+
+  // 创建内容容器
+  const contentContainer = document.createElement('div');
+  contentContainer.className = 'reading-mode-content';
+
   // 添加标题
   const titleElement = document.createElement('h1');
   titleElement.textContent = title;
-  titleElement.className = 'reader-view-title';
-  container.appendChild(titleElement);
-  
+  contentContainer.appendChild(titleElement);
+
+  // 添加元信息（如果有的话）
+  const metaElement = document.createElement('div');
+  metaElement.className = 'reading-mode-meta';
+
+  // 添加发布时间和来源信息
+  const currentUrl = window.location.href;
+  const domain = new URL(currentUrl).hostname;
+  metaElement.innerHTML = `
+    <span>来源: ${domain}</span>
+    <span>阅读时间: ${new Date().toLocaleDateString()}</span>
+  `;
+  contentContainer.appendChild(metaElement);
+
+  // 创建文章内容容器
+  const articleElement = document.createElement('div');
+  articleElement.className = 'reading-mode-article';
+
   // 渲染Markdown内容
-  const contentElement = document.createElement('div');
-  contentElement.className = 'reader-view-content';
-  
-  // 此处假设使用marked或其他Markdown渲染库
-  // 实际项目中，可以引入marked库
-  contentElement.innerHTML = renderMarkdown(markdown);
-  
-  container.appendChild(contentElement);
-  
+  articleElement.innerHTML = renderMarkdown(markdown);
+
+  contentContainer.appendChild(articleElement);
+  mainContainer.appendChild(contentContainer);
+
   // 清空body并添加阅读视图
   document.body.innerHTML = '';
-  document.body.appendChild(container);
-  
-  // 添加阅读模式样式
-  addReadingModeStyles();
-  
+  document.body.appendChild(mainContainer);
+
   // 滚动到顶部
   window.scrollTo(0, 0);
 }
@@ -542,157 +562,452 @@ function renderReadingMode(markdown: string, title: string): void {
  * 降级方案：直接使用HTML渲染阅读模式
  */
 function renderReadingModeWithHtml(html: string, title: string): void {
-  // 创建阅读视图容器
-  const container = document.createElement('div');
-  container.className = 'reader-view-container';
-  
+  // 添加Material Design 3样式
+  addReadingModeStyles();
+
+  // 创建阅读模式主容器
+  const mainContainer = document.createElement('div');
+  mainContainer.id = 'reading-mode-container';
+
+  // 创建内容容器
+  const contentContainer = document.createElement('div');
+  contentContainer.className = 'reading-mode-content';
+
   // 添加标题
   const titleElement = document.createElement('h1');
   titleElement.textContent = title;
-  titleElement.className = 'reader-view-title';
-  container.appendChild(titleElement);
-  
-  // 渲染HTML内容
-  const contentElement = document.createElement('div');
-  contentElement.className = 'reader-view-content';
-  
+  contentContainer.appendChild(titleElement);
+
+  // 添加元信息
+  const metaElement = document.createElement('div');
+  metaElement.className = 'reading-mode-meta';
+
+  const currentUrl = window.location.href;
+  const domain = new URL(currentUrl).hostname;
+  metaElement.innerHTML = `
+    <span>来源: ${domain}</span>
+    <span>阅读时间: ${new Date().toLocaleDateString()}</span>
+  `;
+  contentContainer.appendChild(metaElement);
+
+  // 创建文章内容容器
+  const articleElement = document.createElement('div');
+  articleElement.className = 'reading-mode-article';
+
   // 直接使用HTML内容
-  contentElement.innerHTML = html;
-  
-  container.appendChild(contentElement);
-  
+  articleElement.innerHTML = html;
+
+  contentContainer.appendChild(articleElement);
+  mainContainer.appendChild(contentContainer);
+
   // 清空body并添加阅读视图
   document.body.innerHTML = '';
-  document.body.appendChild(container);
-  
-  // 添加阅读模式样式
-  addReadingModeStyles();
-  
+  document.body.appendChild(mainContainer);
+
   // 滚动到顶部
   window.scrollTo(0, 0);
 }
 
 /**
- * 添加阅读模式样式
+ * 添加Material Design 3阅读模式样式
  */
 function addReadingModeStyles(): void {
-  const style = document.createElement('style');
-  style.textContent = `
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #f8f9fa;
-      color: #333;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      line-height: 1.6;
+  // 首先加载Material Design 3设计令牌
+  const designTokensStyle = document.createElement('style');
+  designTokensStyle.id = 'md3-design-tokens';
+  designTokensStyle.textContent = `
+    /* Material Design 3 设计令牌 */
+    :root {
+      /* 颜色系统 */
+      --md3-sys-color-primary: #1976d2;
+      --md3-sys-color-on-primary: #ffffff;
+      --md3-sys-color-primary-container: #e3f2fd;
+      --md3-sys-color-on-primary-container: #0d47a1;
+      --md3-sys-color-surface: #fefbff;
+      --md3-sys-color-surface-container: #f3f3f3;
+      --md3-sys-color-surface-container-high: #ececec;
+      --md3-sys-color-on-surface: #1c1b1f;
+      --md3-sys-color-on-surface-variant: #49454f;
+      --md3-sys-color-outline: #79747e;
+      --md3-sys-color-outline-variant: #cac4d0;
+
+      /* 排版系统 */
+      --md3-sys-typescale-headline-large-font-family: 'Google Sans', 'Roboto', system-ui, sans-serif;
+      --md3-sys-typescale-headline-large-size: 32px;
+      --md3-sys-typescale-headline-large-weight: 400;
+      --md3-sys-typescale-headline-large-line-height: 40px;
+      --md3-sys-typescale-headline-large-tracking: 0px;
+
+      --md3-sys-typescale-headline-medium-font-family: 'Google Sans', 'Roboto', system-ui, sans-serif;
+      --md3-sys-typescale-headline-medium-size: 28px;
+      --md3-sys-typescale-headline-medium-weight: 400;
+      --md3-sys-typescale-headline-medium-line-height: 36px;
+      --md3-sys-typescale-headline-medium-tracking: 0px;
+
+      --md3-sys-typescale-headline-small-font-family: 'Google Sans', 'Roboto', system-ui, sans-serif;
+      --md3-sys-typescale-headline-small-size: 24px;
+      --md3-sys-typescale-headline-small-weight: 400;
+      --md3-sys-typescale-headline-small-line-height: 32px;
+      --md3-sys-typescale-headline-small-tracking: 0px;
+
+      --md3-sys-typescale-title-medium-font-family: 'Roboto', system-ui, sans-serif;
+      --md3-sys-typescale-title-medium-size: 16px;
+      --md3-sys-typescale-title-medium-weight: 500;
+      --md3-sys-typescale-title-medium-line-height: 24px;
+      --md3-sys-typescale-title-medium-tracking: 0.15px;
+
+      --md3-sys-typescale-body-large-font-family: 'Roboto', system-ui, sans-serif;
+      --md3-sys-typescale-body-large-size: 16px;
+      --md3-sys-typescale-body-large-line-height: 24px;
+      --md3-sys-typescale-body-large-tracking: 0.5px;
+
+      --md3-sys-typescale-body-medium-font-family: 'Roboto', system-ui, sans-serif;
+      --md3-sys-typescale-body-medium-size: 14px;
+      --md3-sys-typescale-body-medium-line-height: 20px;
+      --md3-sys-typescale-body-medium-tracking: 0.25px;
+
+      /* 形状系统 */
+      --md3-sys-shape-corner-extra-small: 4px;
+      --md3-sys-shape-corner-small: 8px;
+      --md3-sys-shape-corner-medium: 12px;
+      --md3-sys-shape-corner-large: 16px;
+
+      /* 阴影系统 */
+      --md3-sys-elevation-level1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      --md3-sys-elevation-level2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+      --md3-sys-elevation-level3: 0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15);
+
+      /* 动画系统 */
+      --md3-sys-motion-duration-short2: 200ms;
+      --md3-sys-motion-duration-medium2: 300ms;
+      --md3-sys-motion-duration-long2: 500ms;
+      --md3-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+      --md3-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
     }
-    
-    .reader-view-container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #fff;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .reader-view-title {
-      font-size: 28px;
-      margin-top: 20px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 10px;
-    }
-    
-    .reader-view-content {
-      font-size: 18px;
-    }
-    
-    .reader-view-content p {
-      margin-bottom: 16px;
-    }
-    
-    .reader-view-content img {
-      max-width: 100%;
-      height: auto;
-      margin: 20px 0;
-    }
-    
-    .reader-view-content pre {
-      background-color: #f5f7f9;
-      border-radius: 4px;
-      padding: 16px;
-      overflow-x: auto;
-      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-      font-size: 14px;
-      line-height: 1.45;
-    }
-    
+
+    /* 深色主题 */
     @media (prefers-color-scheme: dark) {
-      body {
-        background-color: #1a1a1a;
-        color: #e0e0e0;
-      }
-      
-      .reader-view-container {
-        background-color: #262626;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-      }
-      
-      .reader-view-title {
-        border-bottom-color: #333;
-      }
-      
-      .reader-view-content pre {
-        background-color: #333;
+      :root {
+        --md3-sys-color-primary: #90caf9;
+        --md3-sys-color-on-primary: #003258;
+        --md3-sys-color-primary-container: #004881;
+        --md3-sys-color-on-primary-container: #cce7ff;
+        --md3-sys-color-surface: #10131c;
+        --md3-sys-color-surface-container: #1e2129;
+        --md3-sys-color-surface-container-high: #282a31;
+        --md3-sys-color-on-surface: #e2e2e9;
+        --md3-sys-color-on-surface-variant: #c4c7c5;
+        --md3-sys-color-outline: #8e918f;
+        --md3-sys-color-outline-variant: #44474e;
       }
     }
   `;
-  
-  document.head.appendChild(style);
+  document.head.appendChild(designTokensStyle);
+
+  // 然后加载阅读模式样式
+  const readingModeStylesUrl = chrome.runtime.getURL('src/content/styles/reading-mode-md3.css');
+  const linkElement = document.createElement('link');
+  linkElement.rel = 'stylesheet';
+  linkElement.href = readingModeStylesUrl;
+  linkElement.id = 'reading-mode-md3-styles';
+  document.head.appendChild(linkElement);
 }
 
 /**
- * 简单的Markdown渲染函数
- * 实际项目中应该使用成熟的Markdown渲染库
+ * 增强的Markdown渲染器
+ * 支持更丰富的格式，更好地保留原文样式
  */
 function renderMarkdown(markdown: string): string {
-  // 非常简单的Markdown转换，仅作演示
-  // 在实际项目中，应该使用marked、markdown-it等库
-  
-  // 转义HTML
-  const escaped = markdown
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  
-  // 处理标题
-  let html = escaped
-    .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
-    .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-    .replace(/^### (.*?)$/gm, '<h3>$1</h3>');
-  
-  // 处理段落
-  html = html.replace(/^(?!<h[1-6]>)(.+)$/gm, '<p>$1</p>');
-  
-  // 处理代码块
-  html = html.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
-  
-  // 处理行内代码
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  
-  // 处理粗体
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  
-  // 处理斜体
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  
+  if (!markdown) {
+    return '<p>内容为空</p>';
+  }
+
+  // 分割成行进行处理
+  const lines = markdown.split('\n');
+  const result: string[] = [];
+  let inCodeBlock = false;
+  let codeBlockContent: string[] = [];
+  let codeBlockLanguage = '';
+  let inList = false;
+  let listItems: string[] = [];
+  let listType = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    // 处理代码块
+    if (trimmedLine.startsWith('```')) {
+      if (inCodeBlock) {
+        // 结束代码块
+        const codeContent = codeBlockContent.join('\n');
+        const escapedCode = escapeHtml(codeContent);
+        result.push(`<pre class="language-${codeBlockLanguage}"><code>${escapedCode}</code></pre>`);
+        inCodeBlock = false;
+        codeBlockContent = [];
+        codeBlockLanguage = '';
+      } else {
+        // 开始代码块
+        inCodeBlock = true;
+        codeBlockLanguage = trimmedLine.substring(3).trim() || 'text';
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlockContent.push(line);
+      continue;
+    }
+
+    // 处理列表
+    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/);
+    if (listMatch) {
+      const [, indent, marker, content] = listMatch;
+      const isOrdered = /\d+\./.test(marker);
+      const currentListType = isOrdered ? 'ol' : 'ul';
+
+      if (!inList) {
+        inList = true;
+        listType = currentListType;
+        listItems = [];
+      } else if (listType !== currentListType) {
+        // 结束当前列表，开始新列表
+        result.push(`<${listType}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listType}>`);
+        listType = currentListType;
+        listItems = [];
+      }
+
+      listItems.push(processInlineElements(content));
+      continue;
+    } else if (inList) {
+      // 结束列表
+      result.push(`<${listType}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listType}>`);
+      inList = false;
+      listItems = [];
+      listType = '';
+    }
+
+    // 处理标题
+    const headingMatch = trimmedLine.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const content = processInlineElements(headingMatch[2]);
+      result.push(`<h${level}>${content}</h${level}>`);
+      continue;
+    }
+
+    // 处理引用
+    if (trimmedLine.startsWith('>')) {
+      const quoteContent = trimmedLine.substring(1).trim();
+      const processedContent = processInlineElements(quoteContent);
+      result.push(`<blockquote><p>${processedContent}</p></blockquote>`);
+      continue;
+    }
+
+    // 处理分隔线
+    if (trimmedLine.match(/^[-*_]{3,}$/)) {
+      result.push('<hr>');
+      continue;
+    }
+
+    // 处理普通段落
+    if (trimmedLine) {
+      const processedContent = processInlineElements(trimmedLine);
+      result.push(`<p>${processedContent}</p>`);
+    } else {
+      // 空行
+      result.push('');
+    }
+  }
+
+  // 结束可能剩余的列表
+  if (inList) {
+    result.push(`<${listType}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listType}>`);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * 处理行内元素（粗体、斜体、链接、图片、代码等）
+ */
+function processInlineElements(text: string): string {
+  let result = escapeHtml(text);
+
+  // 处理图片（必须在链接之前处理）
+  result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+    return `<figure class="reader-figure"><img src="${src}" alt="${alt}" loading="lazy"><figcaption>${alt}</figcaption></figure>`;
+  });
+
   // 处理链接
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+  });
+
+  // 处理行内代码（必须在粗体斜体之前处理）
+  result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 处理粗体（** 或 __）
+  result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  result = result.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+  // 处理斜体（* 或 _）
+  result = result.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  result = result.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+  // 处理删除线
+  result = result.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+
+  // 处理下划线
+  result = result.replace(/\+\+([^+]+)\+\+/g, '<u>$1</u>');
+
+  return result;
+}
+
+/**
+ * HTML 转义
+ */
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * 创建阅读模式顶部控制栏
+ */
+function createControlBar(): HTMLElement {
+  const controlBar = document.createElement('div');
+  controlBar.className = 'reading-mode-control-bar';
+  controlBar.innerHTML = `
+    <div class="control-bar-content">
+      <button class="control-btn theme-toggle" title="切换主题">🌙</button>
+      <button class="control-btn font-size-up" title="增大字体">A+</button>
+      <button class="control-btn font-size-down" title="减小字体">A-</button>
+      <button class="control-btn preset-toggle" title="阅读预设">⚙️</button>
+      <button class="control-btn close-btn" title="退出阅读模式">✕</button>
+    </div>
+    <div class="preset-panel" style="display: none;">
+      <div class="preset-options">
+        <label>字体大小: <input type="range" id="font-size-slider" min="12" max="24" value="16"></label>
+        <label>行高: <input type="range" id="line-height-slider" min="1.2" max="2.0" step="0.1" value="1.6"></label>
+        <label>段落间距: <input type="range" id="paragraph-spacing-slider" min="8" max="32" value="16"></label>
+        <select id="font-family-select">
+          <option value="default">默认字体</option>
+          <option value="serif">衬线字体</option>
+          <option value="sans-serif">无衬线字体</option>
+        </select>
+        <select id="background-select">
+          <option value="white">白色背景</option>
+          <option value="sepia">护眼模式</option>
+          <option value="dark">深色模式</option>
+        </select>
+      </div>
+    </div>
+  `;
+
+  // 添加事件监听器
+  setupControlBarEvents(controlBar);
+
+  return controlBar;
+}
+
+/**
+ * 设置控制栏事件
+ */
+function setupControlBarEvents(controlBar: HTMLElement): void {
+  const container = document.getElementById('reading-mode-container');
+  if (!container) return;
+
+  // 主题切换
+  const themeToggle = controlBar.querySelector('.theme-toggle');
+  themeToggle?.addEventListener('click', () => {
+    const isDark = container.classList.contains('dark-theme');
+    container.classList.toggle('dark-theme', !isDark);
+    container.classList.toggle('light-theme', isDark);
+    (themeToggle as HTMLElement).textContent = isDark ? '🌙' : '☀️';
+  });
+
+  // 字体大小调整
+  const fontSizeUp = controlBar.querySelector('.font-size-up');
+  const fontSizeDown = controlBar.querySelector('.font-size-down');
   
-  // 处理图片
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+  fontSizeUp?.addEventListener('click', () => {
+    const currentSize = parseInt(getComputedStyle(container).fontSize);
+    container.style.fontSize = `${Math.min(currentSize + 2, 24)}px`;
+  });
   
-  return html;
+  fontSizeDown?.addEventListener('click', () => {
+    const currentSize = parseInt(getComputedStyle(container).fontSize);
+    container.style.fontSize = `${Math.max(currentSize - 2, 12)}px`;
+  });
+
+  // 预设面板切换
+  const presetToggle = controlBar.querySelector('.preset-toggle');
+  const presetPanel = controlBar.querySelector('.preset-panel') as HTMLElement;
+  
+  presetToggle?.addEventListener('click', () => {
+    const isVisible = presetPanel.style.display !== 'none';
+    presetPanel.style.display = isVisible ? 'none' : 'block';
+  });
+
+  // 退出阅读模式
+  const closeBtn = controlBar.querySelector('.close-btn');
+  closeBtn?.addEventListener('click', () => {
+    disableReadingMode();
+  });
+
+  // 预设控制事件
+  setupPresetControls(controlBar, container);
+}
+
+/**
+ * 设置预设控制事件
+ */
+function setupPresetControls(controlBar: HTMLElement, container: HTMLElement): void {
+  // 字体大小滑块
+  const fontSizeSlider = controlBar.querySelector('#font-size-slider') as HTMLInputElement;
+  fontSizeSlider?.addEventListener('input', (e) => {
+    const size = (e.target as HTMLInputElement).value;
+    container.style.fontSize = `${size}px`;
+  });
+
+  // 行高滑块
+  const lineHeightSlider = controlBar.querySelector('#line-height-slider') as HTMLInputElement;
+  lineHeightSlider?.addEventListener('input', (e) => {
+    const height = (e.target as HTMLInputElement).value;
+    container.style.lineHeight = height;
+  });
+
+  // 段落间距滑块
+  const paragraphSpacingSlider = controlBar.querySelector('#paragraph-spacing-slider') as HTMLInputElement;
+  paragraphSpacingSlider?.addEventListener('input', (e) => {
+    const spacing = (e.target as HTMLInputElement).value;
+    const style = document.getElementById('reading-dynamic-spacing') || document.createElement('style');
+    style.id = 'reading-dynamic-spacing';
+    style.textContent = `.reading-mode-article p { margin-bottom: ${spacing}px; }`;
+    if (!style.parentNode) document.head.appendChild(style);
+  });
+
+  // 字体选择
+  const fontFamilySelect = controlBar.querySelector('#font-family-select') as HTMLSelectElement;
+  fontFamilySelect?.addEventListener('change', (e) => {
+    const fontFamily = (e.target as HTMLSelectElement).value;
+    const fontMap: Record<string, string> = {
+      'default': 'system-ui, -apple-system, sans-serif',
+      'serif': 'Georgia, "Times New Roman", serif',
+      'sans-serif': 'Arial, Helvetica, sans-serif'
+    };
+    container.style.fontFamily = fontMap[fontFamily] || fontMap.default;
+  });
+
+  // 背景选择
+  const backgroundSelect = controlBar.querySelector('#background-select') as HTMLSelectElement;
+  backgroundSelect?.addEventListener('change', (e) => {
+    const background = (e.target as HTMLSelectElement).value;
+    container.classList.remove('white-bg', 'sepia-bg', 'dark-bg');
+    container.classList.add(`${background}-bg`);
+  });
 }
 
 // 监听存储变化

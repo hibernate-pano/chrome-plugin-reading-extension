@@ -46,9 +46,5 @@ export default defineConfig({
     alias: {
       'turndown': resolve(__dirname, 'node_modules/turndown/lib/turndown.browser.cjs')
     }
-  },
-  // 确保Web Worker正确处理
-  worker: {
-    format: 'es'
   }
 }); 

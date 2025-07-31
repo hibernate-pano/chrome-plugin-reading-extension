@@ -1,0 +1,495 @@
+/* Material Design 3 阅读模式样式 */
+
+/* 使用Material Design 3设计令牌 */
+:root {
+  /* Material Design 3 阅读模式色彩系统 */
+  --md3-reading-surface: var(--md3-sys-color-surface);
+  --md3-reading-surface-container: var(--md3-sys-color-surface-container);
+  --md3-reading-surface-container-high: var(--md3-sys-color-surface-container-high);
+  --md3-reading-on-surface: var(--md3-sys-color-on-surface);
+  --md3-reading-on-surface-variant: var(--md3-sys-color-on-surface-variant);
+  --md3-reading-outline: var(--md3-sys-color-outline);
+  --md3-reading-outline-variant: var(--md3-sys-color-outline-variant);
+  --md3-reading-primary: var(--md3-sys-color-primary);
+  --md3-reading-on-primary: var(--md3-sys-color-on-primary);
+  --md3-reading-primary-container: var(--md3-sys-color-primary-container);
+  --md3-reading-on-primary-container: var(--md3-sys-color-on-primary-container);
+  
+  /* Material Design 3 阅读模式排版 */
+  --md3-reading-font-family: var(--md3-sys-typescale-body-large-font-family);
+  --md3-reading-font-size: var(--md3-sys-typescale-body-large-size);
+  --md3-reading-line-height: var(--md3-sys-typescale-body-large-line-height);
+  --md3-reading-letter-spacing: var(--md3-sys-typescale-body-large-tracking);
+  
+  /* Material Design 3 阅读模式间距 */
+  --md3-reading-container-padding: 24px;
+  --md3-reading-content-padding: 32px;
+  --md3-reading-section-spacing: 24px;
+  --md3-reading-paragraph-spacing: 16px;
+  
+  /* Material Design 3 阅读模式尺寸 */
+  --md3-reading-max-width: 720px;
+  --md3-reading-border-radius: var(--md3-sys-shape-corner-large);
+  
+  /* Material Design 3 阅读模式阴影 */
+  --md3-reading-elevation-1: var(--md3-sys-elevation-level1);
+  --md3-reading-elevation-2: var(--md3-sys-elevation-level2);
+  --md3-reading-elevation-3: var(--md3-sys-elevation-level3);
+}
+
+/* 控制栏样式 */
+.reading-mode-control-bar {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: var(--md3-reading-surface-container);
+  border-radius: var(--md3-reading-border-radius);
+  box-shadow: var(--md3-reading-elevation-2);
+  padding: 8px;
+  border: 1px solid var(--md3-reading-outline-variant);
+}
+
+.control-bar-content {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--md3-sys-shape-corner-medium);
+  background: transparent;
+  color: var(--md3-reading-on-surface);
+  cursor: pointer;
+  transition: all var(--md3-sys-motion-duration-short2) var(--md3-sys-motion-easing-standard);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.control-btn:hover {
+  background: var(--md3-reading-surface-container-high);
+}
+
+.control-btn:active {
+  background: var(--md3-reading-primary-container);
+  color: var(--md3-reading-on-primary-container);
+}
+
+.preset-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--md3-reading-surface-container);
+  border-radius: var(--md3-reading-border-radius);
+  box-shadow: var(--md3-reading-elevation-2);
+  padding: 16px;
+  min-width: 280px;
+  border: 1px solid var(--md3-reading-outline-variant);
+}
+
+.preset-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preset-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--md3-reading-on-surface);
+  font-weight: 500;
+}
+
+.preset-options input[type="range"] {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--md3-reading-outline-variant);
+  outline: none;
+  appearance: none;
+}
+
+.preset-options input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--md3-reading-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.preset-options select {
+  padding: 8px 12px;
+  border: 1px solid var(--md3-reading-outline-variant);
+  border-radius: var(--md3-sys-shape-corner-small);
+  background: var(--md3-reading-surface-container);
+  color: var(--md3-reading-on-surface);
+  font-size: 14px;
+}
+
+/* 阅读模式主容器 */
+#reading-mode-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  overflow-y: auto;
+  background-color: var(--md3-reading-surface);
+  color: var(--md3-reading-on-surface);
+  font-family: var(--md3-reading-font-family);
+  font-size: var(--md3-reading-font-size);
+  line-height: var(--md3-reading-line-height);
+  letter-spacing: var(--md3-reading-letter-spacing);
+  
+  /* 响应式内边距 */
+  padding: clamp(16px, 4vh, 32px) clamp(16px, 5vw, 48px);
+  
+  /* Material Design 3 动画 */
+  transition: all var(--md3-sys-motion-duration-medium2) var(--md3-sys-motion-easing-emphasized);
+  
+  /* 进入动画 */
+  animation: md3ReadingModeEnter var(--md3-sys-motion-duration-long2) var(--md3-sys-motion-easing-emphasized) forwards;
+}
+
+/* 主题样式 */
+#reading-mode-container.white-bg {
+  background-color: #ffffff;
+  color: #333333;
+}
+
+#reading-mode-container.sepia-bg {
+  background-color: #f4ecd8;
+  color: #5d4037;
+}
+
+#reading-mode-container.dark-bg {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+#reading-mode-container.dark-bg .reading-mode-content {
+  background-color: #2d2d2d;
+}
+
+#reading-mode-container.dark-bg .control-btn {
+  color: #e0e0e0;
+}
+
+@keyframes md3ReadingModeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 阅读内容容器 */
+.reading-mode-content {
+  max-width: var(--md3-reading-max-width);
+  margin: 0 auto;
+  background-color: var(--md3-reading-surface-container);
+  border-radius: var(--md3-reading-border-radius);
+  box-shadow: var(--md3-reading-elevation-2);
+  overflow: hidden;
+  
+  /* 内容进入动画 */
+  animation: md3ContentEnter var(--md3-sys-motion-duration-long2) var(--md3-sys-motion-easing-emphasized) 0.1s forwards;
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+@keyframes md3ContentEnter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 文章标题 */
+.reading-mode-content h1 {
+  font-family: var(--md3-sys-typescale-headline-large-font-family);
+  font-size: var(--md3-sys-typescale-headline-large-size);
+  font-weight: var(--md3-sys-typescale-headline-large-weight);
+  line-height: var(--md3-sys-typescale-headline-large-line-height);
+  letter-spacing: var(--md3-sys-typescale-headline-large-tracking);
+  color: var(--md3-reading-on-surface);
+  margin: 0 0 var(--md3-reading-section-spacing) 0;
+  padding: var(--md3-reading-content-padding) var(--md3-reading-content-padding) 0;
+}
+
+/* 元信息 */
+.reading-mode-meta {
+  padding: 0 var(--md3-reading-content-padding);
+  margin-bottom: var(--md3-reading-section-spacing);
+  display: flex;
+  gap: 16px;
+  font-size: var(--md3-sys-typescale-body-medium-size);
+  color: var(--md3-reading-on-surface-variant);
+  border-bottom: 1px solid var(--md3-reading-outline-variant);
+  padding-bottom: var(--md3-reading-section-spacing);
+}
+
+/* 文章内容 */
+.reading-mode-article {
+  padding: 0 var(--md3-reading-content-padding) var(--md3-reading-content-padding);
+  color: var(--md3-reading-on-surface);
+}
+
+/* 改进的段落样式 */
+.reading-mode-article p {
+  margin: 0 0 var(--md3-reading-paragraph-spacing) 0;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: justify;
+  text-indent: 2em; /* 中文首行缩进 */
+}
+
+/* 标题样式 */
+.reading-mode-article h2 {
+  font-family: var(--md3-sys-typescale-headline-medium-font-family);
+  font-size: var(--md3-sys-typescale-headline-medium-size);
+  font-weight: var(--md3-sys-typescale-headline-medium-weight);
+  line-height: var(--md3-sys-typescale-headline-medium-line-height);
+  color: var(--md3-reading-on-surface);
+  margin: var(--md3-reading-section-spacing) 0 var(--md3-reading-paragraph-spacing) 0;
+}
+
+.reading-mode-article h3 {
+  font-family: var(--md3-sys-typescale-headline-small-font-family);
+  font-size: var(--md3-sys-typescale-headline-small-size);
+  font-weight: var(--md3-sys-typescale-headline-small-weight);
+  line-height: var(--md3-sys-typescale-headline-small-line-height);
+  color: var(--md3-reading-on-surface);
+  margin: var(--md3-reading-paragraph-spacing) 0 var(--md3-reading-paragraph-spacing) 0;
+}
+
+.reading-mode-article h4,
+.reading-mode-article h5,
+.reading-mode-article h6 {
+  font-family: var(--md3-sys-typescale-title-medium-font-family);
+  font-size: var(--md3-sys-typescale-title-medium-size);
+  font-weight: var(--md3-sys-typescale-title-medium-weight);
+  line-height: var(--md3-sys-typescale-title-medium-line-height);
+  color: var(--md3-reading-on-surface);
+  margin: var(--md3-reading-paragraph-spacing) 0 8px 0;
+}
+
+/* 强调文本 */
+.reading-mode-article strong,
+.reading-mode-article b {
+  font-weight: 600;
+  color: var(--md3-reading-on-surface);
+}
+
+.reading-mode-article em,
+.reading-mode-article i {
+  font-style: italic;
+}
+
+/* 改进的图片样式 */
+.reading-mode-article img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--md3-reading-section-spacing) auto;
+  border-radius: var(--md3-sys-shape-corner-medium);
+  box-shadow: var(--md3-reading-elevation-1);
+}
+
+/* 图片说明 */
+.reading-mode-article figure {
+  margin: var(--md3-reading-section-spacing) 0;
+  text-align: center;
+}
+
+.reading-mode-article figcaption {
+  font-size: var(--md3-sys-typescale-body-medium-size);
+  color: var(--md3-reading-on-surface-variant);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* 改进的代码块样式 */
+.reading-mode-article pre {
+  background-color: var(--md3-reading-surface-container-high);
+  color: var(--md3-reading-on-surface);
+  border: 1px solid var(--md3-reading-outline-variant);
+  border-radius: var(--md3-sys-shape-corner-medium);
+  padding: 16px;
+  margin: var(--md3-reading-section-spacing) 0;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  position: relative;
+}
+
+.reading-mode-article code {
+  background-color: var(--md3-reading-surface-container-high);
+  color: var(--md3-reading-primary);
+  padding: 2px 6px;
+  border-radius: var(--md3-sys-shape-corner-extra-small);
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: 0.9em;
+}
+
+.reading-mode-article pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* 改进的引用样式 */
+.reading-mode-article blockquote {
+  margin: var(--md3-reading-section-spacing) 0;
+  padding: 16px 20px;
+  background-color: var(--md3-reading-primary-container);
+  border-left: 4px solid var(--md3-reading-primary);
+  border-radius: 0 var(--md3-sys-shape-corner-medium) var(--md3-sys-shape-corner-medium) 0;
+  color: var(--md3-reading-on-primary-container);
+  font-style: italic;
+  position: relative;
+}
+
+/* 列表样式 */
+.reading-mode-article ul,
+.reading-mode-article ol {
+  margin: var(--md3-reading-paragraph-spacing) 0;
+  padding-left: 24px;
+}
+
+.reading-mode-article li {
+  margin-bottom: 8px;
+  color: var(--md3-reading-on-surface);
+  line-height: inherit;
+}
+
+/* 链接样式 */
+.reading-mode-article a {
+  color: var(--md3-reading-primary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--md3-sys-motion-duration-short2) var(--md3-sys-motion-easing-standard);
+}
+
+.reading-mode-article a:hover {
+  border-bottom-color: var(--md3-reading-primary);
+}
+
+/* 表格样式 */
+.reading-mode-article table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--md3-reading-section-spacing) 0;
+  background-color: var(--md3-reading-surface-container);
+  border-radius: var(--md3-sys-shape-corner-medium);
+  overflow: hidden;
+  box-shadow: var(--md3-reading-elevation-1);
+}
+
+.reading-mode-article th,
+.reading-mode-article td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--md3-reading-outline-variant);
+}
+
+.reading-mode-article th {
+  background-color: var(--md3-reading-surface-container-high);
+  color: var(--md3-reading-on-surface);
+  font-weight: 500;
+}
+
+.reading-mode-article td {
+  color: var(--md3-reading-on-surface);
+}
+
+/* 分隔线样式 */
+.reading-mode-article hr {
+  border: none;
+  height: 1px;
+  background-color: var(--md3-reading-outline-variant);
+  margin: var(--md3-reading-section-spacing) 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  #reading-mode-container {
+    padding: 16px;
+  }
+  
+  .reading-mode-content {
+    border-radius: var(--md3-sys-shape-corner-medium);
+  }
+  
+  .reading-mode-content h1 {
+    font-size: var(--md3-sys-typescale-headline-medium-size);
+    padding: 20px 20px 0;
+  }
+  
+  .reading-mode-meta {
+    padding: 0 20px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .reading-mode-article {
+    padding: 0 20px 20px;
+  }
+
+  .reading-mode-article p {
+    text-indent: 1em; /* 移动端减少缩进 */
+  }
+
+  .reading-mode-control-bar {
+    top: 10px;
+    right: 10px;
+    padding: 6px;
+  }
+
+  .control-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
+
+  .preset-panel {
+    min-width: 240px;
+  }
+}
+
+/* 滚动条样式 */
+#reading-mode-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+#reading-mode-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#reading-mode-container::-webkit-scrollbar-thumb {
+  background-color: var(--md3-reading-outline-variant);
+  border-radius: 4px;
+  transition: background-color var(--md3-sys-motion-duration-short2) var(--md3-sys-motion-easing-standard);
+}
+
+#reading-mode-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--md3-reading-outline);
+}
