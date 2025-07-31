@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>响应式布局测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+        
+        .test-item {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+        
+        .test-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        .test-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            font-weight: 600;
+        }
+        
+        .test-content {
+            padding: 20px;
+        }
+        
+        .iframe-container {
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        
+        .iframe-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .control-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+        
+        .control-button:hover {
+            background: #0056b3;
+        }
+        
+        .control-button.active {
+            background: #28a745;
+        }
+        
+        .metrics {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .metrics-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .metrics-label {
+            color: #666;
+        }
+        
+        .metrics-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .animation-test {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .animation-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .animation-button {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .animation-button:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+        
+        .performance-metrics {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+        
+        .performance-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .performance-label {
+            color: #155724;
+            font-weight: 500;
+        }
+        
+        .performance-value {
+            color: #155724;
+            font-family: monospace;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #c3e6c3;
+        }
+        
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .animation-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Chrome 扩展 Popup 响应式布局测试</h1>
+            <p>测试不同屏幕尺寸下的布局表现和动画效果</p>
+        </div>
+        
+        <!-- 不同尺寸测试 -->
+        <div class="test-grid">
+            <!-- 标准尺寸 -->
+            <div class="test-item">
+                <div class="test-header">标准尺寸 (380×520)</div>
+                <div class="test-content">
+                    <div class="iframe-container">
+                        <div class="iframe-label">标准</div>
+                        <iframe src="dist/index.html" width="380" height="520" frameborder="0" id="standard-iframe"></iframe>
+                    </div>
+                    <div class="test-controls">
+                        <button class="control-button" onclick="reloadIframe('standard-iframe')">重新加载</button>
+                        <button class="control-button" onclick="testInteraction('standard-iframe')">测试交互</button>
+                    </div>
+                    <div class="metrics" id="standard-metrics">
+                        <div class="metrics-row">
+                            <span class="metrics-label">尺寸:</span>
+                            <span class="metrics-value">380×520</span>
+                        </div>
+                        <div class="metrics-row">
+                            <span class="metrics-label">密度:</span>
+                            <span class="metrics-value">标准</span>
+                        </div>
+                        <div class="metrics-row">
+                            <span class="metrics-label">状态:</span>
+                            <span class="metrics-value">正常</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 小尺寸 -->
+            <div class="test-item">
+                <div class="test-header">小尺寸 (360×500)</div>
+                <div class="test-content">
+                    <div class="iframe-container">
+                        <div class="iframe-label">小屏</div>
+                        <iframe src="dist/index.html" width="360" height="500" frameborder="0" id="small-iframe"></iframe>
+                    </div>
+                    <div class="test-controls">
+                        <button class="control-button" onclick="reloadIframe('small-iframe')">重新加载</button>
+                        <button class="control-button" onclick="testInteraction('small-iframe')">测试交互</button>
+                    </div>
+                    <div class="metrics" id="small-metrics">
+                        <div class="metrics-row">
+                            <span class="metrics-label">尺寸:</span>
+                            <span class="metrics-value">360×500</span>
+                        </div>
+                        <div class="metrics-row">
+                            <span class="metrics-label">密度:</span>
+                            <span class="metrics-value">紧凑</span>
+                        </div>
+                        <div class="metrics-row">
+                            <span class="metrics-label">状态:</span>
+                            <span class="metrics-value">正常</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 大尺寸 -->
+            <div class="test-item">
+                <div class="test-header">大尺寸 (400×540)</div>
+                <div class="test-content">
+                    <div class="iframe-container">
+                        <div class="iframe-label">大屏</div>
+                        <iframe src="dist/index.html" width="400" height="540" frameborder="0" id="large-iframe"></iframe>
+                    </div>
+                    <div class="test-controls">
+                        <button class="control-button" onclick="reloadIframe('large-iframe')">重新加载</button>
+                        <button class="control-button" onclick="testInteraction('large-iframe')">测试交互</button>
+                    </div>
+                    <div class="metrics" id="large-metrics">
+                        <div class="metrics-row">
+                            <span class="metrics-label">尺寸:</span>
+                            <span class="metrics-value">400×540</span>
+                        </div>
+                        <div class="metrics-row">
+                            <span class="metrics-label">密度:</span>
+                            <span class="metrics-value">宽松</span>
+                        </div>
+                        <div class="metrics-row">
+                            <span class="metrics-label">状态:</span>
+                            <span class="metrics-value">正常</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 动画效果测试 -->
+        <div class="animation-test">
+            <h2>动画效果测试</h2>
+            <div class="animation-controls">
+                <button class="animation-button" onclick="testLoadAnimation()">测试加载动画</button>
+                <button class="animation-button" onclick="testHoverEffects()">测试悬停效果</button>
+                <button class="animation-button" onclick="testTransitions()">测试过渡动画</button>
+                <button class="animation-button" onclick="testThemeSwitch()">测试主题切换</button>
+                <button class="animation-button" onclick="testSliderAnimation()">测试滑块动画</button>
+                <button class="animation-button" onclick="testSwitchAnimation()">测试开关动画</button>
+            </div>
+            
+            <div class="performance-metrics">
+                <h3>性能指标</h3>
+                <div class="performance-item">
+                    <span class="performance-label">页面加载时间:</span>
+                    <span class="performance-value" id="load-time">测量中...</span>
+                </div>
+                <div class="performance-item">
+                    <span class="performance-label">动画帧率:</span>
+                    <span class="performance-value" id="frame-rate">测量中...</span>
+                </div>
+                <div class="performance-item">
+                    <span class="performance-label">交互响应时间:</span>
+                    <span class="performance-value" id="interaction-time">测量中...</span>
+                </div>
+                <div class="performance-item">
+                    <span class="performance-label">内存使用:</span>
+                    <span class="performance-value" id="memory-usage">测量中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 性能监控
+        let performanceData = {
+            loadTime: 0,
+            frameRate: 0,
+            interactionTime: 0,
+            memoryUsage: 0
+        };
+
+        // 页面加载时间测量
+        window.addEventListener('load', function() {
+            performanceData.loadTime = performance.now();
+            document.getElementById('load-time').textContent = performanceData.loadTime.toFixed(2) + 'ms';
+        });
+
+        // 重新加载iframe
+        function reloadIframe(iframeId) {
+            const iframe = document.getElementById(iframeId);
+            const startTime = performance.now();
+            
+            iframe.onload = function() {
+                const loadTime = performance.now() - startTime;
+                console.log(`${iframeId} 加载时间: ${loadTime.toFixed(2)}ms`);
+            };
+            
+            iframe.src = iframe.src;
+        }
+
+        // 测试交互
+        function testInteraction(iframeId) {
+            const iframe = document.getElementById(iframeId);
+            console.log(`测试 ${iframeId} 的交互功能`);
+            
+            // 模拟点击测试
+            const startTime = performance.now();
+            
+            // 这里可以添加实际的交互测试逻辑
+            setTimeout(() => {
+                const interactionTime = performance.now() - startTime;
+                document.getElementById('interaction-time').textContent = interactionTime.toFixed(2) + 'ms';
+            }, 100);
+        }
+
+        // 动画测试函数
+        function testLoadAnimation() {
+            console.log('测试加载动画');
+            // 重新加载所有iframe来观察加载动画
+            ['standard-iframe', 'small-iframe', 'large-iframe'].forEach(id => {
+                reloadIframe(id);
+            });
+        }
+
+        function testHoverEffects() {
+            console.log('测试悬停效果');
+            // 这里可以添加悬停效果的测试逻辑
+        }
+
+        function testTransitions() {
+            console.log('测试过渡动画');
+            // 这里可以添加过渡动画的测试逻辑
+        }
+
+        function testThemeSwitch() {
+            console.log('测试主题切换动画');
+            // 这里可以添加主题切换的测试逻辑
+        }
+
+        function testSliderAnimation() {
+            console.log('测试滑块动画');
+            // 这里可以添加滑块动画的测试逻辑
+        }
+
+        function testSwitchAnimation() {
+            console.log('测试开关动画');
+            // 这里可以添加开关动画的测试逻辑
+        }
+
+        // 帧率监控
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        function measureFrameRate() {
+            frameCount++;
+            const currentTime = performance.now();
+            
+            if (currentTime - lastTime >= 1000) {
+                performanceData.frameRate = frameCount;
+                document.getElementById('frame-rate').textContent = frameCount + ' FPS';
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+            
+            requestAnimationFrame(measureFrameRate);
+        }
+
+        // 开始帧率监控
+        measureFrameRate();
+
+        // 内存使用监控（如果支持）
+        if ('memory' in performance) {
+            setInterval(() => {
+                const memory = performance.memory;
+                const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+                document.getElementById('memory-usage').textContent = usedMB + ' MB';
+            }, 2000);
+        } else {
+            document.getElementById('memory-usage').textContent = '不支持';
+        }
+
+        console.log('响应式测试页面已加载');
+    </script>
+</body>
+</html>

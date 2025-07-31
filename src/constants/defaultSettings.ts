@@ -1,8 +1,8 @@
 import { UserSettings } from '../types';
 import { StorageKeys, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
-import { 
-  DEFAULT_LINE_HEIGHT, 
-  DEFAULT_PARAGRAPH_SPACING 
+import {
+  DEFAULT_LINE_HEIGHT,
+  DEFAULT_PARAGRAPH_SPACING
 } from './options';
 
 /**
@@ -16,7 +16,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   fontFamily: 'default',
   paragraphSpacing: 1.2,
   pageWidth: 800,
-  
+  backgroundColor: 'white',
+
   // 预设相关
   presets: [],
   activePreset: null,
