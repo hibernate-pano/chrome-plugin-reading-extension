@@ -10,6 +10,10 @@ import { logger } from '../../utils/logManager';
 import { TextSelectionToolbar } from '../components/TextSelectionToolbar';
 import { MarkdownWorkerManager } from '../workers/markdownWorkerManager';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
+import { ContentExtractor } from '../extractors/contentExtractor';
+import { ReadabilityExtractor } from '../extractors/ReadabilityExtractor';
+import { DOMUtils } from '../../utils/dom';
+import { RenderError } from '../../types/errors';
 
 // Toast通知组件（简化版，实际项目中可能需要导入或实现）
 const Toast = {
@@ -25,22 +29,25 @@ const Toast = {
   }
 };
 
-// 状态变量
-let originalContent: string | null = null;
-let isReadingMode = false;
-let textSelectionToolbar: TextSelectionToolbar | null = null;
+// 单例MarkdownWorkerManager
 let markdownWorkerManager: MarkdownWorkerManager | null = null;
 
-// 扩展ErrorCode类型
-type ExtendedErrorCode = ErrorCode | 'RENDER_FAILED' | 'NETWORK_REQUEST_FAILED';
-
-// 添加RenderError类型
-class RenderError extends ReaderError {
-  constructor(message: string, context?: unknown) {
-    super(message, 'UNEXPECTED_STATE', context);
+// 自定义渲染错误类型
+class RenderError extends Error {
+  constructor(message: string, public details?: any) {
+    super(message);
     this.name = 'RenderError';
   }
 }
+
+// 阅读模式状态
+let isReaderMode = false;
+let originalScrollY = 0;
+let originalContent: Node[] = [];
+let extractedContent: string = '';
+
+// 扩展ErrorCode类型
+type ExtendedErrorCode = ErrorCode | 'RENDER_FAILED' | 'NETWORK_REQUEST_FAILED';
 
 // 用户友好的错误消息
 const userFriendlyMessages: Record<ExtendedErrorCode, string> = {
@@ -188,17 +195,75 @@ async function handleCodeBlocks(container: HTMLElement | null, settings: Reading
     return;
   }
 
-  // 需要完全重新处理代码块，可以动态导入highlight.js
+  // 需要完全重新处理代码块
   console.log('开始处理代码块');
   try {
-    // 动态导入highlight.js
-    const hljs = await import('highlight.js');
-    console.log('highlight.js加载成功');
-    
-    // 处理代码块的逻辑...
-    // 这里简化处理，实际项目中需要完整实现
-    
-    console.log('代码块处理完成');
+    // 获取所有代码块
+    const codeBlocks = container.querySelectorAll('pre code');
+    if (codeBlocks.length > 0) {
+      console.log(`发现${codeBlocks.length}个代码块需要高亮处理`);
+      
+              // 加载highlight.js的CDN脚本
+      if (!document.getElementById('highlight-js-cdn')) {
+        const script = document.createElement('script');
+        script.id = 'highlight-js-cdn';
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js';
+        script.async = true;
+        
+        // 添加CSS
+        const style = document.createElement('link');
+        style.rel = 'stylesheet';
+        style.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css';
+        
+        document.head.appendChild(style);
+        
+        script.onload = () => {
+          console.log('highlight.js加载成功');
+          // 应用高亮
+          if (window.hljs) {
+            codeBlocks.forEach(block => {
+              window.hljs.highlightElement(block);
+            });
+          }
+        };
+        
+        document.head.appendChild(script);
+      } else if (window.hljs) {
+        // 如果已加载，直接应用高亮
+        codeBlocks.forEach(block => {
+          window.hljs.highlightElement(block);
+        });
+      }
+      if (!document.getElementById('highlight-js-cdn')) {
+        const script = document.createElement('script');
+        script.id = 'highlight-js-cdn';
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js';
+        script.onload = () => {
+          // 脚本加载完成后高亮代码块
+          if (window.hljs) {
+            codeBlocks.forEach(block => {
+              window.hljs.highlightElement(block);
+            });
+            console.log('代码块高亮处理完成');
+          }
+        };
+        document.head.appendChild(script);
+        
+        // 加载对应主题的CSS
+        const linkCSS = document.createElement('link');
+        linkCSS.rel = 'stylesheet';
+        linkCSS.href = `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/${codeTheme}.min.css`;
+        document.head.appendChild(linkCSS);
+      } else {
+        // 如果脚本已加载，直接应用高亮
+        if (window.hljs) {
+          codeBlocks.forEach(block => {
+            window.hljs.highlightElement(block);
+          });
+          console.log('代码块高亮处理完成');
+        }
+      }
+    }
   } catch (error) {
     console.error('处理代码块时发生错误:', error);
   }
@@ -319,213 +384,321 @@ function removeFloatingButton() {
   }
 }
 
+function getMarkdownWorkerManager(): MarkdownWorkerManager {
+  if (!markdownWorkerManager) {
+    markdownWorkerManager = new MarkdownWorkerManager();
+  }
+  return markdownWorkerManager;
+}
+
 /**
  * 切换阅读模式
- * 这是主要的公共API，用于启用或禁用阅读模式
+ * @returns 切换后的阅读模式状态
  */
 export async function toggleReadingMode(): Promise<boolean> {
-  const settings = await fetchSettings();
-
-  if (!isReadingMode) {
-    // 保存原始内容
-    originalContent = document.body.innerHTML;
-
-    let loadingToast: any; // 假设Toast.info返回一个带有close方法的对象
-
-    try {
-      // 显示加载提示
-      loadingToast = Toast.info('正在准备阅读模式...', {
-        duration: 0, // 无限期持续
-        showProgress: true
-      });
-
-      // 初始化提取器和worker管理器（如果尚未初始化）
-      if (!markdownWorkerManager) {
-        markdownWorkerManager = new MarkdownWorkerManager();
-      }
-
-      // 1. 提取内容
-      let extractedContent;
-      try {
-        // 使用ExtractorFactory创建提取器
-        const extractor = await ExtractorFactory.createExtractor(window.location.href);
-        extractedContent = await extractor.extract(document, window.location.href);
-        console.log('内容提取完成');
-        
-        // 检查提取是否成功
-        if (!extractedContent || !extractedContent.content) {
-          throw new ContentExtractionError('内容提取失败: 未获取到有效内容', { url: window.location.href });
-        }
-      } catch (error: any) {
-        // 如果已经是ContentExtractionError，直接重新抛出
-        if (error instanceof ContentExtractionError) {
-          throw error;
-        } else {
-          throw new ContentExtractionError('内容提取过程中发生错误', { originalError: error, url: window.location.href });
-        }
-      }
-
-      // 2. 转换为Markdown
-      let markdown;
-      try {
-        markdown = await markdownWorkerManager.convertToMarkdown(extractedContent.content);
-        console.log('Markdown 转换完成');
-        
-        if (!markdown) {
-          throw new RenderError('Markdown 转换失败: 转换结果为空', { htmlLength: extractedContent.content.length });
-        }
-      } catch (error: any) {
-        // 如果已经是ReaderError，直接重新抛出
-        if (error instanceof ReaderError) {
-          throw error;
-        } else {
-          throw new RenderError('Markdown 转换过程中发生错误', { originalError: error });
-        }
-      }
-
-      // 3. 渲染Markdown
-      let renderedHtml;
-      try {
-        // 直接使用markdown变量
-        renderedHtml = markdown;
-        console.log('Markdown 处理完成');
-        
-        if (!renderedHtml) {
-          throw new RenderError('Markdown 处理失败: 结果为空', { markdownLength: markdown.length });
-        }
-      } catch (error: any) {
-        if (error instanceof RenderError) {
-          throw error;
-        } else {
-          throw new RenderError('Markdown 处理过程中发生错误', { originalError: error });
-        }
-      }
-
-      // 4. 创建阅读模式容器
-      const readingModeContainer = document.createElement("div");
-      readingModeContainer.id = "reading-mode-container";
-      readingModeContainer.className = settings.theme === "dark" ? "dark" : "light";
-      readingModeContainer.innerHTML = renderedHtml;
-
-      // 5. 应用样式
-      try {
-        await applyStyles(settings);
-        console.log('样式应用完成');
-      } catch (error: any) {
-        handleError(error, '样式应用');
-        // 即使样式失败也继续执行，但记录错误
-      }
-
-      // 6. 替换页面内容
-      document.body.innerHTML = "";
-      document.body.appendChild(readingModeContainer);
-
-      // 7. 初始化工具栏
-      console.log('初始化文本选择工具栏');
-      textSelectionToolbar = new TextSelectionToolbar();
-      textSelectionToolbar.init();
-
-      isReadingMode = true;
-
-      // 关闭加载提示并显示成功提示
-      if (loadingToast) loadingToast.close();
-      Toast.success('阅读模式已启用');
-
-      return true;
-    } catch (error: any) {
-      // 捕获从特定步骤重新抛出的错误或意外错误
-      console.error("启用阅读模式时发生错误:", error);
-
-      // 关闭加载提示
-      if (loadingToast) loadingToast.close();
-
-      // 使用集中式处理器处理错误
-      handleError(error, '启用阅读模式');
-
-      // 禁用阅读模式以返回原始页面
+  try {
+    if (isReaderMode) {
+      // 禁用阅读模式
       disableReadingMode();
-      
-      return false;
+      isReaderMode = false;
+      console.log('返回当前阅读模式状态:', isReaderMode);
+      return isReaderMode;
+    } else {
+      // 启用阅读模式
+      isReaderMode = await enableReadingMode();
+      console.log('返回当前阅读模式状态:', isReaderMode);
+      return isReaderMode;
     }
-  } else {
-    // 恢复原始内容
-    disableReadingMode();
-    return false;
+  } catch (error) {
+    // 处理错误
+    isReaderMode = false;
+    console.error('切换阅读模式时发生错误:', error);
+    
+    // 记录详细错误信息以帮助调试
+    if (error instanceof RenderError) {
+      console.error('[阅读模式错误] 启用阅读模式:', error);
+    } else if (error instanceof Error) {
+      console.error('[阅读模式错误] 未捕获错误:', error.message, error.stack);
+    }
+    
+    // 确保在发生错误时恢复到原始状态
+    try {
+      if (originalContent.length > 0) {
+        disableReadingMode();
+      }
+    } catch (cleanupError) {
+      console.error('清理阅读模式失败:', cleanupError);
+    }
+    
+    // 返回当前状态（应该是false）
+    return isReaderMode;
+  }
+}
+
+/**
+ * 启用阅读模式
+ */
+async function enableReadingMode(): Promise<boolean> {
+  try {
+    // 保存当前滚动位置和内容
+    originalScrollY = window.scrollY;
+    originalContent = Array.from(document.body.childNodes);
+    
+    // 提取内容
+    const extractor = new ReadabilityExtractor();
+    const extractionResult = await extractor.extract(document);
+    console.log('内容提取完成');
+    
+    if (!extractionResult || !extractionResult.content) {
+      throw new ReaderError('内容提取失败', 'EXTRACTION_FAILED');
+    }
+    
+    extractedContent = extractionResult.content;
+    
+    // 获取MarkdownWorkerManager实例
+    const workerManager = getMarkdownWorkerManager();
+    
+    try {
+      // 转换为Markdown（异步）
+      const markdown = await workerManager.convertToMarkdown(extractedContent);
+      
+      // 渲染阅读模式
+      renderReadingMode(markdown, extractionResult.title || document.title);
+      return true;
+    } catch (markdownError) {
+      console.error('Markdown转换失败:', markdownError);
+      
+      // 如果Markdown转换失败，尝试直接使用HTML内容作为降级方案
+      console.log('尝试使用直接HTML渲染作为降级方案');
+      renderReadingModeWithHtml(extractedContent, extractionResult.title || document.title);
+      return true;
+    }
+  } catch (error) {
+    // 转换为RenderError
+    if (error instanceof Error) {
+      throw new RenderError('Markdown 转换过程中发生错误', { cause: error });
+    } else {
+      throw new RenderError('启用阅读模式时发生未知错误');
+    }
   }
 }
 
 /**
  * 禁用阅读模式
  */
-function disableReadingMode() {
-  if (!isReadingMode) return;
-
-  // 恢复原始HTML内容
-  if (originalContent) {
-    document.documentElement.outerHTML = originalContent;
-    originalContent = null;
-  }
-
-  // 移除阅读模式的CSS和容器
-  const readerModeCss = document.getElementById('panbo-reader-mode-css');
-  if (readerModeCss) {
-    readerModeCss.remove();
-  }
-
-  const readerContainer = document.getElementById('panbo-reader-view');
-  if (readerContainer) {
-    readerContainer.remove();
-  }
-
-  // 移除全局类名
-  document.documentElement.classList.remove('reader-mode-active');
-  document.body.classList.remove('reader-mode-active');
-
-  // 清理 highlight.js 的样式
-  const hljsStyles = document.getElementById('reading-mode-hljs-styles');
-  if (hljsStyles) {
-    hljsStyles.remove();
-  }
+function disableReadingMode(): void {
+  // 清空body
+  document.body.innerHTML = '';
   
-  const customCodeStyles = document.getElementById('reading-mode-custom-code-styles');
-  if (customCodeStyles) {
-    customCodeStyles.remove();
-  }
+  // 恢复原始内容
+  originalContent.forEach(node => {
+    document.body.appendChild(node.cloneNode(true));
+  });
   
-  const readerViewDynamicStyles = document.getElementById('reading-mode-dynamic-styles');
-  if (readerViewDynamicStyles) {
-    readerViewDynamicStyles.remove();
-  }
-
-  removeFloatingButton();
-
-  // 恢复原始溢出状态
-  document.documentElement.style.overflow = '';
-  document.body.style.overflow = '';
-
-  // 清理工具栏
-  if (textSelectionToolbar) {
-    textSelectionToolbar.destroy();
-    textSelectionToolbar = null;
-  }
-
-  // 清理worker和提取器
-  if (markdownWorkerManager) {
-    markdownWorkerManager.destroy();
-    markdownWorkerManager = null;
-  }
-
-  isReadingMode = false;
-  console.log('阅读模式已关闭');
+  // 恢复滚动位置
+  window.scrollTo(0, originalScrollY);
   
-  // 显示退出提示
-  Toast.info('已退出阅读模式');
+  // 重置变量
+  originalContent = [];
+  extractedContent = '';
+}
+
+/**
+ * 渲染阅读模式（使用Markdown）
+ */
+function renderReadingMode(markdown: string, title: string): void {
+  // 创建阅读视图容器
+  const container = document.createElement('div');
+  container.className = 'reader-view-container';
+  
+  // 添加标题
+  const titleElement = document.createElement('h1');
+  titleElement.textContent = title;
+  titleElement.className = 'reader-view-title';
+  container.appendChild(titleElement);
+  
+  // 渲染Markdown内容
+  const contentElement = document.createElement('div');
+  contentElement.className = 'reader-view-content';
+  
+  // 此处假设使用marked或其他Markdown渲染库
+  // 实际项目中，可以引入marked库
+  contentElement.innerHTML = renderMarkdown(markdown);
+  
+  container.appendChild(contentElement);
+  
+  // 清空body并添加阅读视图
+  document.body.innerHTML = '';
+  document.body.appendChild(container);
+  
+  // 添加阅读模式样式
+  addReadingModeStyles();
+  
+  // 滚动到顶部
+  window.scrollTo(0, 0);
+}
+
+/**
+ * 降级方案：直接使用HTML渲染阅读模式
+ */
+function renderReadingModeWithHtml(html: string, title: string): void {
+  // 创建阅读视图容器
+  const container = document.createElement('div');
+  container.className = 'reader-view-container';
+  
+  // 添加标题
+  const titleElement = document.createElement('h1');
+  titleElement.textContent = title;
+  titleElement.className = 'reader-view-title';
+  container.appendChild(titleElement);
+  
+  // 渲染HTML内容
+  const contentElement = document.createElement('div');
+  contentElement.className = 'reader-view-content';
+  
+  // 直接使用HTML内容
+  contentElement.innerHTML = html;
+  
+  container.appendChild(contentElement);
+  
+  // 清空body并添加阅读视图
+  document.body.innerHTML = '';
+  document.body.appendChild(container);
+  
+  // 添加阅读模式样式
+  addReadingModeStyles();
+  
+  // 滚动到顶部
+  window.scrollTo(0, 0);
+}
+
+/**
+ * 添加阅读模式样式
+ */
+function addReadingModeStyles(): void {
+  const style = document.createElement('style');
+  style.textContent = `
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+      color: #333;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+    }
+    
+    .reader-view-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .reader-view-title {
+      font-size: 28px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    
+    .reader-view-content {
+      font-size: 18px;
+    }
+    
+    .reader-view-content p {
+      margin-bottom: 16px;
+    }
+    
+    .reader-view-content img {
+      max-width: 100%;
+      height: auto;
+      margin: 20px 0;
+    }
+    
+    .reader-view-content pre {
+      background-color: #f5f7f9;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+      }
+      
+      .reader-view-container {
+        background-color: #262626;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      }
+      
+      .reader-view-title {
+        border-bottom-color: #333;
+      }
+      
+      .reader-view-content pre {
+        background-color: #333;
+      }
+    }
+  `;
+  
+  document.head.appendChild(style);
+}
+
+/**
+ * 简单的Markdown渲染函数
+ * 实际项目中应该使用成熟的Markdown渲染库
+ */
+function renderMarkdown(markdown: string): string {
+  // 非常简单的Markdown转换，仅作演示
+  // 在实际项目中，应该使用marked、markdown-it等库
+  
+  // 转义HTML
+  const escaped = markdown
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // 处理标题
+  let html = escaped
+    .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+    .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+  
+  // 处理段落
+  html = html.replace(/^(?!<h[1-6]>)(.+)$/gm, '<p>$1</p>');
+  
+  // 处理代码块
+  html = html.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+  
+  // 处理行内代码
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  // 处理粗体
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  
+  // 处理斜体
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  
+  // 处理链接
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  
+  // 处理图片
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+  
+  return html;
 }
 
 // 监听存储变化
 chrome.storage.onChanged.addListener(async (changes) => {
   // 如果不在阅读模式下，不应用样式
-  if (!isReadingMode) return;
+  if (!isReaderMode) return;
 
   const container = document.getElementById('reading-mode-container');
   if (!container) return;

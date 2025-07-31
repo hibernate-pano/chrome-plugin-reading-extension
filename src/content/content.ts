@@ -377,15 +377,8 @@ document.head.appendChild(customCodeStyles);
 // });
 
 // 导入 highlight.js 样式
-// 不通过导入文件的方式，而是直接在代码中定义样式
-// import 'highlight.js/styles/atom-one-light.css';
-// 注释掉 pangu 导入，暂时不使用
-// import pangu from 'pangu';
-
 // 导入性能监控器和工具
 import { performanceMonitor } from '../utils/performance';
-// 不再使用资源加载器
-// import { /* resourceLoader, LoadPriority */ } from '../utils/resourceLoader';
 import { Toast } from '../ui/components/Toast';
 import { createFloatingButton, removeFloatingButton } from './ui/readerFloatingButton';
 import { handleMediaElements } from './processors/mediaProcessor';
@@ -394,12 +387,6 @@ import { handleMediaElements } from './processors/mediaProcessor';
 import {
   ExtractorFactory,
   contentExtractor,
-  // defuddleExtractor, // 移除此行
-  // tableExtractor, // 移除此行
-  // mediaExtractor, // 移除此行
-  // enhancedMediaExtractor, // 移除此行
-  // codeExtractor, // 移除此行
-  // listExtractor // 移除此行
 } from './extractors';
 
 // 导入基础变量系统
@@ -410,9 +397,6 @@ import './extractors/extractors.css';
 import './styles/github-code-new.css';
 
 import { MarkdownWorkerManager } from "./workers/markdownWorkerManager";
-// 移除不存在的导入
-// import { DefuddleExtractor } from "./extractors/defuddleExtractor";
-// import { renderMarkdown } from "./renderers/markdownRenderer";
 
 // Import structured errors and logger
 import { ReaderError, ErrorCode, ContentExtractionError } from '../types/errors';
@@ -739,15 +723,15 @@ async function toggleReadingMode() {
         console.log('内容提取完成');
         // Check if extraction was successful based on ExtractedContent interface (if applicable)
         if (!extractedContent || !extractedContent.content) { // Assuming extractedContent has a 'content' property
-            throw new ContentExtractionError('内容提取失败: 未获取到有效内容', { url: window.location.href });
+          throw new ContentExtractionError('内容提取失败: 未获取到有效内容', { url: window.location.href });
         }
       } catch (error: any) {
         // If it's already a ContentExtractionError, re-throw it.
         // Otherwise, wrap it in ContentExtractionError.
         if (error instanceof ContentExtractionError) {
-             throw error;
+          throw error;
         } else {
-            throw new ContentExtractionError('内容提取过程中发生错误', { originalError: error, url: window.location.href });
+          throw new ContentExtractionError('内容提取过程中发生错误', { originalError: error, url: window.location.href });
         }
       }
 
@@ -757,15 +741,15 @@ async function toggleReadingMode() {
         markdown = await markdownWorkerManager.convertToMarkdown(extractedContent.content);
         console.log('Markdown 转换完成');
         if (!markdown) {
-             throw new RenderError('Markdown 转换失败: 转换结果为空', { htmlLength: extractedContent.content.length });
+          throw new RenderError('Markdown 转换失败: 转换结果为空', { htmlLength: extractedContent.content.length });
         }
       } catch (error: any) {
         // If it's already a ReaderError, re-throw it.
         // Otherwise, wrap it in a generic RenderError (since conversion is part of rendering pipeline)
         if (error instanceof ReaderError) {
-            throw error;
+          throw error;
         } else {
-            throw new RenderError('Markdown 转换过程中发生错误', { originalError: error });
+          throw new RenderError('Markdown 转换过程中发生错误', { originalError: error });
         }
       }
 
@@ -776,13 +760,13 @@ async function toggleReadingMode() {
         renderedHtml = markdown; // 简单地直接使用markdown内容，因为renderMarkdown函数不存在
         console.log('Markdown 处理完成');
         if (!renderedHtml) {
-             throw new RenderError('Markdown 处理失败: 结果为空', { markdownLength: markdown.length });
+          throw new RenderError('Markdown 处理失败: 结果为空', { markdownLength: markdown.length });
         }
       } catch (error: any) {
-         if (error instanceof RenderError) {
-            throw error;
+        if (error instanceof RenderError) {
+          throw error;
         } else {
-            throw new RenderError('Markdown 处理过程中发生错误', { originalError: error });
+          throw new RenderError('Markdown 处理过程中发生错误', { originalError: error });
         }
       }
 
@@ -936,68 +920,116 @@ async function extractContent(): Promise<any> {
 
 // 监听消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    let asyncResponse = false;
+  let asyncResponse = false;
 
-    if (message.action === MESSAGE_TYPES.TOGGLE_READER_MODE) {
-        asyncResponse = true;
-        toggleReadingMode()
-            .then(result => {
-                sendResponse({ success: true, isReadingMode: result });
-            })
-            .catch((error: Error) => {
-                console.error('切换阅读模式失败:', error);
-                sendResponse({ success: false, error: error.message });
-            });
-    } 
-    else if (message.action === MESSAGE_TYPES.EXTRACT_CONTENT) {
-        asyncResponse = true;
-        extractContent()
-            .then((content: any) => {
-                sendResponse({ success: true, content });
-            })
-            .catch((error: Error) => {
-                console.error('提取内容失败:', error);
-                sendResponse({ success: false, error: error.message });
-            });
-    }
-    else if (message.action === MESSAGE_TYPES.SAVE_READING_PROGRESS) {
-        asyncResponse = true;
-        const { url, scrollPosition, title } = message;
-        
-        // 发送消息到background.js保存阅读进度
-        chrome.runtime.sendMessage({
-            action: MESSAGE_TYPES.SAVE_READING_PROGRESS,
-            progress: {
-                url,
-                scrollPosition,
-                lastRead: Date.now(),
-                title
-            }
-        })
-        .then(response => {
-            sendResponse(response);
+  if (message.action === MESSAGE_TYPES.TOGGLE_READER_MODE) {
+    asyncResponse = true;
+    toggleReadingMode()
+      .then(result => {
+        sendResponse({ success: true, isReadingMode: result });
+      })
+      .catch((error: Error) => {
+        console.error('切换阅读模式失败:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+  }
+  else if (message.action === MESSAGE_TYPES.ENABLE_READING_MODE || message.action === 'ENABLE_READING_MODE') {
+    asyncResponse = true;
+    if (!isReadingMode) {
+      toggleReadingMode()
+        .then(result => {
+          sendResponse({ success: true, readingMode: result });
         })
         .catch((error: Error) => {
-            console.error('保存阅读进度失败:', error);
-            sendResponse({ success: false, error: error.message });
-        });
-    }
-    else if (message.action === 'GET_READING_MODE_STATE') {
-        // This action is synchronous, no need for asyncResponse = true
-        console.log('返回当前阅读模式状态:', isReadingMode);
-        sendResponse({
-            isReadingMode: isReadingMode,
-            buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+          console.error('启用阅读模式失败:', error);
+          sendResponse({ success: false, error: error.message });
         });
     } else {
-        // If no action matches, indicate failure or handle appropriately
-        console.warn('收到未知消息动作:', message.action);
-        sendResponse({ success: false, error: '未知消息动作' });
+      sendResponse({ success: true, readingMode: true });
     }
+  }
+  else if (message.action === MESSAGE_TYPES.DISABLE_READING_MODE || message.action === 'DISABLE_READING_MODE') {
+    asyncResponse = true;
+    if (isReadingMode) {
+      toggleReadingMode()
+        .then(result => {
+          sendResponse({ success: true, readingMode: result });
+        })
+        .catch((error: Error) => {
+          console.error('禁用阅读模式失败:', error);
+          sendResponse({ success: false, error: error.message });
+        });
+    } else {
+      sendResponse({ success: true, readingMode: false });
+    }
+  }
+  else if (message.action === MESSAGE_TYPES.APPLY_PRESET || message.action === 'APPLY_PRESET') {
+    asyncResponse = true;
+    try {
+      // 应用预设样式
+      const presetId = message.preset;
+      if (presetId) {
+        // 这里可以添加应用预设的逻辑
+        console.log('应用预设:', presetId);
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未提供预设ID' });
+      }
+    } catch (error: any) {
+      console.error('应用预设失败:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+  else if (message.action === MESSAGE_TYPES.EXTRACT_CONTENT) {
+    asyncResponse = true;
+    extractContent()
+      .then((content: any) => {
+        sendResponse({ success: true, content });
+      })
+      .catch((error: Error) => {
+        console.error('提取内容失败:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+  }
+  else if (message.action === MESSAGE_TYPES.SAVE_READING_PROGRESS) {
+    asyncResponse = true;
+    const { url, scrollPosition, title } = message;
 
-    // Return true to indicate that sendResponse will be called asynchronously
-    // This is only needed for the async case (TOGGLE_READING_MODE)
-    return asyncResponse;
+    // 发送消息到background.js保存阅读进度
+    chrome.runtime.sendMessage({
+      action: MESSAGE_TYPES.SAVE_READING_PROGRESS,
+      progress: {
+        url,
+        scrollPosition,
+        lastRead: Date.now(),
+        title
+      }
+    })
+      .then(response => {
+        sendResponse(response);
+      })
+      .catch((error: Error) => {
+        console.error('保存阅读进度失败:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+  }
+  else if (message.action === MESSAGE_TYPES.GET_READING_MODE_STATE || message.action === 'GET_READING_MODE_STATE') {
+    // This action is synchronous, no need for asyncResponse = true
+    console.log('返回当前阅读模式状态:', isReadingMode);
+    sendResponse({
+      readingMode: isReadingMode,
+      isReadingMode: isReadingMode,
+      buttonText: isReadingMode ? '退出阅读模式' : '进入阅读模式'
+    });
+  } else {
+    // If no action matches, indicate failure or handle appropriately
+    console.warn('收到未知消息动作:', message.action);
+    sendResponse({ success: false, error: '未知消息动作' });
+  }
+
+  // Return true to indicate that sendResponse will be called asynchronously
+  // This is only needed for the async case (TOGGLE_READER_MODE)
+  return asyncResponse;
 });
 
 // ... rest of content.ts ...

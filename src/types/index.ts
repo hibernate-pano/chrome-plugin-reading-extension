@@ -36,6 +36,6 @@ export type ThemeOption = 'light' | 'dark' | 'sepia' | 'custom';
  * 消息类型
  */
 export interface Message {
-  type: 'TOGGLE_READING_MODE' | 'INJECT_CONTENT_SCRIPT';
+  action: string;  // 使用action而非type来匹配实际使用
   payload?: any;
 } 

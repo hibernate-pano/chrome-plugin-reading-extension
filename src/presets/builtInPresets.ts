@@ -140,3 +140,5 @@ export const builtInPresets: ReadingPreset[] = [
     }
   },
 ];
+
+export default builtInPresets;

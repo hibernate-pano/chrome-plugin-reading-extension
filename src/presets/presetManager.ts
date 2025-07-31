@@ -1,12 +1,13 @@
 import { ReadingPreset, StorageKeys, setStorage, getStorage } from '../storage/storage';
-import { builtInPresets } from './builtInPresets';
+import simplifiedPresets from './simplifiedPresets';
+import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
 
 /**
- * 预设管理器
- * 用于管理阅读预设，包括内置预设和自定义预设
+ * 简化版预设管理器
+ * 遵循 "less is more" 和 "约定大于配置" 的设计理念
  */
-export class PresetManager {
-  private static instance: PresetManager;
+export class SimplifiedPresetManager {
+  private static instance: SimplifiedPresetManager;
   private activePresetId: string | null = null;
 
   private constructor() {}
@@ -14,15 +15,15 @@ export class PresetManager {
   /**
    * 获取预设管理器实例
    */
-  public static getInstance(): PresetManager {
-    if (!PresetManager.instance) {
-      PresetManager.instance = new PresetManager();
+  public static getInstance(): SimplifiedPresetManager {
+    if (!SimplifiedPresetManager.instance) {
+      SimplifiedPresetManager.instance = new SimplifiedPresetManager();
     }
-    return PresetManager.instance;
+    return SimplifiedPresetManager.instance;
   }
 
   /**
-   * 初始化预设管理器 (只加载激活的预设)
+   * 初始化预设管理器
    */
   public async initialize(): Promise<void> {
     // 加载当前激活的预设
@@ -33,17 +34,10 @@ export class PresetManager {
   }
 
   /**
-   * 获取所有预设 (只返回内置预设)
+   * 获取所有预设
    */
   public getAllPresets(): ReadingPreset[] {
-    return [...builtInPresets];
-  }
-
-  /**
-   * 获取内置预设
-   */
-  public getBuiltInPresets(): ReadingPreset[] {
-    return [...builtInPresets];
+    return [...simplifiedPresets];
   }
 
   /**
@@ -56,11 +50,10 @@ export class PresetManager {
   }
 
   /**
-   * 根据ID获取预设 (只从内置预设中查找)
+   * 根据ID获取预设
    */
   public getPresetById(id: string): ReadingPreset | null {
-    const allPresets = this.getAllPresets();
-    return allPresets.find(preset => preset.id === id) || null;
+    return simplifiedPresets.find(preset => preset.id === id) || null;
   }
 
   /**
@@ -80,7 +73,7 @@ export class PresetManager {
   }
 
   /**
-   * 应用预设设置 (简化)
+   * 应用预设设置
    */
   private async applyPreset(preset: ReadingPreset): Promise<void> {
     const { settings } = preset;
@@ -91,23 +84,49 @@ export class PresetManager {
     if (settings.codeFontSize) await setStorage(StorageKeys.CODE_FONT_SIZE, settings.codeFontSize);
     if (settings.codeTheme) await setStorage(StorageKeys.CODE_THEME, settings.codeTheme);
     if (settings.lineHeight) await setStorage(StorageKeys.LINE_HEIGHT, settings.lineHeight);
+    if (settings.lineSpacing) await setStorage(StorageKeys.LINE_SPACING, settings.lineSpacing);
+    if (settings.letterSpacing) await setStorage(StorageKeys.LETTER_SPACING, settings.letterSpacing);
+    if (settings.pageWidth) await setStorage(StorageKeys.PAGE_WIDTH, settings.pageWidth);
+    if (settings.textAlign) await setStorage(StorageKeys.TEXT_ALIGN, settings.textAlign);
+    if (settings.firstLineIndent !== undefined) await setStorage(StorageKeys.FIRST_LINE_INDENT, settings.firstLineIndent);
     if (settings.showImages !== undefined) await setStorage(StorageKeys.SHOW_IMAGES, settings.showImages);
+    if (settings.showDirectory !== undefined) await setStorage(StorageKeys.SHOW_DIRECTORY, settings.showDirectory);
     if (settings.fontFamily) await setStorage(StorageKeys.FONT_FAMILY, settings.fontFamily);
     if (settings.backgroundColor) await setStorage(StorageKeys.BACKGROUND_COLOR, settings.backgroundColor);
     if (settings.paragraphSpacing) await setStorage(StorageKeys.PARAGRAPH_SPACING, settings.paragraphSpacing);
   }
 
   /**
-   * 重置为默认预设 (简化)
+   * 重置到默认设置
    */
   public async resetToDefault(): Promise<void> {
-    this.activePresetId = null;
-    await setStorage(StorageKeys.ACTIVE_PRESET, null);
-    
-    // 应用默认预设
-    const defaultPreset = builtInPresets.find(preset => preset.id === 'default');
+    // 重置为默认预设
+    const defaultPreset = simplifiedPresets.find(preset => preset.id === 'default');
     if (defaultPreset) {
       await this.applyPreset(defaultPreset);
+    } else {
+      // 如果找不到默认预设，使用 DEFAULT_SETTINGS
+      await setStorage(StorageKeys.THEME, DEFAULT_SETTINGS.theme);
+      await setStorage(StorageKeys.FONT_SIZE, DEFAULT_SETTINGS.fontSize);
+      await setStorage(StorageKeys.CODE_FONT_SIZE, DEFAULT_SETTINGS.codeFontSize);
+      await setStorage(StorageKeys.CODE_THEME, DEFAULT_SETTINGS.codeTheme);
+      await setStorage(StorageKeys.LINE_HEIGHT, DEFAULT_SETTINGS.lineHeight);
+      await setStorage(StorageKeys.LINE_SPACING, DEFAULT_SETTINGS.lineSpacing);
+      await setStorage(StorageKeys.LETTER_SPACING, DEFAULT_SETTINGS.letterSpacing);
+      await setStorage(StorageKeys.PAGE_WIDTH, DEFAULT_SETTINGS.pageWidth);
+      await setStorage(StorageKeys.TEXT_ALIGN, DEFAULT_SETTINGS.textAlign);
+      await setStorage(StorageKeys.FIRST_LINE_INDENT, DEFAULT_SETTINGS.firstLineIndent);
+      await setStorage(StorageKeys.SHOW_IMAGES, DEFAULT_SETTINGS.showImages);
+      await setStorage(StorageKeys.SHOW_DIRECTORY, DEFAULT_SETTINGS.showDirectory);
+      await setStorage(StorageKeys.FONT_FAMILY, DEFAULT_SETTINGS.fontFamily);
+      await setStorage(StorageKeys.BACKGROUND_COLOR, DEFAULT_SETTINGS.backgroundColor);
+      await setStorage(StorageKeys.PARAGRAPH_SPACING, DEFAULT_SETTINGS.paragraphSpacing);
     }
+
+    // 清除激活的预设
+    this.activePresetId = null;
+    await setStorage(StorageKeys.ACTIVE_PRESET, null);
   }
 }
+
+export default SimplifiedPresetManager;

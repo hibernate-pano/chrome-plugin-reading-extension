@@ -8,6 +8,77 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Material Design 3 Primary Colors
+        'primary-10': '#001d36',
+        'primary-20': '#003258',
+        'primary-30': '#004a77',
+        'primary-40': '#006397',
+        'primary-50': '#007db8',
+        'primary-60': '#2e98d3',
+        'primary-70': '#58b2ea',
+        'primary-80': '#7dcdff',
+        'primary-90': '#c2e7ff',
+        'primary-95': '#e1f4ff',
+        'primary-99': '#fdfcff',
+
+        // Secondary Colors
+        'secondary-10': '#0f1419',
+        'secondary-20': '#24292e',
+        'secondary-30': '#3a3f44',
+        'secondary-40': '#51565c',
+        'secondary-50': '#696e74',
+        'secondary-60': '#82878d',
+        'secondary-70': '#9ca1a7',
+        'secondary-80': '#b7bcc2',
+        'secondary-90': '#d3d8de',
+        'secondary-95': '#e1e6ec',
+        'secondary-99': '#fdfcff',
+
+        // Neutral Colors
+        'neutral-0': '#000000',
+        'neutral-10': '#1a1c1e',
+        'neutral-20': '#2f3133',
+        'neutral-25': '#3a3c3e',
+        'neutral-30': '#464749',
+        'neutral-40': '#5e5f61',
+        'neutral-50': '#777779',
+        'neutral-60': '#919294',
+        'neutral-70': '#ababae',
+        'neutral-80': '#c7c6ca',
+        'neutral-90': '#e3e2e6',
+        'neutral-95': '#f1f0f4',
+        'neutral-98': '#faf9fd',
+        'neutral-99': '#fdfcff',
+        'neutral-100': '#ffffff',
+
+        // Surface Colors
+        'surface': 'var(--md-sys-color-surface)',
+        'surface-dim': 'var(--md-sys-color-surface-dim)',
+        'surface-bright': 'var(--md-sys-color-surface-bright)',
+        'surface-container-lowest': 'var(--md-sys-color-surface-container-lowest)',
+        'surface-container-low': 'var(--md-sys-color-surface-container-low)',
+        'surface-container': 'var(--md-sys-color-surface-container)',
+        'surface-container-high': 'var(--md-sys-color-surface-container-high)',
+        'surface-container-highest': 'var(--md-sys-color-surface-container-highest)',
+
+        // On Colors
+        'on-surface': 'var(--md-sys-color-on-surface)',
+        'on-surface-variant': 'var(--md-sys-color-on-surface-variant)',
+        'on-primary': 'var(--md-sys-color-on-primary)',
+        'on-primary-container': 'var(--md-sys-color-on-primary-container)',
+        'on-secondary': 'var(--md-sys-color-on-secondary)',
+        'on-secondary-container': 'var(--md-sys-color-on-secondary-container)',
+
+        // Container Colors
+        'primary-container': 'var(--md-sys-color-primary-container)',
+        'secondary-container': 'var(--md-sys-color-secondary-container)',
+        'error-container': 'var(--md-sys-color-error-container)',
+
+        // Outline Colors
+        'outline': 'var(--md-sys-color-outline)',
+        'outline-variant': 'var(--md-sys-color-outline-variant)',
+
+        // Legacy colors for backward compatibility
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',

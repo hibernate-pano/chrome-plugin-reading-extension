@@ -9,7 +9,7 @@
     "build:background": "vite build -c vite.background.config.ts",
     "build:popup": "vite build -c vite.popup.config.ts",
     "cleanup": "node scripts/cleanup.js",
-    "build": "pnpm run build:content && pnpm run build:background && pnpm run build:popup && pnpm run cleanup",
+    "build": "pnpm run build:content && pnpm run build:background && pnpm run build:popup && cp -r public/* dist/ && pnpm run cleanup",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "watch": "vite build --watch"
@@ -21,6 +21,7 @@
     "@types/node": "^22.10.2",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.23.12",
     "postcss": "^8.4.49",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -41,6 +42,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "terser": "^5.43.1",
     "typescript": "^5.2.2",
     "vite": "^5.1.6"
   }

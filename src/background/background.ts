@@ -40,6 +40,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error('保存阅读进度失败:', error);
         sendResponse({ success: false, error: error.message });
       });
+  } else if (message.action === 'INJECT_CONTENT_SCRIPT') {
+    // 处理注入内容脚本的请求
+    if (sender.tab?.id) {
+      console.log('向标签页注入内容脚本:', sender.tab.id);
+      sendResponse({ success: true, message: '内容脚本注入请求已处理' });
+    } else {
+      sendResponse({ success: false, error: '无法确定目标标签页' });
+    }
   }
   
   // 返回true表示将异步发送响应

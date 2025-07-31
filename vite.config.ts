@@ -27,6 +27,8 @@ export default defineConfig({
     
     // 代码分割策略
     rollupOptions: {
+      // 外部依赖配置
+      external: ['highlight.js'],
       output: {
         manualChunks: (id: string) => {
           // 核心模块 - 最小化初始加载

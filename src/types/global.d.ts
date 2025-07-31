@@ -120,4 +120,32 @@ interface Navigator {
    * 网络连接信息
    */
   connection?: NetworkInformation;
+}
+
+/**
+ * Highlight.js类型定义
+ */
+interface HighlightJS {
+  /**
+   * 高亮显示HTML元素中的代码
+   * @param element 包含代码的DOM元素
+   */
+  highlightElement(element: Element): void;
+  
+  /**
+   * 对给定代码字符串进行语法高亮
+   * @param code 代码字符串
+   * @param languageName 编程语言名称
+   */
+  highlight(code: string, languageName: string): { value: string };
+}
+
+/**
+ * 扩展Window接口
+ */
+interface Window {
+  /**
+   * Highlight.js实例
+   */
+  hljs?: HighlightJS;
 } 
