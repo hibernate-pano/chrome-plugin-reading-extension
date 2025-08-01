@@ -59,7 +59,7 @@ chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return;
   
   // 向内容脚本发送消息，切换阅读模式
-  chrome.tabs.sendMessage(tab.id, { action: MESSAGE_TYPES.TOGGLE_READER_MODE })
+  chrome.tabs.sendMessage(tab.id, { action: MESSAGE_TYPES.TOGGLE_READING_MODE })
     .then(response => {
       console.log('切换阅读模式响应:', response);
       

@@ -1,158 +1,135 @@
-# Chrome 扩展调试指南
+# Chrome Extension Debugging Guide
 
-## 🔧 已修复的问题
+## Issues Fixed
 
-### 1. **页面黑色显示问题** ✅
-- **问题原因**: 系统深色模式导致 popup 自动应用深色主题
-- **修复方案**: 
-  - 强制 popup 使用浅色主题 (`colorScheme: 'light'`)
-  - 替换所有 CSS 变量为明确的颜色值
-  - 统一使用白色背景和深色文字
+### 1. "process is not defined" Error
 
-### 2. **按钮功能失效问题** ✅
-- **问题原因**: 消息通信字段不匹配
-- **修复方案**:
-  - 统一消息字段：`action` 替代 `type`
-  - 统一消息类型：`GET_READING_MODE_STATE` 替代 `GET_READING_MODE_STATUS`
-  - 添加完整的消息处理逻辑
-  - 增强错误处理和响应验证
+**Problem**: React and other libraries were trying to access `process.env.NODE_ENV` in the browser context.
 
-### 3. **调试日志系统** ✅
-- **添加位置**:
-  - Popup 组件初始化
-  - 按钮点击事件
-  - 消息发送和接收
-  - 内容脚本消息处理
-  - 阅读模式切换逻辑
+**Solution**: Added `define` configuration to Vite config files:
 
-## 🧪 测试步骤
+```javascript
+define: {
+  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+  'process.env': '{}'
+}
+```
 
-### 第一步：重新加载扩展
-1. 打开 Chrome 扩展管理页面 (`chrome://extensions/`)
-2. 找到 "AI Reading Extension"
-3. 点击 "重新加载" 按钮
-4. 确认扩展状态为 "已启用"
+### 2. "Could not establish connection. Receiving end does not exist." Error
 
-### 第二步：打开测试页面
-1. 访问任意网页（推荐使用微信文章或新闻页面）
-2. 打开浏览器开发者工具 (F12)
-3. 切换到 "Console" 标签页
+**Problem**: Message type mismatch between background script and content script.
 
-### 第三步：测试 Popup 界面
-1. 点击扩展图标打开 popup
-2. **预期效果**: 
-   - ✅ 界面显示为白色背景（不再是黑色）
-   - ✅ 所有文字清晰可见
-   - ✅ 卡片样式现代化，有边框和阴影
+**Solution**:
 
-### 第四步：测试阅读模式开关
-1. 点击 "阅读模式" 开关
-2. **查看控制台日志**:
-   ```
-   🚀 PopupShadcn 组件初始化开始
-   🔄 开始初始化 popup
-   📋 当前标签页: {...}
-   📤 发送消息获取阅读模式状态: GET_READING_MODE_STATE
-   📥 收到响应: {...}
-   ✅ popup 初始化完成
-   
-   🔄 切换阅读模式按钮被点击，当前状态: false
-   📋 获取到标签页: {...}
-   📤 发送消息: ENABLE_READING_MODE 设置: {...}
-   📥 收到响应: {...}
-   ✅ 阅读模式切换成功，新状态: true
-   ```
+- Background script was sending `TOGGLE_READER_MODE`
+- Content script was listening for `TOGGLE_READING_MODE`
+- Fixed by updating both to use `TOGGLE_READING_MODE`
 
-3. **预期效果**:
-   - ✅ 开关能正常切换
-   - ✅ 页面内容发生变化（进入阅读模式）
-   - ✅ 状态指示器变为绿色
+## How to Test the Extension
 
-### 第五步：测试预设功能
-1. 点击任意预设按钮（如 "暗色舒适"）
-2. **查看控制台日志**:
-   ```
-   🎨 应用预设按钮被点击: 暗色舒适
-   🔍 找到预设: {...}
-   📝 更新本地设置: {...}
-   📤 阅读模式已开启，发送预设应用消息
-   📥 预设应用响应: {...}
-   ```
+1. **Load the Extension**:
 
-3. **预期效果**:
-   - ✅ 预设按钮有选中状态高亮
-   - ✅ 如果阅读模式已开启，页面样式立即改变
-   - ✅ 设置参数正确更新
+   - Open Chrome and go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked" and select the `dist` folder
 
-### 第六步：测试高级设置
-1. 点击 "展开设置" 按钮
-2. 调整字体大小、行高、段落间距滑块
-3. **预期效果**:
-   - ✅ 滑块能正常拖动
-   - ✅ 数值实时更新显示
-   - ✅ 如果阅读模式已开启，页面样式实时改变
+2. **Test the Extension**:
 
-## 🐛 故障排除
+   - Open `test-extension.html` in Chrome
+   - Click the extension icon in the toolbar
+   - Check if reading mode toggles properly
 
-### 如果 Popup 仍然显示黑色
-1. 检查系统是否为深色模式
-2. 尝试刷新页面后重新打开 popup
-3. 检查浏览器控制台是否有 CSS 错误
+3. **Debug Issues**:
+   - Open Chrome DevTools (F12)
+   - Check the Console tab for error messages
+   - Check the Network tab for failed requests
 
-### 如果按钮仍然无响应
-1. **检查控制台日志**:
-   - 应该看到 "🚀 PopupShadcn 组件初始化开始"
-   - 点击按钮时应该看到相应的日志输出
-   
-2. **如果没有日志输出**:
-   - 扩展可能没有正确加载
-   - 尝试重新加载扩展
-   - 检查是否有 JavaScript 错误
+## Common Issues and Solutions
 
-3. **如果有错误日志**:
-   - 查看具体错误信息
-   - 检查是否是权限问题
-   - 确认当前页面允许内容脚本运行
+### Extension Not Loading
 
-### 如果内容脚本无响应
-1. **检查内容脚本日志**:
-   ```
-   📥 内容脚本收到消息: {...}
-   🔄 处理切换阅读模式消息
-   ✅ 阅读模式切换成功，当前状态: true
-   ```
+- Check if the `dist` folder contains all necessary files
+- Verify `manifest.json` is valid
+- Check Chrome extension page for error messages
 
-2. **如果没有内容脚本日志**:
-   - 内容脚本可能没有加载
-   - 刷新页面重试
-   - 检查 manifest.json 配置
+### Content Script Not Working
 
-## 📊 成功标准
+- Verify `contentShadcn.js` is in the correct location
+- Check if the script is being injected (DevTools > Sources)
+- Look for console errors in the page context
 
-修复成功的标志：
-- ✅ Popup 界面显示为白色背景，文字清晰
-- ✅ 所有按钮点击都有控制台日志输出
-- ✅ 阅读模式开关能正常工作
-- ✅ 预设按钮能正常应用样式
-- ✅ 高级设置滑块能实时调整效果
-- ✅ 没有 JavaScript 错误或警告
+### Background Script Issues
 
-## 🔍 详细日志说明
+- Check `background.js` is properly built
+- Look for errors in the extension's background page console
+- Verify message passing between content and background scripts
 
-### Popup 日志前缀含义
-- 🚀 = 组件初始化
-- 🔄 = 功能操作
-- 📤 = 发送消息
-- 📥 = 接收响应
-- ✅ = 操作成功
-- ❌ = 操作失败
-- ⚠️ = 警告信息
+### Build Issues
 
-### 内容脚本日志前缀含义
-- 📥 = 接收消息
-- 🟢 = 启用操作
-- 🔴 = 禁用操作
-- 🎨 = 样式应用
-- ⚙️ = 设置更新
+- Run `npm run build` to rebuild the extension
+- Check for TypeScript compilation errors
+- Verify all Vite config files have the `define` configuration
 
-如果按照以上步骤测试后仍有问题，请提供具体的控制台日志输出，我将进一步协助排查。
+## File Structure
+
+```
+dist/
+├── manifest.json
+├── src/
+│   ├── background/
+│   │   └── background.js
+│   ├── content/
+│   │   └── contentShadcn.js
+│   └── popup/
+│       └── popup.js
+└── assets/
+    ├── style.css
+    └── popup.css
+```
+
+## Troubleshooting Steps
+
+1. **Clear Extension Data**:
+
+   - Go to `chrome://extensions/`
+   - Find your extension and click "Remove"
+   - Reload the extension
+
+2. **Check Console Logs**:
+
+   - Open DevTools on the test page
+   - Look for extension-related messages
+   - Check for any error messages
+
+3. **Verify Message Passing**:
+
+   - Background script should send: `{ action: 'TOGGLE_READING_MODE' }`
+   - Content script should respond with status
+
+4. **Test in Incognito Mode**:
+   - Sometimes extensions behave differently in incognito mode
+   - Check if the issue persists
+
+## Development Commands
+
+```bash
+# Build the extension
+npm run build
+
+# Build individual components
+npm run build:content-shadcn
+npm run build:background
+npm run build:popup
+
+# Clean up build artifacts
+npm run cleanup
+```
+
+## Key Files to Check
+
+- `src/content/contentShadcn.ts` - Main content script
+- `src/background/background.ts` - Background script
+- `src/constants/index.ts` - Message type definitions
+- `vite.content-shadcn.config.ts` - Content script build config
+- `vite.background.config.ts` - Background script build config
+- `public/manifest.json` - Extension manifest

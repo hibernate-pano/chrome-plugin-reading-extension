@@ -1,53 +1,35 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    'process.env': '{}'
+  },
   plugins: [react()],
-  
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+      '@': resolve(__dirname, 'src'),
+      'turndown': resolve(__dirname, 'node_modules/turndown/lib/turndown.browser.cjs')
+    }
   },
-  
   build: {
-    // 启用特定于Chrome扩展的优化
-    target: 'esnext',
-    cssCodeSplit: true,
-    minify: 'terser',
-    terserOptions: {
-      // 压缩选项
-      compress: {
-        drop_console: false, // 在生产环境可以设置为true
-        drop_debugger: true
-      }
-    },
-    
-    // 代码分割策略
+    outDir: 'dist',
+    emptyOutDir: false,
     rollupOptions: {
-      // 外部依赖配置
-      external: ['highlight.js'],
+      external: ['chrome'],
       output: {
+        globals: {
+          chrome: 'chrome'
+        },
+        // 自定义分块策略
         manualChunks: (id: string) => {
-          // 核心模块 - 最小化初始加载
-          if (id.includes('src/content/contentLoader') || 
-              id.includes('src/content/ui/readerFloatingButton')) {
-            return 'core';
-          }
-          
-          // 第三方依赖
-          if (id.includes('node_modules/react') || 
-              id.includes('node_modules/react-dom')) {
-            return 'vendor-react';
-          }
-          
-          if (id.includes('node_modules/zustand')) {
-            return 'vendor-zustand';
-          }
-          
-          // 功能模块
+          // 核心功能
           if (id.includes('src/content/features/readingMode') || 
               id.includes('src/content/features/contentProcessors')) {
             return 'feature-reader-mode';
@@ -137,7 +119,6 @@ export default defineConfig({
     // 其他构建优化
     sourcemap: process.env.NODE_ENV !== 'production', 
     assetsInlineLimit: 4096, // 4kb以下文件内联为base64
-    emptyOutDir: true,
     reportCompressedSize: false // 禁止报告压缩大小以提高构建性能
   },
   

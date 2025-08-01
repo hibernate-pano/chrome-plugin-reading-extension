@@ -3,11 +3,9 @@ import { useSettingsStore } from '../store/settingsStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
 import { StorageKeys, getStorage, setStorage, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
 import { MESSAGE_TYPES } from '../constants';
 import builtInPresets from '../presets/builtInPresets';
-// import { Settings, BookOpen, Palette, Type, Spacing, Eye } from 'lucide-react';
 
 /**
  * 基于 Shadcn/UI 的现代化 Popup 组件
@@ -20,11 +18,9 @@ import builtInPresets from '../presets/builtInPresets';
  */
 export const PopupShadcn: React.FC = () => {
   const { settings, updateSetting, initSettings } = useSettingsStore();
-  const { theme, fontSize, lineHeight, paragraphSpacing, fontFamily, backgroundColor } = settings;
   const [readingMode, setReadingMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPreset, setSelectedPreset] = useState<string>('paper');
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   // 获取当前活动标签页的辅助函数
   const getCurrentTab = async (): Promise<chrome.tabs.Tab | null> => {
@@ -146,7 +142,9 @@ export const PopupShadcn: React.FC = () => {
       // 更新本地设置
       console.log('📝 更新本地设置:', preset.settings);
       Object.entries(preset.settings).forEach(([key, value]) => {
-        updateSetting(key as keyof typeof settings, value);
+        if (value !== false && value !== true) { // 过滤掉布尔值
+          updateSetting(key as keyof typeof settings, value as any);
+        }
       });
       setSelectedPreset(presetName);
 
@@ -177,16 +175,16 @@ export const PopupShadcn: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="extension-popup flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-64 bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="extension-popup w-80 bg-white text-gray-900 min-h-[480px]" style={{ colorScheme: 'light' }}>
+    <div className="w-80 bg-white text-gray-900 min-h-[480px]">
       {/* 头部 */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 border-b border-gray-200">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -197,16 +195,15 @@ export const PopupShadcn: React.FC = () => {
               <p className="text-xs text-gray-600">智能阅读体验</p>
             </div>
           </div>
-          <div className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md">
+          <div className="text-xs text-gray-600 bg-white px-2 py-1 rounded-md shadow-sm">
             v1.8.0
           </div>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-
         {/* 阅读模式开关 */}
-        <Card className="border-2 border-gray-200 bg-white transition-all duration-200 hover:shadow-md">
+        <Card className="border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center space-x-2 text-gray-900">
               <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
@@ -236,7 +233,7 @@ export const PopupShadcn: React.FC = () => {
         </Card>
 
         {/* 快速预设 */}
-        <Card className="border-2 border-gray-200 bg-white transition-all duration-200 hover:shadow-md">
+        <Card className="border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center space-x-2 text-gray-900">
               <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
@@ -256,10 +253,11 @@ export const PopupShadcn: React.FC = () => {
                   variant={selectedPreset === preset.name ? "default" : "outline"}
                   size="sm"
                   onClick={() => applyPreset(preset.name)}
-                  className={`justify-start transition-all duration-200 hover:scale-105 text-gray-900 ${selectedPreset === preset.name
-                    ? 'bg-blue-600 text-white shadow-md border-blue-600'
-                    : 'hover:bg-gray-50 border-gray-200'
-                    }`}
+                  className={`justify-start transition-all duration-200 hover:scale-105 ${
+                    selectedPreset === preset.name
+                      ? 'bg-blue-600 text-white shadow-md border-blue-600'
+                      : 'hover:bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
                 >
                   <span className="mr-2">{preset.icon}</span>
                   {preset.displayName}
@@ -269,92 +267,16 @@ export const PopupShadcn: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* 高级设置 */}
-        <Card className="border-2 border-gray-200 bg-white transition-all duration-200 hover:shadow-md">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center space-x-2 text-gray-900">
-              <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center">
-                <span className="text-sm">⚙️</span>
+        {/* 提示信息 */}
+        <Card className="border border-blue-200 bg-blue-50 shadow-sm">
+          <CardContent className="pt-4">
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600 text-sm">💡</span>
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">提示</p>
+                <p className="text-xs">开启阅读模式后，可以在页面侧边栏进行更详细的设置调整。</p>
               </div>
-              <span>高级设置</span>
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              精细调整阅读参数，个性化定制阅读体验
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-              className="w-full justify-between hover:bg-gray-50 transition-colors duration-200 text-gray-900"
-            >
-              <span>{showAdvancedSettings ? '收起设置' : '展开设置'}</span>
-              <span className={`transition-transform duration-200 ${showAdvancedSettings ? 'rotate-180' : ''}`}>
-                ▼
-              </span>
-            </Button>
-
-            {showAdvancedSettings && (
-              <div className="mt-4 space-y-4">
-                {/* 字体大小 */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium flex items-center space-x-1 text-gray-900">
-                      <span>🔤</span>
-                      <span>字体大小</span>
-                    </label>
-                    <span className="text-xs text-gray-600">{fontSize}px</span>
-                  </div>
-                  <Slider
-                    value={[fontSize]}
-                    onValueChange={(value) => updateSetting('fontSize', value[0])}
-                    min={12}
-                    max={24}
-                    step={1}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* 行高 */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium flex items-center space-x-1 text-gray-900">
-                      <span>📏</span>
-                      <span>行高</span>
-                    </label>
-                    <span className="text-xs text-gray-600">{lineHeight}</span>
-                  </div>
-                  <Slider
-                    value={[lineHeight]}
-                    onValueChange={(value) => updateSetting('lineHeight', value[0])}
-                    min={1.2}
-                    max={2.0}
-                    step={0.1}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* 段落间距 */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium flex items-center space-x-1 text-gray-900">
-                      <span>📐</span>
-                      <span>段落间距</span>
-                    </label>
-                    <span className="text-xs text-gray-600">{paragraphSpacing}px</span>
-                  </div>
-                  <Slider
-                    value={[paragraphSpacing]}
-                    onValueChange={(value) => updateSetting('paragraphSpacing', value[0])}
-                    min={8}
-                    max={32}
-                    step={2}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>

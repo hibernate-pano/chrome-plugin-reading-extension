@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import styles from './ReaderView.module.css';
-// import { extractContent } from '../../extractors'; // 删除此行
 import { ExtractedContent } from '../../types';
 import { readingProgressModel } from '../../../storage/models/ReadingProgressModel';
 import { ReadingProgress } from './types';
+import { FloatingUIManager, mountFloatingUI } from '../../ui/FloatingUIManager';
+import { UserSettings } from '../../../types';
 
 interface ReaderViewProps {
   onClose: () => void;
@@ -14,17 +15,27 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   const [content, setContent] = useState<ExtractedContent | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  // const [theme, setTheme] = useState<'light' | 'dark'>('light'); // 删除此行
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'sepia' | 'yellow'>('light');
+  const [lineHeight, setLineHeight] = useState<'tight' | 'normal' | 'loose'>('normal');
+  
+  // 浮动UI相关状态
+  const [settings, setSettings] = useState<UserSettings>({
+    fontSize: 16,
+    lineHeight: 1.6,
+    fontFamily: 'default',
+    theme: 'light',
+    paragraphSpacing: 1.2,
+    pageWidth: 800,
+    backgroundColor: 'white',
+    presets: [],
+    activePreset: null,
+  });
+  
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const currentUrl = window.location.href;
   const saveProgressIntervalRef = useRef<number | null>(null);
   const [initialScrollApplied, setInitialScrollApplied] = useState<boolean>(false);
-
-  // 处理初始主题设置 (不再需要，因为主题由 content.ts 统一管理)
-  // useEffect(() => {
-  //   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  //   setTheme(prefersDark ? 'dark' : 'light');
-  // }, []);
 
   // 提取内容的函数
   const extractContent = async () => {
@@ -87,6 +98,88 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
     }
   };
 
+  // 处理字体大小变化
+  const handleFontSizeChange = (size: 'small' | 'medium' | 'large') => {
+    setFontSize(size);
+    applyReadingStyles();
+  };
+
+  // 处理主题变化
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'sepia' | 'yellow') => {
+    setTheme(newTheme);
+    applyReadingStyles();
+  };
+
+  // 处理行间距变化
+  const handleLineHeightChange = (height: 'tight' | 'normal' | 'loose') => {
+    setLineHeight(height);
+    applyReadingStyles();
+  };
+
+  // 处理浮动UI设置变更
+  const handleSettingsChange = (key: keyof UserSettings, value: any) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+    applyReadingStyles();
+  };
+
+  // 处理阅读模式切换
+  const handleToggleReadingMode = () => {
+    // 这里可以添加阅读模式的切换逻辑
+    console.log('Toggle reading mode');
+  };
+
+  // 应用阅读样式
+  const applyReadingStyles = () => {
+    const container = contentContainerRef.current;
+    if (!container) return;
+
+    // 字体大小映射
+    const fontSizeMap = {
+      small: '14px',
+      medium: '16px',
+      large: '18px'
+    };
+
+    // 行间距映射
+    const lineHeightMap = {
+      tight: '1.4',
+      normal: '1.6',
+      loose: '1.8'
+    };
+
+    // 主题样式映射
+    const themeStyles = {
+      light: {
+        background: '#ffffff',
+        color: '#1f2937'
+      },
+      dark: {
+        background: '#1f2937',
+        color: '#f9fafb'
+      },
+      sepia: {
+        background: '#f5f2e9',
+        color: '#4a3728'
+      },
+      yellow: {
+        background: '#fffbf0',
+        color: '#78350f'
+      }
+    };
+
+    // 应用样式
+    container.style.fontSize = fontSizeMap[fontSize];
+    container.style.lineHeight = lineHeightMap[lineHeight];
+    container.style.background = themeStyles[theme].background;
+    container.style.color = themeStyles[theme].color;
+
+    // 更新CSS变量
+    document.documentElement.style.setProperty('--reading-font-size', fontSizeMap[fontSize]);
+    document.documentElement.style.setProperty('--reading-line-height', lineHeightMap[lineHeight]);
+    document.documentElement.style.setProperty('--reading-background', themeStyles[theme].background);
+    document.documentElement.style.setProperty('--reading-color', themeStyles[theme].color);
+  };
+
   // 组件挂载时提取内容
   useEffect(() => {
     extractContent();
@@ -146,23 +239,23 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
       }
     });
 
-  }, [content, isLoading]); // 移除 theme 依赖
+  }, [content, isLoading]);
 
-  // 切换主题 (不再需要，因为主题由 content.ts 统一管理)
-  // const toggleTheme = () => {
-  //   setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  // };
+  // 内容加载完成后应用初始样式
+  useEffect(() => {
+    if (content && !isLoading) {
+      applyReadingStyles();
+    }
+  }, [content, isLoading]);
+
+
 
   return (
-    <div className={styles.readerView}> {/* 移除 data-theme={theme} */}
+    <div className={styles.readerView}>
       <div className={styles.toolbar}>
         <button className={styles.closeButton} onClick={onClose} aria-label="关闭阅读模式">
           ✕
         </button>
-        {/* 移除主题切换按钮 */}
-        {/* <button className={styles.themeButton} onClick={toggleTheme} aria-label="切换主题">
-          {theme === 'light' ? '🌙' : '☀️'}
-        </button> */}
       </div>
 
       <div className={styles.contentContainer} ref={contentContainerRef}>
@@ -199,93 +292,91 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
           </div>
         )}
       </div>
+
+      {/* 浮动UI管理器 */}
+      <FloatingUIManager
+        isReadingModeActive={true}
+        settings={settings}
+        onSettingsChange={handleSettingsChange}
+        onToggleReadingMode={handleToggleReadingMode}
+      />
     </div>
   );
 };
 
-// 追踪当前阅读模式实例的ID，避免多个实例
-let currentReaderViewId: string | null = null;
-
-// 用于存储原始样式的全局变量
-let originalOverflowStyle: string | null = null;
-let originalBodyOverflowStyle: string | null = null;
-
+// 创建阅读视图的函数
 export function createReaderView(): void {
-  // 如果已经存在阅读模式，先清理它
-  cleanupReaderView();
-
-  // 生成唯一ID
-  const readerViewId = `reader-view-${Date.now()}`;
-  currentReaderViewId = readerViewId;
-
-  // 保存原始溢出状态
-  originalOverflowStyle = document.documentElement.style.overflow;
-  originalBodyOverflowStyle = document.body.style.overflow;
-
-  // 防止页面滚动
-  document.documentElement.style.overflow = 'hidden';
-  document.body.style.overflow = 'hidden';
+  // 检查是否已经存在阅读视图
+  const existingReader = document.getElementById('reader-view');
+  if (existingReader) {
+    existingReader.remove();
+  }
 
   // 创建容器
   const readerContainer = document.createElement('div');
-  readerContainer.id = readerViewId;
-  readerContainer.setAttribute('class', 'reader-view-container');
-  // readerContainer.setAttribute('data-theme', settings.theme); // Theme is now handled by content.ts
+  readerContainer.id = 'reader-view';
+  readerContainer.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9997;
+    background: rgba(255, 255, 255, 0.95);
+    overflow: visible;
+    pointer-events: none;
+  `;
+
+  // 添加到页面
   document.body.appendChild(readerContainer);
 
-  // 渲染组件
+  // 创建React根节点
   const root = createRoot(readerContainer);
+
+  // 挂载浮动UI
+  const cleanupFloatingUI = mountFloatingUI({
+    isReadingModeActive: true,
+    settings: {
+      fontSize: 16,
+      lineHeight: 1.6,
+      fontFamily: 'default',
+      theme: 'light',
+      paragraphSpacing: 1.2,
+      pageWidth: 800,
+      backgroundColor: 'white',
+      presets: [],
+      activePreset: null,
+    },
+    onSettingsChange: (key, value) => {
+      console.log('Settings changed:', key, value);
+    },
+    onToggleReadingMode: () => {
+      console.log('Toggle reading mode');
+    },
+  });
+
+  // 渲染阅读视图组件
   root.render(
     <ReaderView
       onClose={() => {
-        if (readerViewId === currentReaderViewId) {
-          cleanupReaderView();
-        }
+        cleanupFloatingUI();
+        root.unmount();
+        readerContainer.remove();
       }}
     />
   );
 }
 
+// 清理阅读视图的函数
 export function cleanupReaderView(): void {
-  // 查找当前的阅读模式容器
-  const existingContainer = currentReaderViewId 
-    ? document.getElementById(currentReaderViewId)
-    : document.querySelector('.reader-view-container');
-
-  if (existingContainer) {
-    // 卸载React组件
-    const root = (existingContainer as any)._reactRootContainer;
-    if (root) {
-      // @ts-ignore - 尝试使用未公开的卸载方法
-      if (typeof root.unmount === 'function') root.unmount();
-    }
-
-    // 移除容器元素
-    existingContainer.remove();
+  const readerContainer = document.getElementById('reader-view');
+  if (readerContainer) {
+    readerContainer.remove();
   }
-
-  // 恢复原始溢出样式
-  if (originalOverflowStyle !== null) {
-    document.documentElement.style.overflow = originalOverflowStyle;
-  } else {
-    document.documentElement.style.removeProperty('overflow');
-  }
-
-  if (originalBodyOverflowStyle !== null) {
-    document.body.style.overflow = originalBodyOverflowStyle;
-  } else {
-    document.body.style.removeProperty('overflow');
-  }
-
-  // 清除文档级别的主题设置
-  document.documentElement.removeAttribute('data-theme');
   
-  // 重置当前阅读模式ID
-  currentReaderViewId = null;
-  
-  // 重置原始样式引用
-  originalOverflowStyle = null;
-  originalBodyOverflowStyle = null;
-}
-
-export default ReaderView; 
+  // 清理浮动UI
+  const floatingUIContainer = document.getElementById('reading-extension-floating-ui');
+  if (floatingUIContainer) {
+    floatingUIContainer.remove();
+  }
+} 

@@ -6,6 +6,10 @@ import type { LibraryFormats } from 'vite';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    'process.env': '{}'
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: false,

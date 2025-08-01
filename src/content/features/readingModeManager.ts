@@ -6,6 +6,7 @@
 import { UserSettings } from '../../types';
 import { getStorage, setStorage, StorageKeys } from '../../storage/storage';
 import { MESSAGE_TYPES } from '../../constants';
+import { mountFloatingUI } from '../ui/FloatingUIManager';
 
 export class ReadingModeManager {
   private isActive = false;
@@ -13,6 +14,7 @@ export class ReadingModeManager {
   private readerContainer: HTMLElement | null = null;
   private settings: UserSettings;
   private styleElement: HTMLStyleElement | null = null;
+  private floatingUICleanup: (() => void) | null = null;
 
   constructor(settings: UserSettings) {
     this.settings = settings;
@@ -75,9 +77,12 @@ export class ReadingModeManager {
 
       this.isActive = true;
 
+      // 挂载浮动UI
+      this.mountFloatingUI();
+
       // 通知背景脚本
       chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.READING_MODE_ENABLED,
+        type: 'READING_MODE_ENABLED',
         url: window.location.href
       });
 
@@ -107,9 +112,12 @@ export class ReadingModeManager {
       this.originalContent = null;
       this.isActive = false;
 
+      // 清理浮动UI
+      this.cleanupFloatingUI();
+
       // 通知背景脚本
       chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.READING_MODE_DISABLED,
+        type: 'READING_MODE_DISABLED',
         url: window.location.href
       });
 
@@ -238,12 +246,44 @@ export class ReadingModeManager {
   }
 
   /**
+   * 挂载浮动UI
+   */
+  private mountFloatingUI(): void {
+    if (this.floatingUICleanup) {
+      this.floatingUICleanup();
+    }
+
+    this.floatingUICleanup = mountFloatingUI({
+      isReadingModeActive: this.isActive,
+      settings: this.settings,
+      onSettingsChange: (key: keyof UserSettings, value: any) => {
+        this.updateSettings({ [key]: value });
+      },
+      onToggleReadingMode: () => {
+        this.toggle();
+      },
+    });
+  }
+
+  /**
+   * 清理浮动UI
+   */
+  private cleanupFloatingUI(): void {
+    if (this.floatingUICleanup) {
+      this.floatingUICleanup();
+      this.floatingUICleanup = null;
+    }
+  }
+
+  /**
    * 销毁管理器
    */
   destroy(): void {
     if (this.isActive) {
       this.disable();
     }
+
+    this.cleanupFloatingUI();
 
     if (this.styleElement) {
       this.styleElement.remove();

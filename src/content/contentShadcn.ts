@@ -7,7 +7,6 @@ import { ReadingModeManager } from './features/readingModeManager';
 import { getStorage, setStorage, StorageKeys } from '../storage/storage';
 import { MESSAGE_TYPES } from '../constants';
 import { UserSettings } from '../types';
-import { createFloatingButton, removeFloatingButton } from './ui/readerFloatingButton';
 
 // 导入样式
 import './styles/readingMode.css';
@@ -26,9 +25,6 @@ async function initialize(): Promise<void> {
 
     // 创建阅读模式管理器
     readingModeManager = new ReadingModeManager(currentSettings);
-
-    // 创建浮动按钮
-    createFloatingButton(toggleReadingMode);
 
     // 监听来自popup的消息
     setupMessageListeners();
@@ -81,16 +77,11 @@ async function toggleReadingMode(): Promise<void> {
 
   try {
     await readingModeManager.toggle();
-
-    // 更新浮动按钮状态
     const { isActive } = readingModeManager.getStatus();
-    updateFloatingButtonState(isActive);
     console.log('✅ 阅读模式切换成功，当前状态:', isActive);
 
   } catch (error) {
     console.error('❌ 切换阅读模式失败:', error);
-
-    // 显示错误提示
     showErrorNotification('阅读模式切换失败，请重试');
   }
 }
@@ -112,8 +103,7 @@ async function enableReadingMode(settings?: UserSettings): Promise<void> {
 
     const { isActive } = readingModeManager.getStatus();
     if (!isActive) {
-      await readingModeManager.enable();
-      updateFloatingButtonState(true);
+          await readingModeManager.enable();
       console.log('✅ 阅读模式已启用');
     } else {
       console.log('ℹ️ 阅读模式已经是启用状态');
@@ -136,8 +126,7 @@ async function disableReadingMode(): Promise<void> {
   try {
     const { isActive } = readingModeManager.getStatus();
     if (isActive) {
-      await readingModeManager.disable();
-      updateFloatingButtonState(false);
+      await     readingModeManager.disable();
       console.log('✅ 阅读模式已禁用');
     } else {
       console.log('ℹ️ 阅读模式已经是禁用状态');
@@ -147,16 +136,7 @@ async function disableReadingMode(): Promise<void> {
   }
 }
 
-/**
- * 更新浮动按钮状态
- */
-function updateFloatingButtonState(isActive: boolean): void {
-  const button = document.querySelector('#reading-mode-floating-button') as HTMLElement;
-  if (button) {
-    button.classList.toggle('active', isActive);
-    button.title = isActive ? '退出阅读模式' : '进入阅读模式';
-  }
-}
+
 
 /**
  * 设置消息监听器
@@ -170,6 +150,7 @@ function setupMessageListeners(): void {
 
     switch (messageType) {
       case MESSAGE_TYPES.TOGGLE_READING_MODE:
+      case MESSAGE_TYPES.TOGGLE_READER_MODE:
         console.log('🔄 处理切换阅读模式消息');
         toggleReadingMode();
         sendResponse({ success: true });
@@ -321,7 +302,6 @@ function showErrorNotification(message: string): void {
  */
 function cleanup(): void {
   readingModeManager?.destroy();
-  removeFloatingButton();
 }
 
 // 页面卸载时清理资源
