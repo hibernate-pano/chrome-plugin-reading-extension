@@ -73,8 +73,9 @@ async function loadSettings(): Promise<UserSettings> {
  * 切换阅读模式
  */
 async function toggleReadingMode(): Promise<void> {
+  console.log('🔄 切换阅读模式');
   if (!readingModeManager) {
-    console.error('阅读模式管理器未初始化');
+    console.error('❌ 阅读模式管理器未初始化');
     return;
   }
 
@@ -84,12 +85,65 @@ async function toggleReadingMode(): Promise<void> {
     // 更新浮动按钮状态
     const { isActive } = readingModeManager.getStatus();
     updateFloatingButtonState(isActive);
+    console.log('✅ 阅读模式切换成功，当前状态:', isActive);
 
   } catch (error) {
-    console.error('切换阅读模式失败:', error);
+    console.error('❌ 切换阅读模式失败:', error);
 
     // 显示错误提示
     showErrorNotification('阅读模式切换失败，请重试');
+  }
+}
+
+/**
+ * 启用阅读模式
+ */
+async function enableReadingMode(settings?: UserSettings): Promise<void> {
+  console.log('🟢 启用阅读模式，设置:', settings);
+  if (!readingModeManager) {
+    console.error('❌ 阅读模式管理器未初始化');
+    return;
+  }
+
+  try {
+    if (settings) {
+      await updateSettings(settings);
+    }
+
+    const { isActive } = readingModeManager.getStatus();
+    if (!isActive) {
+      await readingModeManager.enable();
+      updateFloatingButtonState(true);
+      console.log('✅ 阅读模式已启用');
+    } else {
+      console.log('ℹ️ 阅读模式已经是启用状态');
+    }
+  } catch (error) {
+    console.error('❌ 启用阅读模式失败:', error);
+  }
+}
+
+/**
+ * 禁用阅读模式
+ */
+async function disableReadingMode(): Promise<void> {
+  console.log('🔴 禁用阅读模式');
+  if (!readingModeManager) {
+    console.error('❌ 阅读模式管理器未初始化');
+    return;
+  }
+
+  try {
+    const { isActive } = readingModeManager.getStatus();
+    if (isActive) {
+      await readingModeManager.disable();
+      updateFloatingButtonState(false);
+      console.log('✅ 阅读模式已禁用');
+    } else {
+      console.log('ℹ️ 阅读模式已经是禁用状态');
+    }
+  } catch (error) {
+    console.error('❌ 禁用阅读模式失败:', error);
   }
 }
 
@@ -109,23 +163,63 @@ function updateFloatingButtonState(isActive: boolean): void {
  */
 function setupMessageListeners(): void {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    switch (message.type) {
+    console.log('📥 内容脚本收到消息:', message);
+
+    // 支持 action 和 type 两种字段格式
+    const messageType = message.action || message.type;
+
+    switch (messageType) {
       case MESSAGE_TYPES.TOGGLE_READING_MODE:
+        console.log('🔄 处理切换阅读模式消息');
         toggleReadingMode();
         sendResponse({ success: true });
         break;
 
+      case MESSAGE_TYPES.ENABLE_READING_MODE:
+        console.log('🟢 处理启用阅读模式消息');
+        enableReadingMode(message.settings);
+        sendResponse({ success: true });
+        break;
+
+      case MESSAGE_TYPES.DISABLE_READING_MODE:
+        console.log('🔴 处理禁用阅读模式消息');
+        disableReadingMode();
+        sendResponse({ success: true });
+        break;
+
+      case MESSAGE_TYPES.GET_READING_MODE_STATE:
+        console.log('📊 处理获取阅读模式状态消息');
+        const status = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
+        console.log('📤 返回状态:', status);
+        sendResponse({
+          success: true,
+          readingMode: status.isActive,
+          isReadingMode: status.isActive,
+          settings: status.settings
+        });
+        break;
+
       case MESSAGE_TYPES.UPDATE_SETTINGS:
+        console.log('⚙️ 处理更新设置消息');
         updateSettings(message.settings);
         sendResponse({ success: true });
         break;
 
+      case MESSAGE_TYPES.APPLY_PRESET:
+        console.log('🎨 处理应用预设消息');
+        applyPreset(message.preset);
+        sendResponse({ success: true });
+        break;
+
       case MESSAGE_TYPES.GET_READING_STATUS:
-        const status = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
-        sendResponse(status);
+        console.log('📊 处理获取阅读状态消息（旧版）');
+        const oldStatus = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
+        sendResponse(oldStatus);
         break;
 
       default:
+        console.warn('⚠️ 未知消息类型:', messageType, message);
+        sendResponse({ success: false, error: 'Unknown message type' });
         break;
     }
   });
@@ -155,8 +249,36 @@ function setupStorageListeners(): void {
  * 更新设置
  */
 function updateSettings(newSettings: Partial<UserSettings>): void {
+  console.log('⚙️ 更新设置:', newSettings);
   currentSettings = { ...currentSettings, ...newSettings };
   readingModeManager?.updateSettings(newSettings);
+}
+
+/**
+ * 应用预设
+ */
+async function applyPreset(preset: any): Promise<void> {
+  console.log('🎨 应用预设:', preset);
+  if (!preset || !preset.settings) {
+    console.warn('⚠️ 预设数据无效');
+    return;
+  }
+
+  try {
+    // 更新设置
+    updateSettings(preset.settings);
+
+    // 如果阅读模式已启用，立即应用新设置
+    const { isActive } = readingModeManager?.getStatus() || { isActive: false };
+    if (isActive) {
+      await readingModeManager?.updateSettings(preset.settings);
+      console.log('✅ 预设已应用到当前阅读模式');
+    } else {
+      console.log('ℹ️ 预设已保存，将在下次启用阅读模式时生效');
+    }
+  } catch (error) {
+    console.error('❌ 应用预设失败:', error);
+  }
 }
 
 /**
