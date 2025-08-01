@@ -8,6 +8,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'default',
     name: '默认',
+    displayName: '默认',
+    icon: '📄',
     description: '默认阅读设置',
     isBuiltIn: true,
     settings: {
@@ -26,6 +28,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'dark-comfort',
     name: '暗色舒适',
+    displayName: '暗色舒适',
+    icon: '🌙',
     description: '深色背景配合舒适字体，减少眼睡',
     isBuiltIn: true,
     settings: {
@@ -43,6 +47,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'comfortable',
     name: '舒适阅读',
+    displayName: '舒适阅读',
+    icon: '☁️',
     description: '更大的字体和更宽松的间距，适合长时间阅读',
     isBuiltIn: true,
     settings: {
@@ -58,6 +64,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'compact',
     name: '紧凑模式',
+    displayName: '紧凑模式',
+    icon: '📋',
     description: '更小的字体和更紧凑的间距，适合信息密集型内容',
     isBuiltIn: true,
     settings: {
@@ -73,6 +81,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'night',
     name: '夜间模式',
+    displayName: '夜间模式',
+    icon: '🌃',
     description: '深色背景，适合夜间阅读',
     isBuiltIn: true,
     settings: {
@@ -90,6 +100,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'focus',
     name: '专注模式',
+    displayName: '专注模式',
+    icon: '🎯',
     description: '简洁的布局，无图片，适合需要专注的阅读',
     isBuiltIn: true,
     settings: {
@@ -108,6 +120,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'academic',
     name: '学术阅读',
+    displayName: '学术阅读',
+    icon: '🎓',
     description: '适合学术论文和技术文档的阅读',
     isBuiltIn: true,
     settings: {
@@ -126,6 +140,8 @@ export const builtInPresets: ReadingPreset[] = [
   {
     id: 'novel',
     name: '小说模式',
+    displayName: '小说模式',
+    icon: '📚',
     description: '适合小说和长篇文学作品的阅读',
     isBuiltIn: true,
     settings: {

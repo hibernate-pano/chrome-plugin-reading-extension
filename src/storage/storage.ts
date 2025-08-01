@@ -102,6 +102,8 @@ export async function initializeDefaultSettings(): Promise<void> {
 export interface ReadingPreset {
   id: string;
   name: string;
+  displayName?: string;
+  icon?: string;
   description?: string;
   isBuiltIn?: boolean;
   settings: {

@@ -1,0 +1,220 @@
+/* 阅读模式样式 - 基于 Shadcn/UI 设计系统 */
+
+/* 阅读模式容器 */
+.reading-mode-container {
+  font-family: var(--font-reading, Georgia, 'Times New Roman', serif);
+  line-height: var(--reading-line-height, 1.6);
+  font-size: var(--reading-font-size, 16px);
+  color: var(--reading-text-color, hsl(var(--foreground)));
+  background-color: var(--reading-bg-color, hsl(var(--background)));
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+  transition: all 0.3s ease;
+}
+
+/* 阅读模式标题 */
+.reading-mode-title {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  color: hsl(var(--foreground));
+}
+
+/* 阅读模式副标题 */
+.reading-mode-subtitle {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 2rem;
+}
+
+/* 阅读模式段落 */
+.reading-mode-content p {
+  margin-bottom: var(--reading-paragraph-spacing, 1rem);
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+/* 阅读模式列表 */
+.reading-mode-content ul,
+.reading-mode-content ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.reading-mode-content li {
+  margin-bottom: 0.5rem;
+}
+
+/* 阅读模式引用 */
+.reading-mode-content blockquote {
+  border-left: 4px solid hsl(var(--border));
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+/* 阅读模式代码 */
+.reading-mode-content code {
+  background-color: hsl(var(--muted));
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-mono, 'Courier New', monospace);
+  font-size: 0.9em;
+}
+
+.reading-mode-content pre {
+  background-color: hsl(var(--muted));
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.reading-mode-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* 阅读模式链接 */
+.reading-mode-content a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--primary) / 0.3);
+  transition: text-decoration-color 0.2s ease;
+}
+
+.reading-mode-content a:hover {
+  text-decoration-color: hsl(var(--primary));
+}
+
+/* 阅读模式图片 */
+.reading-mode-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+/* 阅读模式表格 */
+.reading-mode-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.reading-mode-content th,
+.reading-mode-content td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.reading-mode-content th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+}
+
+/* 背景色主题 */
+.reading-mode-container.paper-cream {
+  --reading-bg-color: #F8F5F1;
+  --reading-text-color: #2D1B0E;
+}
+
+.reading-mode-container.paper-mint {
+  --reading-bg-color: #f1f7f5;
+  --reading-text-color: #1a3d32;
+}
+
+.reading-mode-container.paper-warm {
+  --reading-bg-color: #f9f3ee;
+  --reading-text-color: #3d2e1f;
+}
+
+.reading-mode-container.paper-cool {
+  --reading-bg-color: #f2f5f8;
+  --reading-text-color: #1f2937;
+}
+
+.reading-mode-container.paper-sepia {
+  --reading-bg-color: #f5f2e9;
+  --reading-text-color: #4a3728;
+}
+
+/* 暗色模式 */
+.reading-mode-container.dark {
+  --reading-bg-color: hsl(222.2 84% 4.9%);
+  --reading-text-color: hsl(210 40% 98%);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .reading-mode-container {
+    padding: 1rem;
+    font-size: calc(var(--reading-font-size, 16px) * 0.9);
+  }
+  
+  .reading-mode-title {
+    font-size: 1.5rem;
+  }
+  
+  .reading-mode-subtitle {
+    font-size: 1rem;
+  }
+}
+
+/* 动画效果 */
+.reading-mode-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.reading-mode-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.reading-mode-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reading-mode-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 选择文本样式 */
+.reading-mode-container ::selection {
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary-foreground));
+}
+
+/* 滚动条样式 */
+.reading-mode-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.reading-mode-container::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+.reading-mode-container::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+.reading-mode-container::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}

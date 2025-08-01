@@ -37,7 +37,7 @@
         "<all_urls>"
       ],
       "js": [
-        "src/contentLoader/contentLoader.js"
+        "src/content/contentShadcn.js"
       ],
       "css": [
         "assets/style.css"
