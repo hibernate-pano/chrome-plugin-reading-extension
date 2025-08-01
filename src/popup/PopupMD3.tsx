@@ -10,30 +10,19 @@ import { MESSAGE_TYPES } from '../constants';
 import builtInPresets from '../presets/builtInPresets';
 
 /**
- * Material Design 3 Popup 组件
+ * Material Design 3 Popup 组件 - 重新整合版本
  *
- * 这是Chrome扩展的主要弹出界面，采用现代化的卡片式设计。
- * 主要功能包括：
- * - 阅读模式开关控制
- * - 阅读预设选择和管理
- * - 文本设置调整（字体、大小、行高等）
- * - 主题切换（明暗模式）
- * - 实时设置同步和错误处理
+ * 解决了配置层级堆叠问题，将预设选择和详细设置整合到统一的界面中。
+ * 新的布局结构：
+ * 1. 阅读模式开关 - 核心功能控制
+ * 2. 快速预设选择 - 推荐的主要配置方式
+ * 3. 高级设置 - 详细的精细调整选项
  *
- * 设计特点：
- * - 遵循Material Design 3规范
- * - 响应式布局，适配380x520px弹窗
- * - 可折叠的设置区域，节省空间
- * - 流畅的动画和交互效果
- * - 完善的无障碍访问支持
- *
- * 性能优化：
- * - 使用useCallback和useMemo减少重渲染
- * - 防抖处理频繁的设置更新
- * - 错误边界和加载状态管理
- *
- * @author Chrome Extension Team
- * @version 1.8.0
+ * 主要改进：
+ * - 预设与详细设置的智能交互
+ * - 清晰的视觉层次和功能分组
+ * - 统一的配置界面，避免页面跳转
+ * - 优化的空间利用和用户体验
  */
 export const PopupMD3: React.FC = () => {
   const { settings, updateSetting, initSettings } = useSettingsStore();
@@ -45,13 +34,36 @@ export const PopupMD3: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // 设置项展开状态
-  const [expandedSection, setExpandedSection] = useState<string>('font'); // 默认展开字体设置
+  // 高级设置展开状态 - 默认收起，鼓励用户优先使用预设
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [expandedAdvancedSection, setExpandedAdvancedSection] = useState<string>('');
+
+  // 预设状态检测
+  const [isCustomPreset, setIsCustomPreset] = useState(false);
 
   useEffect(() => {
     initSettings();
     initializePopup();
   }, []);
+
+  // 检测当前设置是否匹配预设
+  const checkPresetMatch = useCallback(() => {
+    const currentPreset = builtInPresets.find(preset => preset.id === selectedPreset);
+    if (currentPreset && currentPreset.settings) {
+      const settingsMatch = 
+        (currentPreset.settings.fontSize === undefined || settings.fontSize === currentPreset.settings.fontSize) &&
+        (currentPreset.settings.lineHeight === undefined || settings.lineHeight === currentPreset.settings.lineHeight) &&
+        (currentPreset.settings.paragraphSpacing === undefined || settings.paragraphSpacing === currentPreset.settings.paragraphSpacing) &&
+        (currentPreset.settings.fontFamily === undefined || settings.fontFamily === currentPreset.settings.fontFamily) &&
+        (currentPreset.settings.backgroundColor === undefined || settings.backgroundColor === currentPreset.settings.backgroundColor);
+      
+      setIsCustomPreset(!settingsMatch);
+    }
+  }, [settings, selectedPreset]);
+
+  useEffect(() => {
+    checkPresetMatch();
+  }, [settings, selectedPreset, checkPresetMatch]);
 
   const initializePopup = async () => {
     setIsLoading(true);
@@ -110,6 +122,29 @@ export const PopupMD3: React.FC = () => {
     setSelectedPreset(presetId);
     await setStorage(StorageKeys.ACTIVE_PRESET, presetId);
 
+    // 应用预设的所有设置
+    const preset = builtInPresets.find(p => p.id === presetId);
+    if (preset && preset.settings) {
+      // 批量更新设置，只更新存在的字段
+      if (preset.settings.fontSize !== undefined) {
+        await updateSetting('fontSize', preset.settings.fontSize);
+      }
+      if (preset.settings.lineHeight !== undefined) {
+        await updateSetting('lineHeight', preset.settings.lineHeight);
+      }
+      if (preset.settings.paragraphSpacing !== undefined) {
+        await updateSetting('paragraphSpacing', preset.settings.paragraphSpacing);
+      }
+      if (preset.settings.fontFamily !== undefined) {
+        await updateSetting('fontFamily', preset.settings.fontFamily);
+      }
+      if (preset.settings.backgroundColor !== undefined) {
+        await updateSetting('backgroundColor', preset.settings.backgroundColor);
+      }
+      
+      setIsCustomPreset(false);
+    }
+
     // 如果当前处于阅读模式，立即应用新预设
     if (readingMode) {
       try {
@@ -126,20 +161,23 @@ export const PopupMD3: React.FC = () => {
     }
   };
 
-  // 切换设置区域展开状态
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? '' : section);
+  // 重置为当前预设
+  const resetToPreset = async () => {
+    if (selectedPreset && !isCustomPreset) return;
+    
+    const preset = builtInPresets.find(p => p.id === selectedPreset);
+    if (preset) {
+      await handlePresetChange(selectedPreset);
+    }
+  };
+
+  // 切换高级设置区域展开状态
+  const toggleAdvancedSection = (section: string) => {
+    setExpandedAdvancedSection(expandedAdvancedSection === section ? '' : section);
   };
 
   /**
    * 防抖函数 - 优化频繁的设置更新
-   *
-   * 对于字体大小、行高、段落间距等可能频繁变化的设置，
-   * 使用防抖来减少不必要的存储操作和内容脚本通信。
-   *
-   * @param func 要防抖的函数
-   * @param delay 防抖延迟时间（毫秒）
-   * @returns 防抖后的函数
    */
   const debounce = useCallback((func: Function, delay: number) => {
     let timeoutId: NodeJS.Timeout;
@@ -151,11 +189,6 @@ export const PopupMD3: React.FC = () => {
 
   /**
    * 处理主题切换动画
-   *
-   * 在明暗主题之间切换时，添加平滑的过渡动画效果。
-   * 使用CSS过渡类来实现颜色变化的动画。
-   *
-   * @returns Promise<void>
    */
   const handleThemeChange = useCallback(async () => {
     setIsThemeTransitioning(true);
@@ -194,14 +227,7 @@ export const PopupMD3: React.FC = () => {
   );
 
   /**
-   * 处理设置变更
-   *
-   * 统一处理所有设置项的更新，包括错误处理和加载状态管理。
-   * 对于频繁变化的设置（如字体大小、行高）使用防抖优化。
-   *
-   * @param key 设置项的键名
-   * @param value 新的设置值
-   * @returns Promise<void>
+   * 处理设置变更 - 修改后标记为自定义
    */
   const handleSettingChange = useCallback(async (key: keyof UserSettings, value: any) => {
     try {
@@ -215,6 +241,9 @@ export const PopupMD3: React.FC = () => {
         await updateSetting(key, value);
         await applySettingsToContent(key, value);
       }
+
+      // 标记为自定义设置
+      setIsCustomPreset(true);
     } catch (err) {
       console.error('设置更新失败:', err);
       setError('设置更新失败，请重试');
@@ -225,23 +254,9 @@ export const PopupMD3: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="w-80 h-96 flex items-center justify-center bg-surface text-on-surface">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-primary-40 border-t-transparent rounded-full animate-spin" />
-          <p className="text-body-medium text-on-surface-variant">加载中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 如果正在加载，显示加载状态
-  if (isLoading) {
-    return (
-      <div className="popup-container">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p className="loading-text">正在加载设置...</p>
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">正在加载设置...</p>
       </div>
     );
   }
@@ -250,16 +265,16 @@ export const PopupMD3: React.FC = () => {
     <div className={`popup-container ${isThemeTransitioning ? 'theme-transition' : ''}`}>
       {/* Header */}
       <div className="popup-header">
-        <div className="popup-header-content flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary-40 rounded-full flex items-center justify-center">
+        <div className="popup-header-content">
+          <div className="flex">
+            <div className="w-8">
               <svg className="w-5 h-5 text-on-primary" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
             <div>
-              <h1 className="text-title-large font-medium text-on-surface">阅读助手</h1>
-              <p className="text-body-small text-on-surface-variant">优化网页阅读体验</p>
+              <h1>阅读助手</h1>
+              <p>优化网页阅读体验</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -270,14 +285,6 @@ export const PopupMD3: React.FC = () => {
               className="w-8 h-8 p-0"
             >
               {theme === 'light' ? '🌙' : '☀️'}
-            </Button>
-            <Button
-              variant="text"
-              size="small"
-              onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })}
-              className="w-8 h-8 p-0"
-            >
-              ⚙️
             </Button>
           </div>
         </div>
@@ -309,14 +316,14 @@ export const PopupMD3: React.FC = () => {
       {/* Reading Mode Control */}
       <div className="reading-mode-card">
         <div className="reading-mode-content">
-          <div className="flex items-center justify-between">
+          <div className="flex">
             <div className="flex items-center gap-3">
               <div className="text-2xl">📖</div>
               <div>
-                <h3 className="text-title-medium font-medium text-on-surface">
+                <h3>
                   阅读模式
                 </h3>
-                <p className="text-body-small text-on-surface-variant">
+                <p>
                   {readingMode ? '正在优化页面显示' : '提取主要内容，优化排版'}
                 </p>
               </div>
@@ -330,170 +337,222 @@ export const PopupMD3: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Settings Area - Scrollable */}
+      {/* Main Content Area - Scrollable */}
       <div className="settings-area">
-        {/* Font Settings Card */}
-        <div className="settings-card">
-          <button
-            className="settings-card-header"
-            onClick={() => toggleSection('font')}
-          >
-            <div className="settings-card-title">
-              <div className="settings-card-icon">🔤</div>
-              <h3 className="text-title-medium font-medium text-on-surface">字体设置</h3>
-            </div>
-            <div className={`settings-card-expand-icon ${expandedSection === 'font' ? 'expanded' : ''}`}>
-              ▼
-            </div>
-          </button>
-
-          {expandedSection === 'font' && (
-            <div className="settings-card-content">
-              {/* Font Size */}
-              <div className="setting-item">
-                <div className="setting-label">
-                  <span className="setting-label-text">字体大小</span>
-                  <span className="setting-value">{fontSize}px</span>
+        {/* Quick Presets Section - 主要配置方式 */}
+        <div className="presets-section-primary">
+          <div className="presets-header">
+            <h3>
+              <span>⚡</span>
+              快速预设
+            </h3>
+            <p className="presets-description">推荐使用预设快速配置，或在下方进行详细调整</p>
+          </div>
+          
+          <div className="presets-grid">
+            {builtInPresets.slice(0, 3).map((preset) => (
+              <button
+                key={preset.id}
+                className={`preset-button ${selectedPreset === preset.id ? 'selected' : ''}`}
+                onClick={() => handlePresetChange(preset.id)}
+              >
+                <div className="preset-icon">
+                  {preset.id === 'paper' ? '📄' : preset.id === 'dark' ? '🌃' : '🌙'}
                 </div>
-                <CustomSlider
-                  value={fontSize}
-                  min={12}
-                  max={24}
-                  step={1}
-                  onChange={(value: number) => handleSettingChange('fontSize', value)}
-                  className="custom-slider"
-                />
-              </div>
+                <div className="preset-name">
+                  {preset.name}
+                </div>
+                <div className="preset-indicator" />
+              </button>
+            ))}
+          </div>
 
-              {/* Font Family */}
-              <div className="setting-item">
-                <label className="setting-label-text mb-2 block">字体类型</label>
-                <select
-                  value={fontFamily}
-                  onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
-                  className="custom-select"
+          {/* 预设状态指示 */}
+          <div className="preset-status">
+            {isCustomPreset ? (
+              <div className="custom-status">
+                <span className="status-icon">✏️</span>
+                <span className="status-text">已自定义</span>
+                <button 
+                  className="reset-preset-btn"
+                  onClick={resetToPreset}
+                  title="重置为预设配置"
                 >
-                  {Object.entries(FONT_FAMILIES).map(([key, value]) => (
-                    <option key={key} value={key}>{value}</option>
-                  ))}
-                </select>
+                  重置
+                </button>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="preset-status-normal">
+                <span className="status-icon">✅</span>
+                <span className="status-text">使用 "{builtInPresets.find(p => p.id === selectedPreset)?.name}" 预设</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Typography Settings Card */}
-        <div className="settings-card">
+        {/* Advanced Settings Toggle */}
+        <div className="advanced-settings-toggle">
           <button
-            className="settings-card-header"
-            onClick={() => toggleSection('typography')}
+            className="advanced-toggle-btn"
+            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
           >
-            <div className="settings-card-title">
-              <div className="settings-card-icon">📐</div>
-              <h3 className="text-title-medium font-medium text-on-surface">排版设置</h3>
-            </div>
-            <div className={`settings-card-expand-icon ${expandedSection === 'typography' ? 'expanded' : ''}`}>
-              ▼
+            <div className="advanced-toggle-content">
+              <div className="flex items-center gap-3">
+                <span className="advanced-icon">⚙️</span>
+                <div>
+                  <h4>高级设置</h4>
+                  <p>精细调整字体、排版和主题</p>
+                </div>
+              </div>
+              <div className={`advanced-expand-icon ${showAdvancedSettings ? 'expanded' : ''}`}>
+                ▼
+              </div>
             </div>
           </button>
-
-          {expandedSection === 'typography' && (
-            <div className="settings-card-content">
-              {/* Line Height */}
-              <div className="setting-item">
-                <div className="setting-label">
-                  <span className="setting-label-text">行间距</span>
-                  <span className="setting-value">{lineHeight}</span>
-                </div>
-                <CustomSlider
-                  value={lineHeight}
-                  min={1.0}
-                  max={3.0}
-                  step={0.1}
-                  onChange={(value: number) => handleSettingChange('lineHeight', value)}
-                  className="custom-slider"
-                />
-              </div>
-
-              {/* Paragraph Spacing */}
-              <div className="setting-item">
-                <div className="setting-label">
-                  <span className="setting-label-text">段落间距</span>
-                  <span className="setting-value">{paragraphSpacing}</span>
-                </div>
-                <CustomSlider
-                  value={paragraphSpacing}
-                  min={0.5}
-                  max={3.0}
-                  step={0.1}
-                  onChange={(value: number) => handleSettingChange('paragraphSpacing', value)}
-                  className="custom-slider"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Theme Settings Card */}
-        <div className="settings-card">
-          <button
-            className="settings-card-header"
-            onClick={() => toggleSection('theme')}
-          >
-            <div className="settings-card-title">
-              <div className="settings-card-icon">🎨</div>
-              <h3 className="text-title-medium font-medium text-on-surface">主题设置</h3>
-            </div>
-            <div className={`settings-card-expand-icon ${expandedSection === 'theme' ? 'expanded' : ''}`}>
-              ▼
-            </div>
-          </button>
+        {/* Advanced Settings Area */}
+        {showAdvancedSettings && (
+          <div className="advanced-settings-area">
+            {/* Font Settings Card */}
+            <div className="settings-card">
+              <button
+                className="settings-card-header"
+                onClick={() => toggleAdvancedSection('font')}
+              >
+                <div className="settings-card-title">
+                  <div className="settings-card-icon">🔤</div>
+                  <h3>字体设置</h3>
+                </div>
+                <div className={`settings-card-expand-icon ${expandedAdvancedSection === 'font' ? 'expanded' : ''}`}>
+                  ▼
+                </div>
+              </button>
 
-          {expandedSection === 'theme' && (
-            <div className="settings-card-content">
-              {/* Background Colors */}
-              <div className="setting-item">
-                <label className="setting-label-text mb-3 block">背景颜色</label>
-                <div className="color-picker-grid">
-                  {Object.entries(BACKGROUND_COLORS).map(([key, value]) => (
-                    <button
-                      key={key}
-                      className={`color-picker-button ${backgroundColor === key ? 'selected' : ''}`}
-                      style={{ backgroundColor: value }}
-                      onClick={() => handleSettingChange('backgroundColor', key)}
-                      title={key}
+              {expandedAdvancedSection === 'font' && (
+                <div className="settings-card-content">
+                  {/* Font Size */}
+                  <div className="setting-item">
+                    <div className="setting-label">
+                      <span className="setting-label-text">字体大小</span>
+                      <span className="setting-value">{fontSize}px</span>
+                    </div>
+                    <CustomSlider
+                      value={fontSize}
+                      min={12}
+                      max={24}
+                      step={1}
+                      onChange={(value: number) => handleSettingChange('fontSize', value)}
+                      className="custom-slider"
                     />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+                  </div>
 
-      {/* Presets Section */}
-      <div className="presets-section">
-        <h3 className="text-title-medium font-medium text-on-surface mb-3 flex items-center gap-2">
-          <span className="text-xl">📚</span>
-          阅读预设
-        </h3>
-        <div className="presets-grid">
-          {builtInPresets.slice(0, 3).map((preset) => (
-            <button
-              key={preset.id}
-              className={`preset-button ${selectedPreset === preset.id ? 'selected' : ''}`}
-              onClick={() => handlePresetChange(preset.id)}
-            >
-              <div className="preset-icon">
-                {preset.id === 'paper' ? '📄' : preset.id === 'dark' ? '🌃' : '🌙'}
-              </div>
-              <div className="preset-name">
-                {preset.name}
-              </div>
-              <div className="preset-indicator" />
-            </button>
-          ))}
-        </div>
+                  {/* Font Family */}
+                  <div className="setting-item">
+                    <label className="setting-label-text mb-2 block">字体类型</label>
+                    <select
+                      value={fontFamily}
+                      onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
+                      className="custom-select"
+                    >
+                      {Object.entries(FONT_FAMILIES).map(([key, value]) => (
+                        <option key={key} value={key}>{value}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Typography Settings Card */}
+            <div className="settings-card">
+              <button
+                className="settings-card-header"
+                onClick={() => toggleAdvancedSection('typography')}
+              >
+                <div className="settings-card-title">
+                  <div className="settings-card-icon">📐</div>
+                  <h3>排版设置</h3>
+                </div>
+                <div className={`settings-card-expand-icon ${expandedAdvancedSection === 'typography' ? 'expanded' : ''}`}>
+                  ▼
+                </div>
+              </button>
+
+              {expandedAdvancedSection === 'typography' && (
+                <div className="settings-card-content">
+                  {/* Line Height */}
+                  <div className="setting-item">
+                    <div className="setting-label">
+                      <span className="setting-label-text">行间距</span>
+                      <span className="setting-value">{lineHeight}</span>
+                    </div>
+                    <CustomSlider
+                      value={lineHeight}
+                      min={1.0}
+                      max={3.0}
+                      step={0.1}
+                      onChange={(value: number) => handleSettingChange('lineHeight', value)}
+                      className="custom-slider"
+                    />
+                  </div>
+
+                  {/* Paragraph Spacing */}
+                  <div className="setting-item">
+                    <div className="setting-label">
+                      <span className="setting-label-text">段落间距</span>
+                      <span className="setting-value">{paragraphSpacing}</span>
+                    </div>
+                    <CustomSlider
+                      value={paragraphSpacing}
+                      min={0.5}
+                      max={3.0}
+                      step={0.1}
+                      onChange={(value: number) => handleSettingChange('paragraphSpacing', value)}
+                      className="custom-slider"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Theme Settings Card */}
+            <div className="settings-card">
+              <button
+                className="settings-card-header"
+                onClick={() => toggleAdvancedSection('theme')}
+              >
+                <div className="settings-card-title">
+                  <div className="settings-card-icon">🎨</div>
+                  <h3>主题设置</h3>
+                </div>
+                <div className={`settings-card-expand-icon ${expandedAdvancedSection === 'theme' ? 'expanded' : ''}`}>
+                  ▼
+                </div>
+              </button>
+
+              {expandedAdvancedSection === 'theme' && (
+                <div className="settings-card-content">
+                  {/* Background Colors */}
+                  <div className="setting-item">
+                    <label className="setting-label-text mb-3 block">背景颜色</label>
+                    <div className="color-picker-grid">
+                      {Object.entries(BACKGROUND_COLORS).map(([key, value]) => (
+                        <button
+                          key={key}
+                          className={`color-picker-button ${backgroundColor === key ? 'selected' : ''}`}
+                          style={{ backgroundColor: value }}
+                          onClick={() => handleSettingChange('backgroundColor', key)}
+                          title={key}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -501,12 +560,9 @@ export const PopupMD3: React.FC = () => {
         <span className="footer-version">
           Chrome 阅读插件 v1.8.0
         </span>
-        <button
-          className="footer-settings-button"
-          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })}
-        >
-          更多设置
-        </button>
+        <span className="footer-integration-note">
+          统一配置界面
+        </span>
       </div>
     </div>
   );
