@@ -15,31 +15,87 @@ const ACTIONS = {
   SAVE_READING_PROGRESS: 'SAVE_READING_PROGRESS'
 };
 
+// 性能优化：使用 WeakMap 缓存已加载的模块
+const moduleCache = new WeakMap();
+
+// 优化的懒加载函数
+const loadModule = async (modulePath: string, options: {
+  priority?: 'high' | 'low' | 'idle';
+  preload?: boolean;
+  cache?: boolean;
+} = {}) => {
+  const { priority = 'idle', preload = false, cache = true } = options;
+  
+  // 检查缓存
+  if (cache && moduleCache.has(modulePath as any)) {
+    return moduleCache.get(modulePath as any);
+  }
+  
+  // 根据优先级选择加载策略
+  const loadStrategy = () => {
+    switch (priority) {
+      case 'high':
+        return Promise.resolve();
+      case 'low':
+        return new Promise(resolve => setTimeout(resolve, 100));
+      case 'idle':
+      default:
+        return new Promise(resolve => {
+          if (window.requestIdleCallback) {
+            window.requestIdleCallback(() => resolve(undefined));
+          } else {
+            setTimeout(resolve, 1000);
+          }
+        });
+    }
+  };
+  
+  await loadStrategy();
+  
+  try {
+    const module = await import(modulePath);
+    if (cache) {
+      moduleCache.set(modulePath as any, module);
+    }
+    return module;
+  } catch (error) {
+    console.warn(`模块加载失败: ${modulePath}`, error);
+    throw error;
+  }
+};
+
+// 预加载关键模块
+const preloadCriticalModules = () => {
+  // 预加载核心功能模块
+  const criticalModules = [
+    './features/readingModeManager',
+    './ui/FloatingUIManager'
+  ];
+  
+  criticalModules.forEach(modulePath => {
+    loadModule(modulePath, { priority: 'low', preload: true });
+  });
+};
+
 // 懒加载组件 - 使用优化的加载策略
 const loadButton = () => {
-  // 使用requestIdleCallback在浏览器空闲时加载按钮，如果不支持则降级到setTimeout
-  const scheduleLoad = window.requestIdleCallback ||
-    ((cb) => setTimeout(cb, 1000));
-
-  scheduleLoad(() => {
-    import('./ui/readerFloatingButton')
-      .then(({ createFloatingButton }) => {
-        // 仅当DOM完全加载后才创建按钮
-        if (document.readyState === 'complete') {
-          createFloatingButton();
-        } else {
-          // 使用passive事件监听器减少性能影响
-          window.addEventListener('DOMContentLoaded', () => {
-            // 延迟创建按钮，确保不阻塞页面渲染
-            setTimeout(createFloatingButton, 100);
-          }, { passive: true });
-        }
-      })
-      .catch(() => {
-        // 如果加载失败，记录错误但不阻止页面功能
-        console.warn('无法加载浮动按钮组件，但页面功能不受影响');
-      });
-  });
+  loadModule('./ui/readerFloatingButton', { priority: 'idle' })
+    .then(({ createFloatingButton }) => {
+      // 仅当DOM完全加载后才创建按钮
+      if (document.readyState === 'complete') {
+        createFloatingButton();
+      } else {
+        // 使用passive事件监听器减少性能影响
+        window.addEventListener('DOMContentLoaded', () => {
+          // 延迟创建按钮，确保不阻塞页面渲染
+          setTimeout(createFloatingButton, 100);
+        }, { passive: true });
+      }
+    })
+    .catch(() => {
+      // 如果加载失败，记录错误但不阻止页面功能
+      console.warn('无法加载浮动按钮组件，但页面功能不受影响');
+    });
 };
 
 // 启动按钮加载
@@ -65,7 +121,7 @@ function initialize() {
   const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 3000));
   idleCallback(async () => {
     try {
-      const { initPreloadStrategy } = await import('./dynamic/preloadStrategy');
+      const { initPreloadStrategy } = await loadModule('./dynamic/preloadStrategy', { priority: 'low' });
       // 使用自定义配置
       initPreloadStrategy({
         idleTimeout: 2000,
@@ -74,6 +130,9 @@ function initialize() {
           ['4g', '5g', 'wifi'].includes(navigator.connection.effectiveType) :
           true
       });
+      
+      // 预加载关键模块
+      preloadCriticalModules();
     } catch (e) {
       // 预加载失败不影响主功能
       console.debug('预加载策略初始化失败，继续使用基本功能');

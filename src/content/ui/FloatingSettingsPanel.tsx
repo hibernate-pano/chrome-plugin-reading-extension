@@ -77,6 +77,32 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
       if (e.key === 'Escape' && isVisible) {
         onClose();
       }
+      
+      // 方向键导航支持
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        // 在预设按钮之间导航
+        const presetButtons = document.querySelectorAll('[data-preset-button]');
+        const currentIndex = Array.from(presetButtons).findIndex(btn => 
+          btn === document.activeElement
+        );
+        
+        if (currentIndex !== -1) {
+          const nextIndex = e.key === 'ArrowRight' 
+            ? (currentIndex + 1) % presetButtons.length
+            : (currentIndex - 1 + presetButtons.length) % presetButtons.length;
+          
+          (presetButtons[nextIndex] as HTMLElement)?.focus();
+        }
+      }
+      
+      // Ctrl/Cmd + , 打开/关闭面板
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        if (isVisible) {
+          onClose();
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyPress);
@@ -94,7 +120,15 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
         top: position.y,
         width: isCollapsed ? '48px' : '320px',
       }}
+      role="dialog"
+      aria-label="阅读设置面板"
+      aria-modal="true"
+      aria-describedby="settings-panel-description"
     >
+      <div id="settings-panel-description" className="sr-only">
+        阅读设置面板，可以调整字体大小、行高、主题等阅读设置
+      </div>
+      
       <Card className={cn(
         "bg-white/95 backdrop-blur-sm border shadow-xl transition-all duration-200",
         isDragging && "shadow-2xl"
@@ -116,12 +150,29 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
               });
             }
           }}
+          role="button"
+          tabIndex={0}
+          aria-label="拖拽手柄，点击并拖拽可移动面板位置"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              // 键盘拖拽支持
+              const rect = panelRef.current?.getBoundingClientRect();
+              if (rect) {
+                setDragOffset({
+                  x: rect.width / 2,
+                  y: rect.height / 2,
+                });
+                setIsDragging(true);
+              }
+            }
+          }}
         >
           <div className="flex items-center justify-between">
             {!isCollapsed && (
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-gray-700">阅读设置</span>
-                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-blue-400 rounded-full" aria-hidden="true"></div>
               </div>
             )}
             <div className="flex items-center space-x-1">
@@ -130,16 +181,19 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
                 size="icon"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="h-6 w-6"
+                aria-label={isCollapsed ? "展开设置面板" : "折叠设置面板"}
+                aria-expanded={!isCollapsed}
               >
-                <span className="text-xs">{isCollapsed ? '◀' : '▶'}</span>
+                <span className="text-xs" aria-hidden="true">{isCollapsed ? '◀' : '▶'}</span>
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
                 className="h-6 w-6"
+                aria-label="关闭设置面板"
               >
-                <span className="text-xs">✕</span>
+                <span className="text-xs" aria-hidden="true">✕</span>
               </Button>
             </div>
           </div>
@@ -149,17 +203,22 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
           <CardContent className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
             {/* 阅读模式开关 */}
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">阅读模式</span>
+              <span className="text-sm font-medium" id="reading-mode-toggle-label">阅读模式</span>
               <Switch
                 checked={isReadingModeActive}
                 onCheckedChange={onToggleReadingMode}
+                aria-labelledby="reading-mode-toggle-label"
+                aria-describedby="reading-mode-toggle-description"
               />
+            </div>
+            <div id="reading-mode-toggle-description" className="sr-only">
+              切换阅读模式，开启后页面将优化为更适合阅读的布局
             </div>
 
             {/* 预设快速选择 */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-gray-600">快速预设</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs font-medium text-gray-600" id="preset-quick-label">快速预设</label>
+              <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="preset-quick-label">
                 {builtInPresets.slice(0, 4).map((preset) => (
                   <Button
                     key={preset.name}
@@ -171,19 +230,27 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
                       });
                     }}
                     className="h-8 text-xs"
+                    aria-describedby={`quick-preset-${preset.name}-desc`}
+                    data-preset-button
                   >
                     {preset.name}
                   </Button>
                 ))}
               </div>
+              {/* 快速预设描述 */}
+              {builtInPresets.slice(0, 4).map((preset) => (
+                <div key={`quick-desc-${preset.name}`} id={`quick-preset-${preset.name}-desc`} className="sr-only">
+                  {preset.displayName}：{preset.description || '快速应用预设样式'}
+                </div>
+              ))}
             </div>
 
             {/* 字体设置 */}
             <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-gray-600">字体大小</label>
-                  <span className="text-xs text-gray-500">{settings.fontSize}px</span>
+                  <label className="text-xs font-medium text-gray-600" id="font-size-label">字体大小</label>
+                  <span className="text-xs text-gray-500" aria-live="polite">{settings.fontSize}px</span>
                 </div>
                 <Slider
                   value={[settings.fontSize]}
@@ -192,7 +259,12 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
                   max={24}
                   step={1}
                   className="w-full"
+                  aria-labelledby="font-size-label"
+                  aria-describedby="font-size-description"
                 />
+                <div id="font-size-description" className="sr-only">
+                  调整字体大小，范围从14像素到24像素
+                </div>
               </div>
 
               <div className="space-y-2">
