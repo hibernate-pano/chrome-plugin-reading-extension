@@ -12,13 +12,16 @@
 
 ## 技术栈
 
-- TypeScript
-- React
-- Tailwind CSS
-- Zustand
-- Vite
-- pnpm (首选包管理工具)
-- @mozilla/readability
+- **React** 18.2.0 - UI 框架
+- **TypeScript** 5.2.2 - 类型安全
+- **Vite** 5.1.6 - 构建工具（多配置构建）
+- **Tailwind CSS** 4.x - 现代CSS框架（使用@theme指令）
+- **Shadcn/UI** - 高质量React组件库
+- **Zustand** 4.5.2 - 轻量级状态管理
+- **@mozilla/readability** 0.5.0 - 智能内容提取
+- **Radix UI** - 无障碍UI基础组件
+- **Lucide React** - 现代图标库
+- **pnpm** - 首选包管理工具
 
 ## 开发环境设置
 
@@ -95,6 +98,16 @@ chrome-plugin-reading-extension/
 2. **按需加载**：用户激活阅读模式时，才加载完整功能模块
 3. **代码分割**：将功能模块拆分为独立的块，减少初始加载大小
 
+### 🎨 UI 设计架构
+
+采用现代化的设计系统架构：
+
+1. **Tailwind CSS 4**：使用@theme指令定义设计令牌
+2. **Shadcn/UI组件**：基于Radix UI的高质量组件库
+3. **设计令牌系统**：统一的颜色、间距、字体规范
+4. **响应式设计**：移动优先的自适应布局
+5. **无障碍支持**：完整的a11y实现
+
 ### 内容提取架构
 
 采用基于Readability.js的提取引擎：
@@ -112,6 +125,31 @@ chrome-plugin-reading-extension/
 1. **settingsStore**：管理用户设置
 2. **readingProgressStore**：管理阅读进度
 3. **chromeStorageMiddleware**：同步状态到Chrome存储
+
+## 📚 文档
+
+### 🚀 快速开始
+- [快速开始指南](./docs/QUICK_START.md) - 5分钟快速上手开发
+
+### 📖 开发文档
+- [📚 文档中心](./docs/README.md) - 完整的文档导航和索引
+- [🚀 快速开始](./docs/QUICK_START.md) - 5分钟快速上手指南
+- [📖 开发指南](./docs/DEVELOPMENT_GUIDE.md) - 完整的开发指导文档
+- [📋 API 参考](./docs/API_REFERENCE.md) - 完整的 API 参考文档
+- [🎨 设计系统规范](./docs/design-system-spec.md) - Shadcn/UI 设计系统规范
+- [🔄 迁移指南](./docs/MIGRATION_GUIDE.md) - 从 MD3 到 Shadcn/UI 的迁移指南
+- [🛠️ 测试指南](./docs/TESTING.md) - 完整的测试策略
+- [⚡ 性能优化](./docs/PERFORMANCE.md) - 性能优化最佳实践
+- [🔧 故障排除](./docs/TROUBLESHOOTING.md) - 常见问题解决方案
+
+### 🔧 运维文档
+- [故障排除指南](./docs/TROUBLESHOOTING.md) - 常见问题诊断和解决
+- [性能优化指南](./docs/PERFORMANCE.md) - 性能优化最佳实践
+- [测试指南](./docs/TESTING.md) - 完整的测试策略和实践
+
+### 📝 项目文档
+- [Popup 重设计文档](./docs/popup-redesign-spec.md) - Popup 界面设计规范
+- [文档更新日志](./docs/CHANGELOG_DOCS.md) - 文档版本变更记录
 
 ## 贡献指南
 
