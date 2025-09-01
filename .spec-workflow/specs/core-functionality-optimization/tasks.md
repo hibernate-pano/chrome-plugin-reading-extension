@@ -64,7 +64,7 @@
   - _Leverage: Toast组件, 进度指示器_
   - _Requirements: 4.4, 4.5_
 
-- [ ] 9. 响应式设计优化
+- [x] 9. 响应式设计优化
   - File: src/content/styles/
   - 优化移动端和桌面端的响应式设计
   - 改进不同屏幕尺寸的适配
@@ -72,7 +72,7 @@
   - _Leverage: Tailwind CSS响应式工具, 现有样式_
   - _Requirements: 2.5, 5.1, 5.2_
 
-- [ ] 10. 无障碍功能完善
+- [-] 10. 无障碍功能完善
   - File: src/content/ui/accessibility/
   - 完善键盘导航和屏幕阅读器支持
   - 添加高对比度模式和焦点管理

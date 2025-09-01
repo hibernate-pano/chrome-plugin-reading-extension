@@ -3,452 +3,653 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>响应式布局测试</title>
+    <title>响应式设计测试 - Chrome阅读插件</title>
     <style>
+        /* 基础样式 */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f0f2f5;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
         }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
+
         .header {
             text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            color: #666;
-            font-size: 16px;
-        }
-        
-        .test-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 24px;
-            margin-bottom: 30px;
-        }
-        
-        .test-item {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            transition: transform 0.2s ease;
-        }
-        
-        .test-item:hover {
-            transform: translateY(-2px);
-        }
-        
-        .test-header {
+            margin-bottom: 40px;
+            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 16px 20px;
-            font-weight: 600;
+            border-radius: 12px;
         }
-        
-        .test-content {
-            padding: 20px;
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
         }
-        
-        .iframe-container {
-            border: 2px solid #e1e5e9;
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* 断点指示器 */
+        .breakpoint-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
             border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 16px;
-            position: relative;
-        }
-        
-        .iframe-label {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 10;
-        }
-        
-        .test-controls {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        
-        .control-button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s ease;
-        }
-        
-        .control-button:hover {
-            background: #0056b3;
-        }
-        
-        .control-button.active {
-            background: #28a745;
-        }
-        
-        .metrics {
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 12px;
             font-family: monospace;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 14px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
         }
-        
-        .metrics-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
+
+        .breakpoint-indicator::before {
+            content: "断点: ";
+            color: #ffd700;
         }
-        
-        .metrics-label {
-            color: #666;
+
+        /* 响应式网格 */
+        .responsive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
         }
-        
-        .metrics-value {
-            color: #333;
-            font-weight: 600;
-        }
-        
-        .animation-test {
+
+        .card {
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             padding: 24px;
-            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        
-        .animation-controls {
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h3 {
+            color: #2d3748;
+            margin-bottom: 16px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card p {
+            color: #4a5568;
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        /* 阅读模式模拟 */
+        .reading-mode-demo {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .reading-mode-demo h2 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 16px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .reading-mode-demo .subtitle {
+            font-size: 1.2rem;
+            color: #718096;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .reading-mode-demo .content {
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #2d3748;
+        }
+
+        .reading-mode-demo .content p {
+            margin-bottom: 24px;
+            text-align: justify;
+        }
+
+        .reading-mode-demo .content h3 {
+            font-size: 1.8rem;
+            color: #2d3748;
+            margin: 32px 0 16px 0;
+            font-weight: 600;
+        }
+
+        .reading-mode-demo .content blockquote {
+            border-left: 4px solid #667eea;
+            padding: 16px 24px;
+            margin: 24px 0;
+            background: #f7fafc;
+            font-style: italic;
+            color: #4a5568;
+        }
+
+        .reading-mode-demo .content code {
+            background: #edf2f7;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            color: #2d3748;
+        }
+
+        .reading-mode-demo .content pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 24px 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .reading-mode-demo .content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* 响应式设计特性展示 */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .feature {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-3px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .feature h4 {
+            color: #2d3748;
+            margin-bottom: 12px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .feature p {
+            color: #4a5568;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* 响应式断点测试 */
+        .breakpoint-test {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .breakpoint-test h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .breakpoint-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
-            margin-bottom: 20px;
         }
-        
-        .animation-button {
-            background: #17a2b8;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-        
-        .animation-button:hover {
-            background: #138496;
-            transform: translateY(-1px);
-        }
-        
-        .performance-metrics {
-            background: #e8f5e8;
-            border: 1px solid #c3e6c3;
-            border-radius: 8px;
+
+        .breakpoint-item {
             padding: 16px;
-            margin-top: 20px;
-        }
-        
-        .performance-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        .performance-label {
-            color: #155724;
+            border-radius: 8px;
+            text-align: center;
             font-weight: 500;
         }
-        
-        .performance-value {
-            color: #155724;
-            font-family: monospace;
-            background: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid #c3e6c3;
+
+        .breakpoint-item.sm {
+            background: #fed7d7;
+            color: #c53030;
         }
-        
-        @media (max-width: 768px) {
-            .test-grid {
+
+        .breakpoint-item.md {
+            background: #fef5e7;
+            color: #d69e2e;
+        }
+
+        .breakpoint-item.lg {
+            background: #e6fffa;
+            color: #319795;
+        }
+
+        .breakpoint-item.xl {
+            background: #e6f3ff;
+            color: #3182ce;
+        }
+
+        .breakpoint-item.2xl {
+            background: #f3e8ff;
+            color: #805ad5;
+        }
+
+        /* 响应式工具提示 */
+        .responsive-tips {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 40px;
+        }
+
+        .responsive-tips h3 {
+            margin-bottom: 16px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .responsive-tips ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .responsive-tips li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .responsive-tips li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        /* 响应式媒体查询 */
+        @media (max-width: 639px) {
+            .container {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .reading-mode-demo {
+                padding: 20px;
+            }
+
+            .reading-mode-demo h2 {
+                font-size: 2rem;
+            }
+
+            .reading-mode-demo .content {
+                font-size: 1rem;
+            }
+
+            .card, .feature, .breakpoint-test {
+                padding: 20px;
+            }
+
+            .responsive-grid {
                 grid-template-columns: 1fr;
             }
-            
-            .animation-controls {
+
+            .features {
                 grid-template-columns: 1fr;
+            }
+
+            .breakpoint-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 640px) and (max-width: 767px) {
+            .container {
+                padding: 18px;
+            }
+
+            .header h1 {
+                font-size: 2.25rem;
+            }
+
+            .reading-mode-demo h2 {
+                font-size: 2.25rem;
+            }
+
+            .responsive-grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .reading-mode-demo h2 {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .container {
+                padding: 24px;
+            }
+
+            .header h1 {
+                font-size: 2.75rem;
+            }
+
+            .reading-mode-demo h2 {
+                font-size: 2.75rem;
+            }
+        }
+
+        @media (min-width: 1280px) {
+            .container {
+                padding: 32px;
+            }
+
+            .header h1 {
+                font-size: 3rem;
+            }
+
+            .reading-mode-demo h2 {
+                font-size: 3rem;
+            }
+        }
+
+        /* 触摸设备优化 */
+        @media (hover: none) and (pointer: coarse) {
+            .card:hover, .feature:hover {
+                transform: none;
+            }
+
+            .card:active, .feature:active {
+                transform: scale(0.98);
+            }
+        }
+
+        /* 高对比度模式 */
+        @media (prefers-contrast: high) {
+            .card, .feature, .breakpoint-test, .reading-mode-demo {
+                border: 2px solid #000;
+            }
+
+            .header, .responsive-tips {
+                border: 2px solid #fff;
+            }
+        }
+
+        /* 减少动画偏好 */
+        @media (prefers-reduced-motion: reduce) {
+            .card, .feature {
+                transition: none;
+            }
+
+            .card:hover, .feature:hover {
+                transform: none;
             }
         }
     </style>
 </head>
 <body>
+    <!-- 断点指示器 -->
+    <div class="breakpoint-indicator" id="breakpointIndicator">
+        加载中...
+    </div>
+
     <div class="container">
+        <!-- 头部 -->
         <div class="header">
-            <h1>Chrome 扩展 Popup 响应式布局测试</h1>
-            <p>测试不同屏幕尺寸下的布局表现和动画效果</p>
+            <h1>响应式设计测试</h1>
+            <p>Chrome阅读插件的响应式设计优化验证</p>
         </div>
-        
-        <!-- 不同尺寸测试 -->
-        <div class="test-grid">
-            <!-- 标准尺寸 -->
-            <div class="test-item">
-                <div class="test-header">标准尺寸 (380×520)</div>
-                <div class="test-content">
-                    <div class="iframe-container">
-                        <div class="iframe-label">标准</div>
-                        <iframe src="dist/index.html" width="380" height="520" frameborder="0" id="standard-iframe"></iframe>
-                    </div>
-                    <div class="test-controls">
-                        <button class="control-button" onclick="reloadIframe('standard-iframe')">重新加载</button>
-                        <button class="control-button" onclick="testInteraction('standard-iframe')">测试交互</button>
-                    </div>
-                    <div class="metrics" id="standard-metrics">
-                        <div class="metrics-row">
-                            <span class="metrics-label">尺寸:</span>
-                            <span class="metrics-value">380×520</span>
-                        </div>
-                        <div class="metrics-row">
-                            <span class="metrics-label">密度:</span>
-                            <span class="metrics-value">标准</span>
-                        </div>
-                        <div class="metrics-row">
-                            <span class="metrics-label">状态:</span>
-                            <span class="metrics-value">正常</span>
-                        </div>
-                    </div>
-                </div>
+
+        <!-- 响应式特性展示 -->
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <h4>移动端优化</h4>
+                <p>针对小屏幕设备的专门优化，提供触摸友好的交互体验</p>
             </div>
-            
-            <!-- 小尺寸 -->
-            <div class="test-item">
-                <div class="test-header">小尺寸 (360×500)</div>
-                <div class="test-content">
-                    <div class="iframe-container">
-                        <div class="iframe-label">小屏</div>
-                        <iframe src="dist/index.html" width="360" height="500" frameborder="0" id="small-iframe"></iframe>
-                    </div>
-                    <div class="test-controls">
-                        <button class="control-button" onclick="reloadIframe('small-iframe')">重新加载</button>
-                        <button class="control-button" onclick="testInteraction('small-iframe')">测试交互</button>
-                    </div>
-                    <div class="metrics" id="small-metrics">
-                        <div class="metrics-row">
-                            <span class="metrics-label">尺寸:</span>
-                            <span class="metrics-value">360×500</span>
-                        </div>
-                        <div class="metrics-row">
-                            <span class="metrics-label">密度:</span>
-                            <span class="metrics-value">紧凑</span>
-                        </div>
-                        <div class="metrics-row">
-                            <span class="metrics-label">状态:</span>
-                            <span class="metrics-value">正常</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="feature">
+                <div class="feature-icon">💻</div>
+                <h4>桌面端适配</h4>
+                <p>大屏幕下的最佳阅读体验，充分利用屏幕空间</p>
             </div>
-            
-            <!-- 大尺寸 -->
-            <div class="test-item">
-                <div class="test-header">大尺寸 (400×540)</div>
-                <div class="test-content">
-                    <div class="iframe-container">
-                        <div class="iframe-label">大屏</div>
-                        <iframe src="dist/index.html" width="400" height="540" frameborder="0" id="large-iframe"></iframe>
-                    </div>
-                    <div class="test-controls">
-                        <button class="control-button" onclick="reloadIframe('large-iframe')">重新加载</button>
-                        <button class="control-button" onclick="testInteraction('large-iframe')">测试交互</button>
-                    </div>
-                    <div class="metrics" id="large-metrics">
-                        <div class="metrics-row">
-                            <span class="metrics-label">尺寸:</span>
-                            <span class="metrics-value">400×540</span>
-                        </div>
-                        <div class="metrics-row">
-                            <span class="metrics-label">密度:</span>
-                            <span class="metrics-value">宽松</span>
-                        </div>
-                        <div class="metrics-row">
-                            <span class="metrics-label">状态:</span>
-                            <span class="metrics-value">正常</span>
-                        </div>
-                    </div>
+            <div class="feature">
+                <div class="feature-icon">🔄</div>
+                <h4>流畅过渡</h4>
+                <p>平滑的响应式变化，确保不同断点间的优雅切换</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🎯</div>
+                <h4>精确断点</h4>
+                <p>基于Tailwind CSS标准的5个断点系统，覆盖所有设备</p>
+            </div>
+        </div>
+
+        <!-- 阅读模式演示 -->
+        <div class="reading-mode-demo">
+            <h2>阅读模式响应式演示</h2>
+            <div class="subtitle">在不同屏幕尺寸下体验优化的阅读体验</div>
+            <div class="content">
+                <p>这是一个模拟的阅读模式界面，展示了我们如何在不同设备上提供一致的阅读体验。通过响应式设计，我们确保无论用户使用什么设备，都能获得最佳的阅读体验。</p>
+                
+                <h3>响应式设计原则</h3>
+                <p>我们的响应式设计基于以下原则：移动优先、渐进增强、一致体验。这意味着我们首先为小屏幕设备设计，然后逐步增强大屏幕设备的体验。</p>
+                
+                <blockquote>
+                    响应式设计不仅仅是让内容适应不同屏幕，更是要确保在每个设备上都能提供最佳的可用性和可读性。
+                </blockquote>
+                
+                <h3>技术实现</h3>
+                <p>我们使用了现代的CSS技术，包括CSS Grid、Flexbox、CSS变量和媒体查询。这些技术让我们能够创建灵活、可维护的响应式布局。</p>
+                
+                <pre><code>/* 响应式断点系统 */
+:root {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}</code></pre>
+                
+                <p>通过这个统一的断点系统，我们确保了所有组件在不同屏幕尺寸下的一致性。每个断点都有专门的设计考虑，确保用户体验的连贯性。</p>
+            </div>
+        </div>
+
+        <!-- 断点测试 -->
+        <div class="breakpoint-test">
+            <h3>断点系统测试</h3>
+            <div class="breakpoint-grid">
+                <div class="breakpoint-item sm">
+                    <strong>SM</strong><br>
+                    ≥640px<br>
+                    手机横屏
+                </div>
+                <div class="breakpoint-item md">
+                    <strong>MD</strong><br>
+                    ≥768px<br>
+                    平板
+                </div>
+                <div class="breakpoint-item lg">
+                    <strong>LG</strong><br>
+                    ≥1024px<br>
+                    小桌面
+                </div>
+                <div class="breakpoint-item xl">
+                    <strong>XL</strong><br>
+                    ≥1280px<br>
+                    大桌面
+                </div>
+                <div class="breakpoint-item 2xl">
+                    <strong>2XL</strong><br>
+                    ≥1536px<br>
+                    超大屏幕
                 </div>
             </div>
         </div>
-        
-        <!-- 动画效果测试 -->
-        <div class="animation-test">
-            <h2>动画效果测试</h2>
-            <div class="animation-controls">
-                <button class="animation-button" onclick="testLoadAnimation()">测试加载动画</button>
-                <button class="animation-button" onclick="testHoverEffects()">测试悬停效果</button>
-                <button class="animation-button" onclick="testTransitions()">测试过渡动画</button>
-                <button class="animation-button" onclick="testThemeSwitch()">测试主题切换</button>
-                <button class="animation-button" onclick="testSliderAnimation()">测试滑块动画</button>
-                <button class="animation-button" onclick="testSwitchAnimation()">测试开关动画</button>
+
+        <!-- 响应式网格测试 -->
+        <div class="responsive-grid">
+            <div class="card">
+                <h3>响应式卡片 1</h3>
+                <p>这个卡片会根据屏幕尺寸自动调整布局。在小屏幕上，它会占据全宽；在大屏幕上，它会与其他卡片并排显示。</p>
+                <p>通过CSS Grid的auto-fit和minmax函数，我们实现了真正的响应式布局，无需额外的JavaScript代码。</p>
             </div>
-            
-            <div class="performance-metrics">
-                <h3>性能指标</h3>
-                <div class="performance-item">
-                    <span class="performance-label">页面加载时间:</span>
-                    <span class="performance-value" id="load-time">测量中...</span>
-                </div>
-                <div class="performance-item">
-                    <span class="performance-label">动画帧率:</span>
-                    <span class="performance-value" id="frame-rate">测量中...</span>
-                </div>
-                <div class="performance-item">
-                    <span class="performance-label">交互响应时间:</span>
-                    <span class="performance-value" id="interaction-time">测量中...</span>
-                </div>
-                <div class="performance-item">
-                    <span class="performance-label">内存使用:</span>
-                    <span class="performance-value" id="memory-usage">测量中...</span>
-                </div>
+            <div class="card">
+                <h3>响应式卡片 2</h3>
+                <p>响应式设计不仅仅是关于屏幕尺寸，还包括触摸设备、高DPI屏幕、高对比度模式等各种用户需求。</p>
+                <p>我们通过媒体查询和CSS特性检测，为不同的设备和用户偏好提供了专门的优化。</p>
             </div>
+            <div class="card">
+                <h3>响应式卡片 3</h3>
+                <p>性能是响应式设计的重要考虑因素。我们使用了CSS变量、高效的布局算法和优化的媒体查询，确保在各种设备上都有良好的性能表现。</p>
+                <p>同时，我们也考虑了可访问性，支持屏幕阅读器和键盘导航。</p>
+            </div>
+        </div>
+
+        <!-- 响应式设计提示 -->
+        <div class="responsive-tips">
+            <h3>响应式设计最佳实践</h3>
+            <ul>
+                <li>使用相对单位（rem, em, %, vw, vh）而不是固定像素</li>
+                <li>采用移动优先的设计方法</li>
+                <li>使用CSS Grid和Flexbox进行布局</li>
+                <li>测试所有断点下的用户体验</li>
+                <li>考虑触摸设备的交互需求</li>
+                <li>优化图片和媒体内容</li>
+                <li>确保可访问性标准</li>
+                <li>性能优化和代码维护性</li>
+            </ul>
         </div>
     </div>
 
     <script>
-        // 性能监控
-        let performanceData = {
-            loadTime: 0,
-            frameRate: 0,
-            interactionTime: 0,
-            memoryUsage: 0
-        };
+        // 断点指示器
+        function updateBreakpointIndicator() {
+            const width = window.innerWidth;
+            let breakpoint = '';
+            let description = '';
 
-        // 页面加载时间测量
-        window.addEventListener('load', function() {
-            performanceData.loadTime = performance.now();
-            document.getElementById('load-time').textContent = performanceData.loadTime.toFixed(2) + 'ms';
-        });
-
-        // 重新加载iframe
-        function reloadIframe(iframeId) {
-            const iframe = document.getElementById(iframeId);
-            const startTime = performance.now();
-            
-            iframe.onload = function() {
-                const loadTime = performance.now() - startTime;
-                console.log(`${iframeId} 加载时间: ${loadTime.toFixed(2)}ms`);
-            };
-            
-            iframe.src = iframe.src;
-        }
-
-        // 测试交互
-        function testInteraction(iframeId) {
-            const iframe = document.getElementById(iframeId);
-            console.log(`测试 ${iframeId} 的交互功能`);
-            
-            // 模拟点击测试
-            const startTime = performance.now();
-            
-            // 这里可以添加实际的交互测试逻辑
-            setTimeout(() => {
-                const interactionTime = performance.now() - startTime;
-                document.getElementById('interaction-time').textContent = interactionTime.toFixed(2) + 'ms';
-            }, 100);
-        }
-
-        // 动画测试函数
-        function testLoadAnimation() {
-            console.log('测试加载动画');
-            // 重新加载所有iframe来观察加载动画
-            ['standard-iframe', 'small-iframe', 'large-iframe'].forEach(id => {
-                reloadIframe(id);
-            });
-        }
-
-        function testHoverEffects() {
-            console.log('测试悬停效果');
-            // 这里可以添加悬停效果的测试逻辑
-        }
-
-        function testTransitions() {
-            console.log('测试过渡动画');
-            // 这里可以添加过渡动画的测试逻辑
-        }
-
-        function testThemeSwitch() {
-            console.log('测试主题切换动画');
-            // 这里可以添加主题切换的测试逻辑
-        }
-
-        function testSliderAnimation() {
-            console.log('测试滑块动画');
-            // 这里可以添加滑块动画的测试逻辑
-        }
-
-        function testSwitchAnimation() {
-            console.log('测试开关动画');
-            // 这里可以添加开关动画的测试逻辑
-        }
-
-        // 帧率监控
-        let frameCount = 0;
-        let lastTime = performance.now();
-
-        function measureFrameRate() {
-            frameCount++;
-            const currentTime = performance.now();
-            
-            if (currentTime - lastTime >= 1000) {
-                performanceData.frameRate = frameCount;
-                document.getElementById('frame-rate').textContent = frameCount + ' FPS';
-                frameCount = 0;
-                lastTime = currentTime;
+            if (width >= 1536) {
+                breakpoint = '2XL';
+                description = '超大屏幕 (≥1536px)';
+            } else if (width >= 1280) {
+                breakpoint = 'XL';
+                description = '大桌面 (≥1280px)';
+            } else if (width >= 1024) {
+                breakpoint = 'LG';
+                description = '小桌面 (≥1024px)';
+            } else if (width >= 768) {
+                breakpoint = 'MD';
+                description = '平板 (≥768px)';
+            } else if (width >= 640) {
+                breakpoint = 'SM';
+                description = '手机横屏 (≥640px)';
+            } else {
+                breakpoint = 'XS';
+                description = '手机竖屏 (<640px)';
             }
-            
-            requestAnimationFrame(measureFrameRate);
+
+            document.getElementById('breakpointIndicator').innerHTML = 
+                `${breakpoint}<br><small>${description}</small>`;
         }
 
-        // 开始帧率监控
-        measureFrameRate();
+        // 初始化
+        updateBreakpointIndicator();
 
-        // 内存使用监控（如果支持）
-        if ('memory' in performance) {
-            setInterval(() => {
-                const memory = performance.memory;
-                const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
-                document.getElementById('memory-usage').textContent = usedMB + ' MB';
-            }, 2000);
-        } else {
-            document.getElementById('memory-usage').textContent = '不支持';
-        }
+        // 监听窗口大小变化
+        window.addEventListener('resize', updateBreakpointIndicator);
 
-        console.log('响应式测试页面已加载');
+        // 添加一些交互效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为卡片添加点击效果
+            const cards = document.querySelectorAll('.card, .feature');
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                });
+            });
+
+            // 添加滚动动画
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // 观察所有卡片和特性
+            document.querySelectorAll('.card, .feature').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        });
     </script>
 </body>
 </html>

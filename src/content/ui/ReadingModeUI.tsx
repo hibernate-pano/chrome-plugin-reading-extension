@@ -240,21 +240,22 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
       >
         <Card className={cn(
           "bg-card/95 backdrop-blur-sm border shadow-2xl transition-all duration-300",
-          "min-w-[320px] max-w-[400px]",
+          "min-w-[280px] sm:min-w-[320px] md:min-w-[360px] lg:min-w-[400px]",
+          "max-w-[320px] sm:max-w-[360px] md:max-w-[400px] lg:max-w-[450px]",
           isMinimized ? "w-12 h-12" : "w-full",
           isDragging && "cursor-grabbing"
         )}>
           {isMinimized ? (
-            <CardContent className="p-3 flex items-center justify-center">
+            <CardContent className="p-2 sm:p-3 flex items-center justify-center">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsMinimized(false)}
-                    className="h-6 w-6"
+                    className="h-5 w-5 sm:h-6 sm:w-6"
                   >
-                    <span className="text-sm">📖</span>
+                    <span className="text-xs sm:text-sm">📖</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -264,29 +265,29 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
             </CardContent>
           ) : (
             <>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 sm:pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-semibold">阅读模式</span>
-                    <Badge variant="secondary" className="text-xs">
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <span className="text-xs sm:text-sm font-semibold">阅读模式</span>
+                    <Badge variant="secondary" className="text-xs px-1.5 sm:px-2 py-0.5">
                       {settings.theme === 'light' ? '☀️' : '🌙'}
                     </Badge>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-0.5 sm:space-x-1">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setShowSettings(!showSettings)}
-                          className="h-6 w-6"
+                          className="h-5 w-5 sm:h-6 sm:w-6"
                         >
                           <span className="text-xs">⚙️</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>{showSettings ? '隐藏设置' : '显示设置'}</p>
-                      </TooltipTrigger>
+                      </TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -294,14 +295,14 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                           variant="ghost"
                           size="icon"
                           onClick={() => setIsMinimized(true)}
-                          className="h-6 w-6"
+                          className="h-5 w-5 sm:h-6 sm:w-6"
                         >
                           <span className="text-xs">−</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>最小化</p>
-                      </TooltipTrigger>
+                      </TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -309,20 +310,20 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                           variant="ghost"
                           size="icon"
                           onClick={onToggle}
-                          className="h-6 w-6"
+                          className="h-5 w-5 sm:h-6 sm:w-6"
                         >
                           <span className="text-xs">✕</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>关闭阅读模式</p>
-                      </TooltipTrigger>
+                      </TooltipContent>
                     </Tooltip>
                   </div>
                 </div>
 
                 {/* 主开关 */}
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center justify-between pt-1 sm:pt-2">
                   <span className="text-xs text-muted-foreground">启用阅读模式</span>
                   <Switch
                     checked={isActive}
@@ -334,21 +335,21 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
 
               <CardContent className="pt-0">
                 {/* 快速操作 */}
-                <div className="flex items-center space-x-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-2 mb-3 sm:mb-4">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onSettingsChange('fontSize', Math.max(settings.fontSize - 1, 12))}
-                        className="flex-1"
+                        className="text-xs h-7 sm:h-8 px-2 sm:px-3"
                       >
                         A−
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>减小字体 (Ctrl+-)</p>
-                    </TooltipTrigger>
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -356,14 +357,14 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onSettingsChange('fontSize', 16)}
-                        className="flex-1"
+                        className="text-xs h-7 sm:h-8 px-2 sm:px-3"
                       >
                         重置
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>重置字体大小 (Ctrl+0)</p>
-                    </TooltipTrigger>
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -371,14 +372,14 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onSettingsChange('fontSize', Math.min(settings.fontSize + 1, 24))}
-                        className="flex-1"
+                        className="text-xs h-7 sm:h-8 px-2 sm:px-3"
                       >
                         A+
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>增大字体 (Ctrl+=)</p>
-                    </TooltipTrigger>
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -386,22 +387,22 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onSettingsChange('theme', settings.theme === 'light' ? 'dark' : 'light')}
-                        className="flex-1"
+                        className="text-xs h-7 sm:h-8 px-2 sm:px-3"
                       >
                         {settings.theme === 'light' ? '🌙' : '☀️'}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>切换主题</p>
-                    </TooltipTrigger>
+                    </TooltipContent>
                   </Tooltip>
                 </div>
 
                 {/* 详细设置 */}
                 {showSettings && (
-                  <div className="space-y-4 pt-3 border-t">
+                  <div className="space-y-3 sm:space-y-4 pt-2 sm:pt-3 border-t">
                     {/* 标签页导航 */}
-                    <div className="flex space-x-1">
+                    <div className="flex space-x-0.5 sm:space-x-1">
                       {[
                         { key: 'basic', label: '基础' },
                         { key: 'advanced', label: '高级' },
@@ -412,7 +413,7 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                           variant={activeTab === tab.key ? 'default' : 'ghost'}
                           size="sm"
                           onClick={() => setActiveTab(tab.key as any)}
-                          className="flex-1 text-xs h-7"
+                          className="flex-1 text-xs h-6 sm:h-7 px-2 sm:px-3"
                         >
                           {tab.label}
                         </Button>
@@ -421,9 +422,9 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
 
                     {/* 基础设置 */}
                     {activeTab === 'basic' && (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {/* 字体大小 */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5 sm:space-y-2">
                           <div className="flex items-center justify-between">
                             <label className="text-xs font-medium">字体大小</label>
                             <span className="text-xs text-muted-foreground">{settings.fontSize}px</span>
@@ -439,13 +440,13 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                         </div>
 
                         {/* 字体族 */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5 sm:space-y-2">
                           <label className="text-xs font-medium">字体</label>
                           <Select
                             value={settings.fontFamily}
                             onValueChange={(value) => onSettingsChange('fontFamily', value)}
                           >
-                            <SelectTrigger className="h-8 text-xs">
+                            <SelectTrigger className="h-7 sm:h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -464,7 +465,7 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                         </div>
 
                         {/* 行高 */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5 sm:space-y-2">
                           <div className="flex items-center justify-between">
                             <label className="text-xs font-medium">行高</label>
                             <span className="text-xs text-muted-foreground">{settings.lineHeight}</span>
@@ -480,9 +481,9 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                         </div>
 
                         {/* 背景色 */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5 sm:space-y-2">
                           <label className="text-xs font-medium">背景色</label>
-                          <div className="grid grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
                             {backgroundColorOptions.map((option) => (
                               <Tooltip key={option.value}>
                                 <TooltipTrigger asChild>
@@ -490,7 +491,7 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                                     variant={settings.backgroundColor === option.value ? "default" : "outline"}
                                     size="sm"
                                     onClick={() => onSettingsChange('backgroundColor', option.value)}
-                                    className="h-8 text-xs"
+                                    className="h-6 sm:h-8 text-xs px-2 sm:px-3"
                                     style={{ backgroundColor: option.color }}
                                   >
                                     {option.label}
@@ -502,6 +503,29 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                               </Tooltip>
                             ))}
                           </div>
+                        </div>
+
+                        {/* 显示图片 */}
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-medium">显示图片</label>
+                          <Switch
+                            checked={settings.showImages}
+                            onValueChange={(checked) => onSettingsChange('showImages', checked)}
+                            size="sm"
+                          />
+                        </div>
+
+                        {/* 代码设置 */}
+                        <div className="space-y-1.5 sm:space-y-2">
+                          <label className="text-xs font-medium">代码字体大小</label>
+                          <Slider
+                            value={[settings.codeFontSize]}
+                            onValueChange={(value) => onSettingsChange('codeFontSize', value[0])}
+                            min={12}
+                            max={20}
+                            step={1}
+                            className="w-full"
+                          />
                         </div>
                       </div>
                     )}
@@ -634,12 +658,12 @@ export const ReadingModeUI: React.FC<ReadingModeUIProps> = ({
                 )}
 
                 {/* 快捷键提示 */}
-                <div className="text-xs text-muted-foreground text-center pt-3 border-t">
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <span>Ctrl+R 切换</span>
-                    <span>Ctrl+/- 字体</span>
-                    <span>Ctrl+0 重置</span>
-                    <span>Esc 退出</span>
+                <div className="text-xs text-muted-foreground text-center pt-2 sm:pt-3 border-t">
+                  <div className="grid grid-cols-2 gap-1 sm:gap-2 text-center">
+                    <span className="text-xs">Ctrl+R 切换</span>
+                    <span className="text-xs">Ctrl+/- 字体</span>
+                    <span className="text-xs">Ctrl+0 重置</span>
+                    <span className="text-xs">Esc 退出</span>
                   </div>
                 </div>
               </CardContent>
