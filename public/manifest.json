@@ -20,11 +20,6 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/content/chunks/*",
-        "src/content/styles/*",
-        "workers/*",
-        "content/styles/*",
-        "content/content.css",
         "assets/*"
       ],
       "matches": [
@@ -38,7 +33,7 @@
         "<all_urls>"
       ],
       "js": [
-        "src/content/contentShadcn.js"
+        "contentShadcn.js"
       ],
       "css": [
         "assets/style.css"
@@ -47,7 +42,7 @@
     }
   ],
   "background": {
-    "service_worker": "src/background/background.js",
+    "service_worker": "background.js",
     "type": "module"
   },
   "icons": {
