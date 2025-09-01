@@ -42,13 +42,13 @@ export default defineConfig({
         entryFileNames: (chunkInfo) => {
           const name = chunkInfo.name;
           if (name === 'popup') {
-            return 'src/popup/popup.js';
+            return 'popup.js';
           } else if (name === 'background') {
-            return 'src/background/background.js';
+            return 'background.js';
           } else if (name === 'content') {
-            return 'src/content/contentShadcn.js';
+            return 'contentShadcn.js';
           } else if (name === 'contentLoader') {
-            return 'src/contentLoader/contentLoader.js';
+            return 'contentLoader.js';
           }
           return 'assets/[name]-[hash].js';
         },

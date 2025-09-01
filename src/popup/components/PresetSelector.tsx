@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
-import { Card, CardContent } from '../../ui/components/Card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ReadingPreset } from '../../storage/storage';
 
 /**
@@ -27,7 +27,7 @@ const PresetSelector: React.FC = () => {
           className={`transition-all duration-200 ${isActive ? 'border-brand-500' : ''}`}
           onClick={() => handlePresetSelect(preset.id)}
         >
-          <CardContent className="p-3">
+          <CardContent>
             <div className="flex justify-between items-start">
               <div>
                 <div className="font-medium flex items-center">
