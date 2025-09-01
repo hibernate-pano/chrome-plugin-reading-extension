@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户反馈系统测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #1f2937;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #374151;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #374151;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+        
+        button.primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        button.primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        
+        button.success {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+        
+        button.success:hover {
+            background: #059669;
+            border-color: #059669;
+        }
+        
+        button.warning {
+            background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
+        }
+        
+        button.warning:hover {
+            background: #d97706;
+            border-color: #d97706;
+        }
+        
+        button.danger {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+        
+        button.danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+        
+        .progress-demo {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .progress-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .progress-controls input[type="range"] {
+            flex: 1;
+        }
+        
+        .progress-controls input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .progress-controls label {
+            font-size: 14px;
+            color: #6b7280;
+            min-width: 60px;
+        }
+        
+        .config-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .config-item label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .config-item select,
+        .config-item input {
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .stats-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #3b82f6;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .demo-area {
+            min-height: 200px;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        
+        .demo-area.has-content {
+            border-color: #10b981;
+            background: #f0fdf4;
+            color: #065f46;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle button {
+            padding: 12px 16px;
+            border-radius: 50px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle">
+        <button onclick="toggleTheme()">🌙 切换主题</button>
+    </div>
+
+    <div class="container">
+        <h1>🧪 用户反馈系统测试</h1>
+        
+        <!-- Toast 通知测试 -->
+        <div class="section">
+            <h2>🍞 Toast 通知测试</h2>
+            <div class="button-group">
+                <button onclick="showToast('info')">信息通知</button>
+                <button class="success" onclick="showToast('success')">成功通知</button>
+                <button class="warning" onclick="showToast('warning')">警告通知</button>
+                <button class="danger" onclick="showToast('error')">错误通知</button>
+                <button class="primary" onclick="showToast('loading')">加载通知</button>
+                <button onclick="showToastWithActions()">带操作的通知</button>
+                <button onclick="showToastWithProgress()">带进度条的通知</button>
+                <button onclick="showToastAtPosition('top-left')">左上角</button>
+                <button onclick="showToastAtPosition('top-center')">顶部居中</button>
+                <button onclick="showToastAtPosition('bottom-left')">左下角</button>
+                <button onclick="showToastAtPosition('bottom-center')">底部居中</button>
+                <button onclick="showToastAtPosition('center')">屏幕中央</button>
+            </div>
+        </div>
+
+        <!-- 进度指示器测试 -->
+        <div class="section">
+            <h2>📊 进度指示器测试</h2>
+            
+            <!-- 线性进度条 -->
+            <div class="progress-demo">
+                <h3>线性进度条</h3>
+                <div class="progress-controls">
+                    <label>进度:</label>
+                    <input type="range" id="linear-progress" min="0" max="100" value="0">
+                    <input type="number" id="linear-value" min="0" max="100" value="0">
+                    <button onclick="createLinearProgress()">创建进度条</button>
+                    <button onclick="destroyProgress('linear')">销毁</button>
+                </div>
+                <div id="linear-progress-container"></div>
+            </div>
+
+            <!-- 圆形进度条 -->
+            <div class="progress-demo">
+                <h3>圆形进度条</h3>
+                <div class="progress-controls">
+                    <label>进度:</label>
+                    <input type="range" id="circular-progress" min="0" max="100" value="0">
+                    <input type="number" id="circular-value" min="0" max="100" value="0">
+                    <button onclick="createCircularProgress()">创建进度条</button>
+                    <button onclick="destroyProgress('circular')">销毁</button>
+                </div>
+                <div id="circular-progress-container"></div>
+            </div>
+
+            <!-- 步骤进度条 -->
+            <div class="progress-demo">
+                <h3>步骤进度条</h3>
+                <div class="progress-controls">
+                    <label>步骤:</label>
+                    <input type="range" id="steps-progress" min="1" max="5" value="1">
+                    <input type="number" id="steps-value" min="1" max="5" value="1">
+                    <button onclick="createStepsProgress()">创建进度条</button>
+                    <button onclick="destroyProgress('steps')">销毁</button>
+                </div>
+                <div id="steps-progress-container"></div>
+            </div>
+
+            <!-- 不确定进度条 -->
+            <div class="progress-demo">
+                <h3>不确定进度条</h3>
+                <div class="progress-controls">
+                    <button onclick="createIndeterminateProgress()">创建进度条</button>
+                    <button onclick="destroyProgress('indeterminate')">销毁</button>
+                </div>
+                <div id="indeterminate-progress-container"></div>
+            </div>
+        </div>
+
+        <!-- 便捷方法测试 -->
+        <div class="section">
+            <h2>🚀 便捷方法测试</h2>
+            <div class="button-group">
+                <button class="success" onclick="showSuccessMessage()">显示成功消息</button>
+                <button class="danger" onclick="showErrorMessage()">显示错误消息</button>
+                <button class="primary" onclick="showProgressMessage()">显示进度消息</button>
+                <button onclick="showConfirmDialog()">显示确认对话框</button>
+                <button onclick="showResultMessage(true)">显示成功结果</button>
+                <button onclick="showResultMessage(false)">显示失败结果</button>
+            </div>
+        </div>
+
+        <!-- 配置测试 -->
+        <div class="section">
+            <h2>⚙️ 配置测试</h2>
+            <div class="config-section">
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label>通知位置:</label>
+                        <select id="position-select">
+                            <option value="top-right">右上角</option>
+                            <option value="top-left">左上角</option>
+                            <option value="top-center">顶部居中</option>
+                            <option value="bottom-right">右下角</option>
+                            <option value="bottom-left">左下角</option>
+                            <option value="bottom-center">底部居中</option>
+                            <option value="center">屏幕中央</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label>最大通知数:</label>
+                        <input type="number" id="max-notifications" min="1" max="10" value="5">
+                    </div>
+                    <div class="config-item">
+                        <label>默认持续时间:</label>
+                        <input type="number" id="default-duration" min="1000" max="30000" value="5000" step="1000">
+                    </div>
+                    <div class="config-item">
+                        <label>显示进度条:</label>
+                        <select id="show-progress">
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label>可关闭:</label>
+                        <select id="dismissible">
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label>启用动画:</label>
+                        <select id="enable-animations">
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="primary" onclick="updateConfig()">更新配置</button>
+                <button onclick="resetConfig()">重置配置</button>
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="section">
+            <h2>📈 统计信息</h2>
+            <div class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-shown">0</div>
+                        <div class="stat-label">总显示数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-closed">0</div>
+                        <div class="stat-label">总关闭数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-actions">0</div>
+                        <div class="stat-label">总操作数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="active-notifications">0</div>
+                        <div class="stat-label">活跃通知</div>
+                    </div>
+                </div>
+                <button onclick="refreshStats()">刷新统计</button>
+                <button onclick="resetStats()">重置统计</button>
+            </div>
+        </div>
+
+        <!-- 管理操作 -->
+        <div class="section">
+            <h2>🔧 管理操作</h2>
+            <div class="button-group">
+                <button onclick="closeAllNotifications()">关闭所有通知</button>
+                <button onclick="destroyAllProgress()">销毁所有进度条</button>
+                <button onclick="clearAll()">清空所有</button>
+            </div>
+        </div>
+
+        <!-- 演示区域 -->
+        <div class="section">
+            <h2>🎯 演示区域</h2>
+            <div class="demo-area" id="demo-area">
+                这里将显示各种演示内容
+            </div>
+            <div class="button-group">
+                <button onclick="startDemo()">开始演示</button>
+                <button onclick="stopDemo()">停止演示</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 导入用户反馈系统
+        import feedback, { 
+            FeedbackType, 
+            NotificationPosition, 
+            ProgressType 
+        } from '../src/content/ui/feedback/index.ts';
+
+        // 全局变量
+        let currentProgressInstances = {};
+        let demoInterval = null;
+
+        // 显示Toast通知
+        window.showToast = function(type) {
+            const messages = {
+                info: '这是一条信息通知',
+                success: '操作成功完成！',
+                warning: '请注意这个警告信息',
+                error: '发生了一个错误',
+                loading: '正在处理中，请稍候...'
+            };
+
+            const titles = {
+                info: '信息',
+                success: '成功',
+                warning: '警告',
+                error: '错误',
+                loading: '加载中'
+            };
+
+            feedback[type](messages[type], { title: titles[type] });
+        };
+
+        // 显示带操作的Toast
+        window.showToastWithActions = function() {
+            feedback.info('这是一个带操作按钮的通知', {
+                title: '操作通知',
+                duration: 0,
+                actions: [
+                    {
+                        id: 'action1',
+                        label: '确认',
+                        variant: 'default',
+                        onClick: () => {
+                            feedback.success('您点击了确认按钮');
+                        }
+                    },
+                    {
+                        id: 'action2',
+                        label: '取消',
+                        variant: 'outline',
+                        onClick: () => {
+                            feedback.info('您点击了取消按钮');
+                        }
+                    }
+                ]
+            });
+        };
+
+        // 显示带进度条的Toast
+        window.showToastWithProgress = function() {
+            feedback.loading('正在处理数据...', {
+                title: '数据处理',
+                showProgress: true,
+                duration: 10000
+            });
+        };
+
+        // 在指定位置显示Toast
+        window.showToastAtPosition = function(position) {
+            feedback.info(`这是显示在${position}位置的通知`, {
+                title: '位置测试',
+                position: position
+            });
+        };
+
+        // 创建线性进度条
+        window.createLinearProgress = function() {
+            const value = parseInt(document.getElementById('linear-value').value);
+            const container = document.getElementById('linear-progress-container');
+            
+            if (currentProgressInstances.linear) {
+                currentProgressInstances.linear.destroy();
+            }
+
+            currentProgressInstances.linear = feedback.createLinearProgress({
+                value: value,
+                max: 100,
+                label: '线性进度',
+                showValue: true,
+                size: 'md',
+                variant: 'default',
+                animated: true
+            });
+
+            container.innerHTML = '<div class="demo-area has-content">线性进度条已创建</div>';
+        };
+
+        // 创建圆形进度条
+        window.createCircularProgress = function() {
+            const value = parseInt(document.getElementById('circular-value').value);
+            const container = document.getElementById('circular-progress-container');
+            
+            if (currentProgressInstances.circular) {
+                currentProgressInstances.circular.destroy();
+            }
+
+            currentProgressInstances.circular = feedback.createCircularProgress({
+                value: value,
+                max: 100,
+                label: '圆形进度',
+                showValue: true,
+                size: 'lg',
+                variant: 'success',
+                animated: true
+            });
+
+            container.innerHTML = '<div class="demo-area has-content">圆形进度条已创建</div>';
+        };
+
+        // 创建步骤进度条
+        window.createStepsProgress = function() {
+            const value = parseInt(document.getElementById('steps-value').value);
+            const container = document.getElementById('steps-progress-container');
+            
+            if (currentProgressInstances.steps) {
+                currentProgressInstances.steps.destroy();
+            }
+
+            currentProgressInstances.steps = feedback.createStepsProgress({
+                value: value,
+                max: 5,
+                label: '步骤进度',
+                showValue: true,
+                variant: 'warning',
+                animated: true
+            });
+
+            container.innerHTML = '<div class="demo-area has-content">步骤进度条已创建</div>';
+        };
+
+        // 创建不确定进度条
+        window.createIndeterminateProgress = function() {
+            const container = document.getElementById('indeterminate-progress-container');
+            
+            if (currentProgressInstances.indeterminate) {
+                currentProgressInstances.indeterminate.destroy();
+            }
+
+            currentProgressInstances.indeterminate = feedback.createIndeterminateProgress({
+                label: '不确定进度',
+                variant: 'info',
+                animated: true
+            });
+
+            container.innerHTML = '<div class="demo-area has-content">不确定进度条已创建</div>';
+        };
+
+        // 销毁进度条
+        window.destroyProgress = function(type) {
+            if (currentProgressInstances[type]) {
+                currentProgressInstances[type].destroy();
+                currentProgressInstances[type] = null;
+                
+                const container = document.getElementById(`${type}-progress-container`);
+                container.innerHTML = '';
+            }
+        };
+
+        // 显示成功消息
+        window.showSuccessMessage = function() {
+            feedback.showSuccess('操作成功', '您的操作已经成功完成！');
+        };
+
+        // 显示错误消息
+        window.showErrorMessage = function() {
+            feedback.showError('操作失败', '抱歉，操作过程中发生了错误。');
+        };
+
+        // 显示进度消息
+        window.showProgressMessage = function() {
+            feedback.showProgress('处理中', '正在处理您的请求，请稍候...');
+        };
+
+        // 显示确认对话框
+        window.showConfirmDialog = function() {
+            feedback.showConfirm(
+                '确认操作',
+                '您确定要执行这个操作吗？此操作不可撤销。',
+                () => feedback.success('操作已确认'),
+                () => feedback.info('操作已取消')
+            );
+        };
+
+        // 显示结果消息
+        window.showResultMessage = function(success) {
+            if (success) {
+                feedback.showResult(true, '操作成功', '所有任务都已完成！');
+            } else {
+                feedback.showResult(false, '操作失败', '部分任务未能完成。');
+            }
+        };
+
+        // 更新配置
+        window.updateConfig = function() {
+            const newConfig = {
+                position: document.getElementById('position-select').value,
+                maxNotifications: parseInt(document.getElementById('max-notifications').value),
+                defaultDuration: parseInt(document.getElementById('default-duration').value),
+                showProgress: document.getElementById('show-progress').value === 'true',
+                dismissible: document.getElementById('dismissible').value === 'true',
+                enableAnimations: document.getElementById('enable-animations').value === 'true'
+            };
+
+            feedback.updateConfig(newConfig);
+            feedback.success('配置已更新');
+        };
+
+        // 重置配置
+        window.resetConfig = function() {
+            const defaultConfig = {
+                position: NotificationPosition.TOP_RIGHT,
+                maxNotifications: 5,
+                defaultDuration: 5000,
+                showProgress: true,
+                dismissible: true,
+                enableAnimations: true
+            };
+
+            feedback.updateConfig(defaultConfig);
+            
+            // 重置表单
+            document.getElementById('position-select').value = 'top-right';
+            document.getElementById('max-notifications').value = '5';
+            document.getElementById('default-duration').value = '5000';
+            document.getElementById('show-progress').value = 'true';
+            document.getElementById('dismissible').value = 'true';
+            document.getElementById('enable-animations').value = 'true';
+
+            feedback.success('配置已重置');
+        };
+
+        // 刷新统计信息
+        window.refreshStats = function() {
+            const stats = feedback.getStats();
+            
+            document.getElementById('total-shown').textContent = stats.totalShown;
+            document.getElementById('total-closed').textContent = stats.totalClosed;
+            document.getElementById('total-actions').textContent = stats.totalActions;
+            document.getElementById('active-notifications').textContent = stats.totalShown - stats.totalClosed;
+        };
+
+        // 重置统计信息
+        window.resetStats = function() {
+            feedback.resetStats();
+            window.refreshStats();
+            feedback.success('统计信息已重置');
+        };
+
+        // 关闭所有通知
+        window.closeAllNotifications = function() {
+            feedback.closeAll();
+            feedback.success('所有通知已关闭');
+        };
+
+        // 销毁所有进度条
+        window.destroyAllProgress = function() {
+            Object.values(currentProgressInstances).forEach(instance => {
+                if (instance) instance.destroy();
+            });
+            currentProgressInstances = {};
+            
+            // 清空容器
+            ['linear', 'circular', 'steps', 'indeterminate'].forEach(type => {
+                const container = document.getElementById(`${type}-progress-container`);
+                if (container) container.innerHTML = '';
+            });
+            
+            feedback.success('所有进度条已销毁');
+        };
+
+        // 清空所有
+        window.clearAll = function() {
+            feedback.closeAll();
+            window.destroyAllProgress();
+            feedback.success('所有内容已清空');
+        };
+
+        // 开始演示
+        window.startDemo = function() {
+            if (demoInterval) return;
+            
+            const demoArea = document.getElementById('demo-area');
+            demoArea.innerHTML = '<div class="demo-area has-content">演示进行中...</div>';
+            
+            let step = 0;
+            demoInterval = setInterval(() => {
+                step++;
+                if (step > 10) {
+                    window.stopDemo();
+                    return;
+                }
+                
+                const progress = step * 10;
+                demoArea.innerHTML = `<div class="demo-area has-content">演示步骤 ${step}/10 (${progress}%)</div>`;
+                
+                // 显示进度Toast
+                if (step === 1) {
+                    feedback.loading('开始演示...', { title: '演示进度' });
+                } else if (step === 10) {
+                    feedback.success('演示完成！', { title: '演示进度' });
+                } else {
+                    feedback.info(`演示进行中... ${progress}%`, { title: '演示进度', duration: 1000 });
+                }
+            }, 1000);
+            
+            feedback.info('演示已开始');
+        };
+
+        // 停止演示
+        window.stopDemo = function() {
+            if (demoInterval) {
+                clearInterval(demoInterval);
+                demoInterval = null;
+                
+                const demoArea = document.getElementById('demo-area');
+                demoArea.innerHTML = '<div class="demo-area">演示已停止</div>';
+                
+                feedback.warning('演示已停止');
+            }
+        };
+
+        // 切换主题
+        window.toggleTheme = function() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            
+            const button = document.querySelector('.theme-toggle button');
+            button.textContent = newTheme === 'dark' ? '☀️ 切换主题' : '🌙 切换主题';
+            
+            feedback.info(`已切换到${newTheme === 'dark' ? '暗色' : '亮色'}主题`);
+        };
+
+        // 设置进度条控制事件
+        ['linear', 'circular', 'steps'].forEach(type => {
+            const rangeInput = document.getElementById(`${type}-progress`);
+            const numberInput = document.getElementById(`${type}-value`);
+            
+            if (rangeInput && numberInput) {
+                rangeInput.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    numberInput.value = value;
+                    
+                    if (currentProgressInstances[type]) {
+                        currentProgressInstances[type].update(parseInt(value));
+                    }
+                });
+                
+                numberInput.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    rangeInput.value = value;
+                    
+                    if (currentProgressInstances[type]) {
+                        currentProgressInstances[type].update(parseInt(value));
+                    }
+                });
+            }
+        });
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            feedback.info('用户反馈系统测试页面已加载', { title: '系统状态' });
+            window.refreshStats();
+        });
+
+        // 页面卸载前清理
+        window.addEventListener('beforeunload', function() {
+            if (demoInterval) {
+                clearInterval(demoInterval);
+            }
+            feedback.closeAll();
+        });
+    </script>
+</body>
+</html>

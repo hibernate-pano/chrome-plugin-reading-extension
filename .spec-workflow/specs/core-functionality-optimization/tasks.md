@@ -1,6 +1,6 @@
 # Tasks Document
 
-- [ ] 1. 内容提取引擎优化
+- [x] 1. 内容提取引擎优化
   - File: src/content/extractors/ReadabilityExtractor.ts
   - 重构ReadabilityExtractor，提升性能和稳定性
   - 添加错误处理和降级策略
@@ -8,7 +8,7 @@
   - _Leverage: @mozilla/readability, 现有提取器基础_
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 2. 内容处理器优化
+- [x] 2. 内容处理器优化
   - File: src/content/processors/
   - 优化内容处理流程，提升处理效率
   - 改进代码块、图片等特殊内容的处理
@@ -16,7 +16,7 @@
   - _Leverage: 现有处理器, 内容处理工具_
   - _Requirements: 1.4, 1.5_
 
-- [ ] 3. 阅读模式UI重构
+- [x] 3. 阅读模式UI重构
   - File: src/content/ui/ReadingModeUI.tsx
   - 重构阅读模式界面，使用现代设计语言
   - 优化主题系统和排版引擎
@@ -24,7 +24,7 @@
   - _Leverage: Shadcn/UI组件, Tailwind CSS_
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 4. 浮动UI组件优化
+- [x] 4. 浮动UI组件优化
   - File: src/content/ui/FloatingSettingsPanel.tsx, FloatingSettingsButton.tsx
   - 优化浮动设置面板和按钮的交互体验
   - 改进响应式布局和触摸支持
@@ -32,7 +32,7 @@
   - _Leverage: 现有浮动UI组件, 响应式设计_
   - _Requirements: 2.4, 2.5_
 
-- [ ] 5. 性能监控系统
+- [x] 5. 性能监控系统
   - File: src/content/features/performance/
   - 实现性能监控和优化机制
   - 添加内存管理和CPU使用监控
@@ -40,7 +40,7 @@
   - _Leverage: Performance API, Web Workers_
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 6. 按需加载优化
+- [x] 6. 按需加载优化
   - File: src/content/dynamic/
   - 优化动态加载机制，提升加载性能
   - 实现智能预加载和缓存策略
@@ -48,7 +48,7 @@
   - _Leverage: 现有动态加载系统, 缓存机制_
   - _Requirements: 3.4, 3.5_
 
-- [ ] 7. 错误处理系统
+- [x] 7. 错误处理系统
   - File: src/content/error-handling/
   - 实现友好的错误处理和用户反馈
   - 添加错误恢复和降级策略
@@ -56,7 +56,7 @@
   - _Leverage: 错误边界组件, 通知系统_
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 8. 用户反馈系统
+- [x] 8. 用户反馈系统
   - File: src/content/ui/feedback/
   - 实现用户反馈和通知系统
   - 添加进度指示和状态提示

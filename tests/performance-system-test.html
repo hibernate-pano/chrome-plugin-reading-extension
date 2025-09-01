@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性能监控系统测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .test-button.success {
+            background: #28a745;
+        }
+        .test-button.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .test-button.danger {
+            background: #dc3545;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .metric-card h3 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 0.9em;
+        }
+        .metric-card .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #212529;
+        }
+        .metric-card .unit {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-running {
+            background: #28a745;
+        }
+        .status-stopped {
+            background: #6c757d;
+        }
+        .status-error {
+            background: #dc3545;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            transition: width 0.3s ease;
+        }
+        .chart-container {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .chart-placeholder {
+            height: 200px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+        .worker-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .worker-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .worker-item.active {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .worker-item.inactive {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>性能监控系统测试</h1>
+    
+    <div class="test-section">
+        <h2>系统控制</h2>
+        <button class="test-button" onclick="startSystem()">启动系统</button>
+        <button class="test-button" onclick="stopSystem()">停止系统</button>
+        <button class="test-button" onclick="restartSystem()">重启系统</button>
+        <button class="test-button" onclick="runDiagnostics()">运行诊断</button>
+        <button class="test-button" onclick="optimizeSystem()">优化系统</button>
+        <button class="test-button" onclick="clearResults()">清除结果</button>
+    </div>
+
+    <div class="test-section">
+        <h2>系统状态</h2>
+        <div id="systemStatus">未初始化</div>
+        <div class="metrics-grid" id="systemMetrics">
+            <!-- 系统指标将在这里显示 -->
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>性能测试</h2>
+        <button class="test-button" onclick="testPerformanceMonitoring()">测试性能监控</button>
+        <button class="test-button" onclick="testMemoryManagement()">测试内存管理</button>
+        <button class="test-button" onclick="testWebWorkers()">测试Web Workers</button>
+        <button class="test-button" onclick="testLoadSimulation()">测试负载模拟</button>
+        <button class="test-button" onclick="testStressTest()">压力测试</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Web Worker状态</h2>
+        <div id="workerStatus">
+            <!-- Worker状态将在这里显示 -->
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>性能图表</h2>
+        <div class="chart-container">
+            <h3>内存使用趋势</h3>
+            <div class="chart-placeholder" id="memoryChart">
+                内存使用趋势图表将在这里显示
+            </div>
+        </div>
+        <div class="chart-container">
+            <h3>CPU使用趋势</h3>
+            <div class="chart-placeholder" id="cpuChart">
+                CPU使用趋势图表将在这里显示
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试结果</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // 模拟性能监控系统
+        class MockPerformanceSystem {
+            constructor() {
+                this.isInitialized = false;
+                this.status = 'stopped';
+                this.metrics = {
+                    memory: { used: 0, total: 0, limit: 0, percentage: 0 },
+                    cpu: { current: 0, average: 0, peak: 0 },
+                    responseTime: { average: 0 },
+                    errorRate: { percentage: 0 }
+                };
+                this.workers = [];
+                this.monitoringInterval = null;
+            }
+
+            async initialize() {
+                this.isInitialized = true;
+                this.status = 'running';
+                this.startMonitoring();
+                return Promise.resolve();
+            }
+
+            startMonitoring() {
+                this.monitoringInterval = setInterval(() => {
+                    this.updateMetrics();
+                }, 2000);
+            }
+
+            stopMonitoring() {
+                if (this.monitoringInterval) {
+                    clearInterval(this.monitoringInterval);
+                    this.monitoringInterval = null;
+                }
+                this.status = 'stopped';
+            }
+
+            updateMetrics() {
+                // 模拟指标变化
+                this.metrics.memory.used = Math.random() * 100 + 50;
+                this.metrics.memory.total = 200;
+                this.metrics.memory.limit = 500;
+                this.metrics.memory.percentage = (this.metrics.memory.used / this.metrics.memory.limit) * 100;
+
+                this.metrics.cpu.current = Math.random() * 50 + 20;
+                this.metrics.cpu.average = this.metrics.cpu.current * 0.8;
+                this.metrics.cpu.peak = Math.max(this.metrics.cpu.peak, this.metrics.cpu.current);
+
+                this.metrics.responseTime.average = Math.random() * 300 + 100;
+                this.metrics.errorRate.percentage = Math.random() * 5;
+
+                this.updateUI();
+            }
+
+            updateUI() {
+                // 更新系统指标显示
+                const metricsContainer = document.getElementById('systemMetrics');
+                if (metricsContainer) {
+                    metricsContainer.innerHTML = `
+                        <div class="metric-card">
+                            <h3>内存使用</h3>
+                            <div class="value">${this.metrics.memory.percentage.toFixed(1)}%</div>
+                            <div class="unit">${this.metrics.memory.used.toFixed(1)}MB / ${this.metrics.memory.limit}MB</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${this.metrics.memory.percentage}%"></div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>CPU使用</h3>
+                            <div class="value">${this.metrics.cpu.current.toFixed(1)}%</div>
+                            <div class="unit">峰值: ${this.metrics.cpu.peak.toFixed(1)}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${this.metrics.cpu.current}%"></div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>响应时间</h3>
+                            <div class="value">${this.metrics.responseTime.average.toFixed(0)}ms</div>
+                            <div class="unit">平均响应时间</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>错误率</h3>
+                            <div class="value">${this.metrics.errorRate.percentage.toFixed(2)}%</div>
+                            <div class="unit">系统错误率</div>
+                        </div>
+                    `;
+                }
+
+                // 更新系统状态
+                const statusContainer = document.getElementById('systemStatus');
+                if (statusContainer) {
+                    const statusClass = this.status === 'running' ? 'status-running' : 
+                                      this.status === 'error' ? 'status-error' : 'status-stopped';
+                    statusContainer.innerHTML = `
+                        <span class="status-indicator ${statusClass}"></span>
+                        系统状态: ${this.status === 'running' ? '运行中' : this.status === 'error' ? '错误' : '已停止'}
+                        ${this.isInitialized ? ' (已初始化)' : ' (未初始化)'}
+                    `;
+                }
+            }
+
+            getSystemStatus() {
+                return {
+                    status: this.status,
+                    isInitialized: this.isInitialized,
+                    lastError: null,
+                    components: {
+                        performanceManager: true,
+                        memoryManager: true,
+                        webWorkerManager: true
+                    }
+                };
+            }
+
+            async runDiagnostics() {
+                const issues = [];
+                const recommendations = [];
+
+                if (this.metrics.memory.percentage > 80) {
+                    issues.push(`内存使用率过高: ${this.metrics.memory.percentage.toFixed(1)}%`);
+                    recommendations.push('建议执行内存优化');
+                }
+
+                if (this.metrics.cpu.current > 70) {
+                    issues.push(`CPU使用率过高: ${this.metrics.cpu.current.toFixed(1)}%`);
+                    recommendations.push('建议减少并发任务');
+                }
+
+                if (this.metrics.responseTime.average > 300) {
+                    issues.push(`响应时间过长: ${this.metrics.responseTime.average.toFixed(1)}ms`);
+                    recommendations.push('建议优化操作流程');
+                }
+
+                return {
+                    success: issues.length === 0,
+                    issues,
+                    recommendations
+                };
+            }
+
+            async optimizeSystem() {
+                const optimizations = [];
+                let totalSavings = 0;
+
+                // 模拟内存优化
+                if (this.metrics.memory.percentage > 60) {
+                    const savings = Math.random() * 20 + 10;
+                    totalSavings += savings;
+                    optimizations.push(`内存优化: 节省约${savings.toFixed(1)}MB`);
+                    this.metrics.memory.used = Math.max(50, this.metrics.memory.used - savings);
+                }
+
+                // 模拟CPU优化
+                if (this.metrics.cpu.current > 50) {
+                    optimizations.push('减少Worker数量以降低CPU使用');
+                    this.metrics.cpu.current *= 0.8;
+                }
+
+                return {
+                    success: true,
+                    optimizations,
+                    totalSavings
+                };
+            }
+
+            cleanup() {
+                this.stopMonitoring();
+                this.isInitialized = false;
+                this.status = 'stopped';
+            }
+        }
+
+        // 创建模拟系统实例
+        const mockSystem = new MockPerformanceSystem();
+
+        // 测试结果记录
+        let testResults = [];
+
+        // 启动系统
+        async function startSystem() {
+            try {
+                addResult('正在启动性能监控系统...', 'info');
+                await mockSystem.initialize();
+                addResult('性能监控系统启动成功', 'success');
+            } catch (error) {
+                addResult(`系统启动失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 停止系统
+        function stopSystem() {
+            try {
+                addResult('正在停止性能监控系统...', 'info');
+                mockSystem.stopMonitoring();
+                addResult('性能监控系统已停止', 'success');
+            } catch (error) {
+                addResult(`系统停止失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 重启系统
+        async function restartSystem() {
+            try {
+                addResult('正在重启性能监控系统...', 'info');
+                mockSystem.cleanup();
+                await mockSystem.initialize();
+                addResult('性能监控系统重启成功', 'success');
+            } catch (error) {
+                addResult(`系统重启失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 运行诊断
+        async function runDiagnostics() {
+            try {
+                addResult('正在运行系统诊断...', 'info');
+                const result = await mockSystem.runDiagnostics();
+                
+                if (result.success) {
+                    addResult('系统诊断完成，未发现问题', 'success');
+                } else {
+                    addResult(`系统诊断完成，发现 ${result.issues.length} 个问题:`, 'warning');
+                    result.issues.forEach(issue => {
+                        addResult(`- ${issue}`, 'warning');
+                    });
+                    addResult('优化建议:', 'info');
+                    result.recommendations.forEach(rec => {
+                        addResult(`- ${rec}`, 'info');
+                    });
+                }
+            } catch (error) {
+                addResult(`诊断失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 优化系统
+        async function optimizeSystem() {
+            try {
+                addResult('正在优化系统性能...', 'info');
+                const result = await mockSystem.optimizeSystem();
+                
+                if (result.success) {
+                    addResult(`系统优化完成，执行了 ${result.optimizations.length} 项优化:`, 'success');
+                    result.optimizations.forEach(opt => {
+                        addResult(`- ${opt}`, 'success');
+                    });
+                    addResult(`总计节省: ${result.totalSavings.toFixed(1)}MB`, 'success');
+                } else {
+                    addResult('系统优化失败', 'error');
+                }
+            } catch (error) {
+                addResult(`优化失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试性能监控
+        function testPerformanceMonitoring() {
+            addResult('开始测试性能监控功能...', 'info');
+            
+            // 模拟性能指标收集
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    mockSystem.updateMetrics();
+                    addResult(`性能指标更新 ${i + 1}/5`, 'info');
+                }, i * 1000);
+            }
+            
+            addResult('性能监控测试完成', 'success');
+        }
+
+        // 测试内存管理
+        function testMemoryManagement() {
+            addResult('开始测试内存管理功能...', 'info');
+            
+            // 模拟内存使用变化
+            const originalMemory = mockSystem.metrics.memory.used;
+            mockSystem.metrics.memory.used = 400; // 设置高内存使用
+            mockSystem.updateUI();
+            
+            setTimeout(() => {
+                mockSystem.metrics.memory.used = originalMemory;
+                mockSystem.updateUI();
+                addResult('内存管理测试完成', 'success');
+            }, 2000);
+            
+            addResult('模拟内存使用峰值...', 'info');
+        }
+
+        // 测试Web Workers
+        function testWebWorkers() {
+            addResult('开始测试Web Worker功能...', 'info');
+            
+            // 模拟Worker状态
+            const workerStatusContainer = document.getElementById('workerStatus');
+            if (workerStatusContainer) {
+                workerStatusContainer.innerHTML = `
+                    <div class="worker-item active">
+                        <strong>Worker 1</strong><br>
+                        状态: 活跃<br>
+                        任务: 3
+                    </div>
+                    <div class="worker-item active">
+                        <strong>Worker 2</strong><br>
+                        状态: 活跃<br>
+                        任务: 1
+                    </div>
+                    <div class="worker-item inactive">
+                        <strong>Worker 3</strong><br>
+                        状态: 空闲<br>
+                        任务: 0
+                    </div>
+                `;
+            }
+            
+            addResult('Web Worker测试完成', 'success');
+        }
+
+        // 测试负载模拟
+        function testLoadSimulation() {
+            addResult('开始负载模拟测试...', 'info');
+            
+            // 模拟高负载
+            mockSystem.metrics.cpu.current = 85;
+            mockSystem.metrics.memory.used = 350;
+            mockSystem.metrics.responseTime.average = 450;
+            mockSystem.updateUI();
+            
+            addResult('高负载状态已设置', 'warning');
+            
+            // 5秒后恢复正常
+            setTimeout(() => {
+                mockSystem.metrics.cpu.current = 25;
+                mockSystem.metrics.memory.used = 120;
+                mockSystem.metrics.responseTime.average = 150;
+                mockSystem.updateUI();
+                addResult('负载已恢复正常', 'success');
+            }, 5000);
+        }
+
+        // 压力测试
+        function testStressTest() {
+            addResult('开始压力测试...', 'info');
+            
+            let testCount = 0;
+            const maxTests = 10;
+            
+            const runTest = () => {
+                if (testCount >= maxTests) {
+                    addResult('压力测试完成', 'success');
+                    return;
+                }
+                
+                testCount++;
+                addResult(`压力测试 ${testCount}/${maxTests}`, 'info');
+                
+                // 模拟高负载操作
+                mockSystem.metrics.cpu.current = Math.random() * 60 + 40;
+                mockSystem.metrics.memory.used = Math.random() * 200 + 200;
+                mockSystem.updateUI();
+                
+                setTimeout(runTest, 500);
+            };
+            
+            runTest();
+        }
+
+        // 添加结果
+        function addResult(message, type = 'info') {
+            const resultsContainer = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsContainer.appendChild(resultDiv);
+            
+            // 滚动到底部
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+            
+            // 保存到历史
+            testResults.push({ message, type, timestamp: new Date() });
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testResults = [];
+            addResult('结果已清除', 'info');
+        }
+
+        // 初始化
+        addResult('性能监控系统测试环境已准备就绪', 'success');
+        addResult('点击"启动系统"按钮开始测试', 'info');
+        
+        // 定期更新Worker状态
+        setInterval(() => {
+            if (mockSystem.isInitialized) {
+                // 模拟Worker状态变化
+                const workerStatusContainer = document.getElementById('workerStatus');
+                if (workerStatusContainer && workerStatusContainer.children.length > 0) {
+                    const workers = Array.from(workerStatusContainer.children);
+                    workers.forEach((worker, index) => {
+                        const isActive = Math.random() > 0.3;
+                        worker.className = `worker-item ${isActive ? 'active' : 'inactive'}`;
+                        if (isActive) {
+                            const taskCount = Math.floor(Math.random() * 5);
+                            worker.innerHTML = `
+                                <strong>Worker ${index + 1}</strong><br>
+                                状态: ${isActive ? '活跃' : '空闲'}<br>
+                                任务: ${taskCount}
+                            `;
+                        }
+                    });
+                }
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

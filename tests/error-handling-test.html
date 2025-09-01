@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>错误处理系统测试</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; background: #f8f9fa; border: 1px solid #e9ecef; }
+        .status.success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .status.error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .status.info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .metric-card { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #007bff; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #007bff; }
+        .metric-label { color: #6c757d; font-size: 14px; margin-top: 5px; }
+        .log-container { max-height: 300px; overflow-y: auto; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; }
+        .log-entry { margin-bottom: 5px; padding: 2px 0; }
+        .log-entry.info { color: #17a2b8; }
+        .log-entry.success { color: #28a745; }
+        .log-entry.warning { color: #ffc107; }
+        .log-entry.error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>🛡️ 错误处理系统测试</h1>
+    
+    <div class="container">
+        <h2>系统控制</h2>
+        <div class="controls">
+            <button id="initBtn" class="btn-success">初始化系统</button>
+            <button id="stopBtn" class="btn-danger" disabled>停止系统</button>
+            <button id="optimizeBtn" class="btn-warning">优化系统</button>
+        </div>
+        <div id="systemStatus" class="status info">系统未初始化</div>
+    </div>
+    
+    <div class="grid">
+        <div class="container">
+            <h3>🚨 错误测试</h3>
+            <div class="controls">
+                <button id="testExtractionErrorBtn">内容提取错误</button>
+                <button id="testRenderingErrorBtn">渲染错误</button>
+                <button id="testPerformanceErrorBtn">性能错误</button>
+                <button id="testSystemErrorBtn">系统错误</button>
+            </div>
+            <div id="errorTestStatus" class="status info">等待测试...</div>
+        </div>
+        
+        <div class="container">
+            <h3>🔔 通知测试</h3>
+            <div class="controls">
+                <button id="testSuccessNotificationBtn" class="btn-success">成功通知</button>
+                <button id="testWarningNotificationBtn" class="btn-warning">警告通知</button>
+                <button id="testInfoNotificationBtn">信息通知</button>
+                <button id="testLoadingNotificationBtn">加载通知</button>
+            </div>
+            <div id="notificationTestStatus" class="status info">等待测试...</div>
+        </div>
+        
+        <div class="container">
+            <h3>⚙️ 配置测试</h3>
+            <div class="controls">
+                <button id="testNotificationPositionBtn">切换通知位置</button>
+                <button id="testNotificationThemeBtn">切换主题</button>
+                <button id="testErrorConfigBtn">修改错误配置</button>
+            </div>
+            <div id="configTestStatus" class="status info">等待测试...</div>
+        </div>
+        
+        <div class="container">
+            <h3>📊 统计信息</h3>
+            <div class="controls">
+                <button id="refreshStatsBtn">刷新统计</button>
+                <button id="generateReportBtn">生成报告</button>
+            </div>
+            <div id="statsStatus" class="status info">等待统计...</div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h3>📈 实时监控</h3>
+        <div class="controls">
+            <button id="startMonitoringBtn">开始监控</button>
+            <button id="stopMonitoringBtn" disabled>停止监控</button>
+        </div>
+        <div id="monitoringStatus" class="status info">监控未启动</div>
+        <div id="realTimeMetrics" class="grid">
+            <div class="metric-card">
+                <div class="metric-value" id="totalErrors">0</div>
+                <div class="metric-label">总错误数</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="sessionErrors">0</div>
+                <div class="metric-label">会话错误数</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="lastErrorTime">-</div>
+                <div class="metric-label">最后错误时间</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="recoveryRate">0%</div>
+                <div class="metric-label">恢复率</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h3>📋 系统日志</h3>
+        <div class="controls">
+            <button id="clearLogBtn">清空日志</button>
+            <button id="exportLogBtn">导出日志</button>
+        </div>
+        <div id="logContainer" class="log-container"></div>
+    </div>
+    
+    <div class="container">
+        <h3>📊 综合报告</h3>
+        <div class="controls">
+            <button id="generateComprehensiveReportBtn">生成综合报告</button>
+            <button id="copyReportBtn">复制报告</button>
+        </div>
+        <div id="comprehensiveReport" class="status info">点击"生成综合报告"按钮查看详细报告</div>
+    </div>
+
+    <script type="module">
+        // 模拟错误处理系统（在实际环境中会导入真实的模块）
+        class MockErrorHandlingSystem {
+            constructor() {
+                this.isInitialized = false;
+                this.isMonitoring = false;
+                this.logs = [];
+                this.monitoringInterval = null;
+                this.notificationPositionIndex = 0;
+                this.notificationThemeIndex = 0;
+                this.notificationPositions = ['top-right', 'top-left', 'bottom-right', 'bottom-left', 'center'];
+                this.notificationThemes = ['light', 'dark', 'auto'];
+                
+                this.setupEventListeners();
+                this.log('系统已创建', 'info');
+            }
+            
+            setupEventListeners() {
+                // 系统控制
+                document.getElementById('initBtn').addEventListener('click', () => this.initialize());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stop());
+                document.getElementById('optimizeBtn').addEventListener('click', () => this.optimize());
+                
+                // 错误测试
+                document.getElementById('testExtractionErrorBtn').addEventListener('click', () => this.testExtractionError());
+                document.getElementById('testRenderingErrorBtn').addEventListener('click', () => this.testRenderingError());
+                document.getElementById('testPerformanceErrorBtn').addEventListener('click', () => this.testPerformanceError());
+                document.getElementById('testSystemErrorBtn').addEventListener('click', () => this.testSystemError());
+                
+                // 通知测试
+                document.getElementById('testSuccessNotificationBtn').addEventListener('click', () => this.testSuccessNotification());
+                document.getElementById('testWarningNotificationBtn').addEventListener('click', () => this.testWarningNotification());
+                document.getElementById('testInfoNotificationBtn').addEventListener('click', () => this.testInfoNotification());
+                document.getElementById('testLoadingNotificationBtn').addEventListener('click', () => this.testLoadingNotification());
+                
+                // 配置测试
+                document.getElementById('testNotificationPositionBtn').addEventListener('click', () => this.testNotificationPosition());
+                document.getElementById('testNotificationThemeBtn').addEventListener('click', () => this.testNotificationTheme());
+                document.getElementById('testErrorConfigBtn').addEventListener('click', () => this.testErrorConfig());
+                
+                // 统计和报告
+                document.getElementById('refreshStatsBtn').addEventListener('click', () => this.refreshStats());
+                document.getElementById('generateReportBtn').addEventListener('click', () => this.generateReport());
+                
+                // 监控
+                document.getElementById('startMonitoringBtn').addEventListener('click', () => this.startMonitoring());
+                document.getElementById('stopMonitoringBtn').addEventListener('click', () => this.stopMonitoring());
+                
+                // 日志
+                document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
+                document.getElementById('exportLogBtn').addEventListener('click', () => this.exportLog());
+                
+                // 综合报告
+                document.getElementById('generateComprehensiveReportBtn').addEventListener('click', () => this.generateComprehensiveReport());
+                document.getElementById('copyReportBtn').addEventListener('click', () => this.copyReport());
+            }
+            
+            async initialize() {
+                try {
+                    this.log('正在初始化系统...', 'info');
+                    
+                    // 模拟初始化过程
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    this.isInitialized = true;
+                    this.updateSystemStatus('系统已初始化', 'success');
+                    this.updateButtonStates();
+                    
+                    this.log('系统初始化完成', 'success');
+                    
+                    // 自动启动监控
+                    this.startMonitoring();
+                    
+                } catch (error) {
+                    this.log(`初始化失败: ${error.message}`, 'error');
+                    this.updateSystemStatus(`初始化失败: ${error.message}`, 'error');
+                }
+            }
+            
+            stop() {
+                this.isInitialized = false;
+                this.stopMonitoring();
+                this.updateSystemStatus('系统已停止', 'info');
+                this.updateButtonStates();
+                this.log('系统已停止', 'warning');
+            }
+            
+            async optimize() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法优化', 'warning');
+                    return;
+                }
+                
+                this.log('正在优化系统...', 'info');
+                
+                // 模拟优化过程
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                this.log('系统优化完成', 'success');
+                this.updateSystemStatus('系统已优化', 'success');
+            }
+            
+            // 错误测试方法
+            testExtractionError() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试内容提取错误...', 'info');
+                
+                // 模拟内容提取错误
+                setTimeout(() => {
+                    this.log('内容提取错误测试完成', 'success');
+                    this.updateErrorTestStatus('内容提取错误测试完成', 'success');
+                    this.updateMetrics();
+                }, 800);
+            }
+            
+            testRenderingError() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试渲染错误...', 'info');
+                
+                // 模拟渲染错误
+                setTimeout(() => {
+                    this.log('渲染错误测试完成', 'success');
+                    this.updateErrorTestStatus('渲染错误测试完成', 'success');
+                    this.updateMetrics();
+                }, 600);
+            }
+            
+            testPerformanceError() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试性能错误...', 'info');
+                
+                // 模拟性能错误
+                setTimeout(() => {
+                    this.log('性能错误测试完成', 'success');
+                    this.updateErrorTestStatus('性能错误测试完成', 'success');
+                    this.updateMetrics();
+                }, 700);
+            }
+            
+            testSystemError() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试系统错误...', 'info');
+                
+                // 模拟系统错误
+                setTimeout(() => {
+                    this.log('系统错误测试完成', 'success');
+                    this.updateErrorTestStatus('系统错误测试完成', 'success');
+                    this.updateMetrics();
+                }, 900);
+            }
+            
+            // 通知测试方法
+            testSuccessNotification() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试成功通知...', 'info');
+                
+                setTimeout(() => {
+                    this.log('成功通知测试完成', 'success');
+                    this.updateNotificationTestStatus('成功通知测试完成', 'success');
+                }, 500);
+            }
+            
+            testWarningNotification() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试警告通知...', 'info');
+                
+                setTimeout(() => {
+                    this.log('警告通知测试完成', 'success');
+                    this.updateNotificationTestStatus('警告通知测试完成', 'success');
+                }, 500);
+            }
+            
+            testInfoNotification() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试信息通知...', 'info');
+                
+                setTimeout(() => {
+                    this.log('信息通知测试完成', 'success');
+                    this.updateNotificationTestStatus('信息通知测试完成', 'success');
+                }, 500);
+            }
+            
+            testLoadingNotification() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试加载通知...', 'info');
+                
+                setTimeout(() => {
+                    this.log('加载通知测试完成', 'success');
+                    this.updateNotificationTestStatus('加载通知测试完成', 'success');
+                }, 500);
+            }
+            
+            // 配置测试方法
+            testNotificationPosition() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.notificationPositionIndex = (this.notificationPositionIndex + 1) % this.notificationPositions.length;
+                const newPosition = this.notificationPositions[this.notificationPositionIndex];
+                
+                this.log(`正在测试通知位置: ${newPosition}`, 'info');
+                
+                setTimeout(() => {
+                    this.log(`通知位置测试完成: ${newPosition}`, 'success');
+                    this.updateConfigTestStatus(`通知位置已切换到: ${newPosition}`, 'success');
+                }, 300);
+            }
+            
+            testNotificationTheme() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.notificationThemeIndex = (this.notificationThemeIndex + 1) % this.notificationThemes.length;
+                const newTheme = this.notificationThemes[this.notificationThemeIndex];
+                
+                this.log(`正在测试通知主题: ${newTheme}`, 'info');
+                
+                setTimeout(() => {
+                    this.log(`通知主题测试完成: ${newTheme}`, 'success');
+                    this.updateConfigTestStatus(`通知主题已切换到: ${newTheme}`, 'success');
+                }, 300);
+            }
+            
+            testErrorConfig() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法测试', 'warning');
+                    return;
+                }
+                
+                this.log('正在测试错误配置...', 'info');
+                
+                setTimeout(() => {
+                    this.log('错误配置测试完成', 'success');
+                    this.updateConfigTestStatus('错误配置已更新', 'success');
+                }, 400);
+            }
+            
+            // 统计和报告方法
+            refreshStats() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法刷新统计', 'warning');
+                    return;
+                }
+                
+                this.log('正在刷新统计信息...', 'info');
+                
+                setTimeout(() => {
+                    this.updateMetrics();
+                    this.log('统计信息已刷新', 'success');
+                    this.updateStatsStatus('统计信息已刷新', 'success');
+                }, 300);
+            }
+            
+            generateReport() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法生成报告', 'warning');
+                    return;
+                }
+                
+                this.log('正在生成报告...', 'info');
+                
+                setTimeout(() => {
+                    this.log('报告生成完成', 'success');
+                    this.updateStatsStatus('报告已生成', 'success');
+                }, 600);
+            }
+            
+            // 监控方法
+            startMonitoring() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法启动监控', 'warning');
+                    return;
+                }
+                
+                this.isMonitoring = true;
+                this.updateMonitoringStatus('监控已启动', 'success');
+                this.updateButtonStates();
+                
+                // 启动实时监控
+                this.monitoringInterval = setInterval(() => {
+                    this.updateRealTimeMetrics();
+                }, 1000);
+                
+                this.log('实时监控已启动', 'success');
+            }
+            
+            stopMonitoring() {
+                this.isMonitoring = false;
+                this.updateMonitoringStatus('监控已停止', 'info');
+                this.updateButtonStates();
+                
+                if (this.monitoringInterval) {
+                    clearInterval(this.monitoringInterval);
+                    this.monitoringInterval = null;
+                }
+                
+                this.log('实时监控已停止', 'warning');
+            }
+            
+            // 日志方法
+            clearLog() {
+                this.logs = [];
+                document.getElementById('logContainer').innerHTML = '';
+                this.log('日志已清空', 'info');
+            }
+            
+            exportLog() {
+                const logText = this.logs.map(log => `[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message}`).join('\n');
+                const blob = new Blob([logText], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `error-handling-log-${new Date().toISOString().slice(0, 19)}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.log('日志已导出', 'success');
+            }
+            
+            // 综合报告方法
+            generateComprehensiveReport() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法生成综合报告', 'warning');
+                    return;
+                }
+                
+                this.log('正在生成综合报告...', 'info');
+                
+                setTimeout(() => {
+                    const report = this.generateMockComprehensiveReport();
+                    document.getElementById('comprehensiveReport').textContent = report;
+                    document.getElementById('comprehensiveReport').className = 'status success';
+                    this.log('综合报告生成完成', 'success');
+                }, 800);
+            }
+            
+            copyReport() {
+                const reportElement = document.getElementById('comprehensiveReport');
+                const report = reportElement.textContent;
+                
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(report).then(() => {
+                        this.log('报告已复制到剪贴板', 'success');
+                    }).catch(() => {
+                        this.log('复制失败，请手动复制', 'warning');
+                    });
+                } else {
+                    // 降级方案
+                    const textArea = document.createElement('textarea');
+                    textArea.value = report;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    this.log('报告已复制到剪贴板', 'success');
+                }
+            }
+            
+            // 辅助方法
+            updateSystemStatus(message, type) {
+                const statusElement = document.getElementById('systemStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateErrorTestStatus(message, type) {
+                const statusElement = document.getElementById('errorTestStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateNotificationTestStatus(message, type) {
+                const statusElement = document.getElementById('notificationTestStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateConfigTestStatus(message, type) {
+                const statusElement = document.getElementById('configTestStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateStatsStatus(message, type) {
+                const statusElement = document.getElementById('statsStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateMonitoringStatus(message, type) {
+                const statusElement = document.getElementById('monitoringStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateButtonStates() {
+                const initBtn = document.getElementById('initBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const startMonitoringBtn = document.getElementById('startMonitoringBtn');
+                const stopMonitoringBtn = document.getElementById('stopMonitoringBtn');
+                
+                if (this.isInitialized) {
+                    initBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    startMonitoringBtn.disabled = false;
+                } else {
+                    initBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    startMonitoringBtn.disabled = true;
+                    stopMonitoringBtn.disabled = true;
+                }
+                
+                if (this.isMonitoring) {
+                    startMonitoringBtn.disabled = true;
+                    stopMonitoringBtn.disabled = false;
+                } else {
+                    startMonitoringBtn.disabled = !this.isInitialized;
+                    stopMonitoringBtn.disabled = true;
+                }
+            }
+            
+            updateMetrics() {
+                // 更新实时指标
+                document.getElementById('totalErrors').textContent = Math.floor(Math.random() * 20) + 10;
+                document.getElementById('sessionErrors').textContent = Math.floor(Math.random() * 8) + 2;
+                document.getElementById('lastErrorTime').textContent = new Date().toLocaleTimeString();
+                document.getElementById('recoveryRate').textContent = (Math.random() * 30 + 70).toFixed(1) + '%';
+            }
+            
+            updateRealTimeMetrics() {
+                // 更新实时指标
+                document.getElementById('totalErrors').textContent = Math.floor(Math.random() * 20) + 10;
+                document.getElementById('sessionErrors').textContent = Math.floor(Math.random() * 8) + 2;
+                document.getElementById('lastErrorTime').textContent = new Date().toLocaleTimeString();
+                document.getElementById('recoveryRate').textContent = (Math.random() * 30 + 70).toFixed(1) + '%';
+            }
+            
+            generateMockComprehensiveReport() {
+                return `统一错误处理系统综合报告
+============================
+
+错误统计:
+- 总错误数: ${Math.floor(Math.random() * 20) + 10}
+- 会话错误数: ${Math.floor(Math.random() * 8) + 2}
+- 最后错误时间: ${new Date().toLocaleString()}
+
+按类型统计:
+- extraction: ${Math.floor(Math.random() * 5) + 2} 次
+- rendering: ${Math.floor(Math.random() * 4) + 1} 次
+- performance: ${Math.floor(Math.random() * 3) + 1} 次
+- system: ${Math.floor(Math.random() * 6) + 2} 次
+
+按严重程度统计:
+- low: ${Math.floor(Math.random() * 8) + 3} 次
+- medium: ${Math.floor(Math.random() * 6) + 2} 次
+- high: ${Math.floor(Math.random() * 4) + 1} 次
+- critical: ${Math.floor(Math.random() * 2)} 次
+
+通知配置:
+- 位置: ${this.notificationPositions[this.notificationPositionIndex]}
+- 最大通知数: 5
+- 默认持续时间: 5000ms
+- 启用声音: true
+- 启用振动: true
+- 主题: ${this.notificationThemes[this.notificationThemeIndex]}
+
+错误处理配置:
+- 启用错误报告: true
+- 启用自动恢复: true
+- 启用用户通知: true
+- 最大重试次数: 3
+- 重试延迟: 1000ms
+- 错误日志保留时间: 86400000ms
+- 严重程度阈值: medium
+
+报告生成时间: ${new Date().toLocaleString()}`;
+            }
+            
+            log(message, level = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                this.logs.push({ message, level, timestamp });
+                
+                const logContainer = document.getElementById('logContainer');
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${level}`;
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                logContainer.appendChild(logEntry);
+                
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                if (this.logs.length > 100) {
+                    this.logs.shift();
+                    if (logContainer.firstChild) {
+                        logContainer.removeChild(logContainer.firstChild);
+                    }
+                }
+            }
+        }
+        
+        const system = new MockErrorHandlingSystem();
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            system.log('页面加载完成，测试系统已就绪', 'success');
+        });
+    </script>
+</body>
+</html>

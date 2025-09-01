@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态加载系统测试</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; background: #f8f9fa; border: 1px solid #e9ecef; }
+        .status.success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .status.error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .status.info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🚀 动态加载系统测试</h1>
+    
+    <div class="container">
+        <h2>系统控制</h2>
+        <div class="controls">
+            <button id="initBtn">初始化系统</button>
+            <button id="stopBtn" disabled>停止系统</button>
+            <button id="optimizeBtn">优化系统</button>
+        </div>
+        <div id="systemStatus" class="status info">系统未初始化</div>
+    </div>
+    
+    <div class="container">
+        <h3>模块加载测试</h3>
+        <div class="controls">
+            <button id="loadModuleBtn">加载模块</button>
+            <select id="moduleType">
+                <option value="reader-mode">阅读模式</option>
+                <option value="content-extraction">内容提取</option>
+                <option value="performance">性能监控</option>
+            </select>
+        </div>
+        <div id="loaderStatus" class="status info">等待加载...</div>
+    </div>
+    
+    <div class="container">
+        <h3>预加载测试</h3>
+        <div class="controls">
+            <button id="startPreloadBtn">启动预加载</button>
+            <button id="stopPreloadBtn" disabled>停止预加载</button>
+        </div>
+        <div id="preloadStatus" class="status info">预加载未启动</div>
+    </div>
+    
+    <div class="container">
+        <h3>缓存测试</h3>
+        <div class="controls">
+            <button id="setCacheBtn">设置缓存</button>
+            <button id="getCacheBtn">获取缓存</button>
+            <button id="clearCacheBtn">清空缓存</button>
+        </div>
+        <div id="cacheStatus" class="status info">缓存未初始化</div>
+    </div>
+    
+    <div class="container">
+        <h3>系统日志</h3>
+        <div class="controls">
+            <button id="clearLogBtn">清空日志</button>
+        </div>
+        <div id="logContainer" style="max-height: 300px; overflow-y: auto; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px;"></div>
+    </div>
+
+    <script>
+        class MockDynamicLoadingSystem {
+            constructor() {
+                this.isInitialized = false;
+                this.logs = [];
+                this.setupEventListeners();
+                this.log('系统已创建', 'info');
+            }
+            
+            setupEventListeners() {
+                document.getElementById('initBtn').addEventListener('click', () => this.initialize());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stop());
+                document.getElementById('optimizeBtn').addEventListener('click', () => this.optimize());
+                document.getElementById('loadModuleBtn').addEventListener('click', () => this.loadModule());
+                document.getElementById('startPreloadBtn').addEventListener('click', () => this.startPreload());
+                document.getElementById('stopPreloadBtn').addEventListener('click', () => this.stopPreload());
+                document.getElementById('setCacheBtn').addEventListener('click', () => this.setCache());
+                document.getElementById('getCacheBtn').addEventListener('click', () => this.getCache());
+                document.getElementById('clearCacheBtn').addEventListener('click', () => this.clearCache());
+                document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
+            }
+            
+            async initialize() {
+                try {
+                    this.log('正在初始化系统...', 'info');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    this.isInitialized = true;
+                    this.updateSystemStatus('系统已初始化', 'success');
+                    this.updateButtonStates();
+                    this.log('系统初始化完成', 'success');
+                } catch (error) {
+                    this.log(`初始化失败: ${error.message}`, 'error');
+                }
+            }
+            
+            stop() {
+                this.isInitialized = false;
+                this.updateSystemStatus('系统已停止', 'info');
+                this.updateButtonStates();
+                this.log('系统已停止', 'warning');
+            }
+            
+            async optimize() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法优化', 'warning');
+                    return;
+                }
+                this.log('正在优化系统...', 'info');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                this.log('系统优化完成', 'success');
+            }
+            
+            async loadModule() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法加载模块', 'warning');
+                    return;
+                }
+                const moduleType = document.getElementById('moduleType').value;
+                this.log(`正在加载模块: ${moduleType}`, 'info');
+                try {
+                    await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
+                    this.log(`模块加载成功: ${moduleType}`, 'success');
+                    this.updateLoaderStatus(`模块 ${moduleType} 加载成功`, 'success');
+                } catch (error) {
+                    this.log(`模块加载失败: ${moduleType}`, 'error');
+                }
+            }
+            
+            startPreload() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法启动预加载', 'warning');
+                    return;
+                }
+                this.log('预加载策略已启动', 'success');
+                this.updatePreloadStatus('预加载已启动', 'success');
+                this.updateButtonStates();
+            }
+            
+            stopPreload() {
+                this.log('预加载策略已停止', 'warning');
+                this.updatePreloadStatus('预加载已停止', 'info');
+                this.updateButtonStates();
+            }
+            
+            setCache() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法设置缓存', 'warning');
+                    return;
+                }
+                const key = `test-${Date.now()}`;
+                this.log(`正在设置缓存: ${key}`, 'info');
+                setTimeout(() => {
+                    this.log(`缓存设置成功: ${key}`, 'success');
+                    this.updateCacheStatus(`缓存设置成功: ${key}`, 'success');
+                }, 300);
+            }
+            
+            getCache() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法获取缓存', 'warning');
+                    return;
+                }
+                this.log('正在获取缓存...', 'info');
+                setTimeout(() => {
+                    this.log('缓存获取成功', 'success');
+                    this.updateCacheStatus('缓存获取成功', 'success');
+                }, 200);
+            }
+            
+            clearCache() {
+                if (!this.isInitialized) {
+                    this.log('系统未初始化，无法清空缓存', 'warning');
+                    return;
+                }
+                this.log('正在清空缓存...', 'info');
+                setTimeout(() => {
+                    this.log('缓存已清空', 'success');
+                    this.updateCacheStatus('缓存已清空', 'success');
+                }, 400);
+            }
+            
+            updateSystemStatus(message, type) {
+                const statusElement = document.getElementById('systemStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateLoaderStatus(message, type) {
+                const statusElement = document.getElementById('loaderStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updatePreloadStatus(message, type) {
+                const statusElement = document.getElementById('preloadStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateCacheStatus(message, type) {
+                const statusElement = document.getElementById('cacheStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            updateButtonStates() {
+                const initBtn = document.getElementById('initBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const startPreloadBtn = document.getElementById('startPreloadBtn');
+                const stopPreloadBtn = document.getElementById('stopPreloadBtn');
+                
+                if (this.isInitialized) {
+                    initBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    startPreloadBtn.disabled = false;
+                } else {
+                    initBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    startPreloadBtn.disabled = true;
+                    stopPreloadBtn.disabled = true;
+                }
+            }
+            
+            log(message, level = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                this.logs.push({ message, level, timestamp });
+                
+                const logContainer = document.getElementById('logContainer');
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${level}`;
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                logContainer.appendChild(logEntry);
+                
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                if (this.logs.length > 100) {
+                    this.logs.shift();
+                    if (logContainer.firstChild) {
+                        logContainer.removeChild(logContainer.firstChild);
+                    }
+                }
+            }
+            
+            clearLog() {
+                this.logs = [];
+                document.getElementById('logContainer').innerHTML = '';
+                this.log('日志已清空', 'info');
+            }
+        }
+        
+        const system = new MockDynamicLoadingSystem();
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            system.log('页面加载完成，测试系统已就绪', 'success');
+        });
+    </script>
+</body>
+</html>

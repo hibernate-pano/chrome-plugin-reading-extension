@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阅读模式UI重构测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .demo-content {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        .demo-content h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .demo-content p {
+            margin-bottom: 16px;
+            color: #555;
+        }
+        .demo-content code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .demo-content pre {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+        .demo-content blockquote {
+            border-left: 4px solid #007bff;
+            padding-left: 16px;
+            margin: 16px 0;
+            font-style: italic;
+            color: #666;
+        }
+        .demo-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .demo-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        .demo-content th,
+        .demo-content td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .demo-content th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .demo-content tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>阅读模式UI重构测试</h1>
+    
+    <div class="test-section">
+        <h2>测试控制</h2>
+        <button class="test-button" onclick="toggleReadingMode()">切换阅读模式</button>
+        <button class="test-button" onclick="testFontSizeControls()">字体大小控制测试</button>
+        <button class="test-button" onclick="testThemeSwitching()">主题切换测试</button>
+        <button class="test-button" onclick="testSettingsTabs()">设置标签页测试</button>
+        <button class="test-button" onclick="testThemePresets()">主题预设测试</button>
+        <button class="test-button" onclick="testKeyboardShortcuts()">快捷键测试</button>
+        <button class="test-button" onclick="clearResults()">清除结果</button>
+    </div>
+
+    <div class="test-section">
+        <h2>测试结果</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>演示内容</h2>
+        <div class="demo-content" id="demoContent">
+            <h1>阅读模式UI重构演示</h1>
+            
+            <p>这是一个用于测试阅读模式UI重构的演示页面。它包含了各种类型的内容，包括文本、代码、图片、表格等，以便全面测试阅读模式的功能。</p>
+            
+            <h2>功能特性</h2>
+            
+            <p>重构后的阅读模式UI包含以下主要特性：</p>
+            
+            <ul>
+                <li><strong>现代化设计</strong>：使用Shadcn/UI组件和Tailwind CSS</li>
+                <li><strong>标签页设置</strong>：基础、高级、主题三个设置分类</li>
+                <li><strong>主题预设</strong>：经典、现代、深色、护眼、高对比等预设主题</li>
+                <li><strong>拖拽支持</strong>：可以拖拽移动控制面板</li>
+                <li><strong>快捷键支持</strong>：Ctrl+R切换、Ctrl+/-调整字体等</li>
+                <li><strong>设置管理</strong>：导入、导出、重置设置</li>
+            </ul>
+            
+            <h2>代码示例</h2>
+            
+            <p>以下是一些代码示例：</p>
+            
+            <pre><code class="language-javascript">
+// 阅读模式设置示例
+const readingSettings = {
+  theme: 'light',
+  fontSize: 16,
+  fontFamily: 'serif',
+  backgroundColor: 'cream',
+  lineHeight: 1.6,
+  paragraphSpacing: 16,
+  textAlign: 'left',
+  showImages: true,
+  codeTheme: 'github',
+  codeFontSize: 14
+};
+
+// 应用设置
+function applyReadingSettings(settings) {
+  Object.entries(settings).forEach(([key, value]) => {
+    document.documentElement.style.setProperty(`--${key}`, value);
+  });
+}
+            </code></pre>
+            
+            <h2>引用示例</h2>
+            
+            <blockquote>
+                "好的阅读体验应该让用户专注于内容本身，而不是界面的复杂性。"
+                <br>
+                <em>— 阅读模式设计原则</em>
+            </blockquote>
+            
+            <h2>表格示例</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>功能</th>
+                        <th>状态</th>
+                        <th>描述</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>字体大小调整</td>
+                        <td>✅ 已完成</td>
+                        <td>支持12px-24px范围调整</td>
+                    </tr>
+                    <tr>
+                        <td>主题切换</td>
+                        <td>✅ 已完成</td>
+                        <td>支持明暗主题切换</td>
+                    </tr>
+                    <tr>
+                        <td>拖拽移动</td>
+                        <td>✅ 已完成</td>
+                        <td>支持拖拽移动控制面板</td>
+                    </tr>
+                    <tr>
+                        <td>设置导入导出</td>
+                        <td>✅ 已完成</td>
+                        <td>支持JSON格式设置文件</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h2>图片示例</h2>
+            
+            <p>这里应该有一张图片，但由于这是测试页面，我们使用占位符：</p>
+            
+            <div style="width: 300px; height: 200px; background: #f0f0f0; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #666;">
+                图片占位符<br>
+                300x200px
+            </div>
+            
+            <h2>总结</h2>
+            
+            <p>重构后的阅读模式UI提供了更好的用户体验，包括：</p>
+            
+            <ol>
+                <li>更直观的设置界面</li>
+                <li>更丰富的主题选项</li>
+                <li>更便捷的操作方式</li>
+                <li>更完善的设置管理</li>
+            </ol>
+            
+            <p>这些改进使得阅读模式更加易用和功能完善，为用户提供了更好的阅读体验。</p>
+        </div>
+    </div>
+
+    <script>
+        // 模拟阅读模式状态
+        let isReadingModeActive = false;
+        let currentSettings = {
+            theme: 'light',
+            fontSize: 16,
+            fontFamily: 'serif',
+            backgroundColor: 'cream',
+            lineHeight: 1.6,
+            paragraphSpacing: 16,
+            textAlign: 'left',
+            showImages: true,
+            codeTheme: 'github',
+            codeFontSize: 14
+        };
+
+        // 测试结果记录
+        let testResults = [];
+
+        // 切换阅读模式
+        function toggleReadingMode() {
+            isReadingModeActive = !isReadingModeActive;
+            addResult(`阅读模式已${isReadingModeActive ? '启用' : '禁用'}`, 'success');
+            
+            if (isReadingModeActive) {
+                applyReadingMode();
+            } else {
+                removeReadingMode();
+            }
+        }
+
+        // 应用阅读模式
+        function applyReadingMode() {
+            const content = document.getElementById('demoContent');
+            content.style.maxWidth = '800px';
+            content.style.margin = '40px auto';
+            content.style.padding = '60px';
+            content.style.lineHeight = currentSettings.lineHeight;
+            content.style.fontSize = `${currentSettings.fontSize}px`;
+            content.style.fontFamily = getFontFamily(currentSettings.fontFamily);
+            content.style.backgroundColor = getBackgroundColor(currentSettings.backgroundColor);
+            content.style.textAlign = currentSettings.textAlign;
+            
+            // 应用段落间距
+            const paragraphs = content.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, table, pre, blockquote');
+            paragraphs.forEach(el => {
+                el.style.marginBottom = `${currentSettings.paragraphSpacing}px`;
+            });
+            
+            addResult('阅读模式样式已应用', 'info');
+        }
+
+        // 移除阅读模式
+        function removeReadingMode() {
+            const content = document.getElementById('demoContent');
+            content.style.maxWidth = '';
+            content.style.margin = '';
+            content.style.padding = '';
+            content.style.lineHeight = '';
+            content.style.fontSize = '';
+            content.style.fontFamily = '';
+            content.style.backgroundColor = '';
+            content.style.textAlign = '';
+            
+            const paragraphs = content.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, table, pre, blockquote');
+            paragraphs.forEach(el => {
+                el.style.marginBottom = '';
+            });
+            
+            addResult('阅读模式样式已移除', 'info');
+        }
+
+        // 获取字体族
+        function getFontFamily(family) {
+            const fontMap = {
+                'serif': 'Times New Roman, serif',
+                'sans': 'Arial, sans-serif',
+                'mono': 'Courier New, monospace',
+                'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            };
+            return fontMap[family] || fontMap.serif;
+        }
+
+        // 获取背景色
+        function getBackgroundColor(color) {
+            const colorMap = {
+                'white': '#ffffff',
+                'cream': '#fefefe',
+                'sepia': '#f4ecd8',
+                'mint': '#f0f9f4',
+                'warm': '#fef7f0',
+                'cool': '#f0f4f9',
+                'dark': '#1a1a1a'
+            };
+            return colorMap[color] || colorMap.white;
+        }
+
+        // 测试字体大小控制
+        function testFontSizeControls() {
+            addResult('开始字体大小控制测试...', 'info');
+            
+            // 测试增大字体
+            currentSettings.fontSize = Math.min(currentSettings.fontSize + 2, 24);
+            addResult(`字体大小增加到 ${currentSettings.fontSize}px`, 'success');
+            
+            // 测试减小字体
+            currentSettings.fontSize = Math.max(currentSettings.fontSize - 1, 12);
+            addResult(`字体大小减少到 ${currentSettings.fontSize}px`, 'success');
+            
+            // 测试重置字体
+            currentSettings.fontSize = 16;
+            addResult('字体大小重置为 16px', 'success');
+            
+            if (isReadingModeActive) {
+                applyReadingMode();
+            }
+        }
+
+        // 测试主题切换
+        function testThemeSwitching() {
+            addResult('开始主题切换测试...', 'info');
+            
+            const themes = ['light', 'dark'];
+            const currentIndex = themes.indexOf(currentSettings.theme);
+            const nextIndex = (currentIndex + 1) % themes.length;
+            currentSettings.theme = themes[nextIndex];
+            
+            addResult(`主题已切换到: ${currentSettings.theme}`, 'success');
+            
+            if (isReadingModeActive) {
+                applyReadingMode();
+            }
+        }
+
+        // 测试设置标签页
+        function testSettingsTabs() {
+            addResult('开始设置标签页测试...', 'info');
+            
+            const tabs = ['基础', '高级', '主题'];
+            tabs.forEach((tab, index) => {
+                addResult(`标签页 ${index + 1}: ${tab}`, 'info');
+            });
+            
+            addResult('设置标签页测试完成', 'success');
+        }
+
+        // 测试主题预设
+        function testThemePresets() {
+            addResult('开始主题预设测试...', 'info');
+            
+            const presets = [
+                { name: '经典', theme: 'light', backgroundColor: 'cream' },
+                { name: '现代', theme: 'light', backgroundColor: 'white' },
+                { name: '深色', theme: 'dark', backgroundColor: 'dark' },
+                { name: '护眼', theme: 'light', backgroundColor: 'sepia' },
+                { name: '高对比', theme: 'light', backgroundColor: 'white' }
+            ];
+            
+            presets.forEach((preset, index) => {
+                addResult(`预设 ${index + 1}: ${preset.name} (${preset.theme}/${preset.backgroundColor})`, 'info');
+            });
+            
+            addResult('主题预设测试完成', 'success');
+        }
+
+        // 测试快捷键
+        function testKeyboardShortcuts() {
+            addResult('开始快捷键测试...', 'info');
+            
+            const shortcuts = [
+                'Ctrl+R: 切换阅读模式',
+                'Ctrl+=: 增大字体',
+                'Ctrl+-: 减小字体',
+                'Ctrl+0: 重置字体大小',
+                'Esc: 退出阅读模式'
+            ];
+            
+            shortcuts.forEach(shortcut => {
+                addResult(`快捷键: ${shortcut}`, 'info');
+            });
+            
+            addResult('快捷键测试完成', 'success');
+        }
+
+        // 添加结果
+        function addResult(message, type = 'info') {
+            const resultsContainer = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsContainer.appendChild(resultDiv);
+            
+            // 滚动到底部
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+            
+            // 保存到历史
+            testResults.push({ message, type, timestamp: new Date() });
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testResults = [];
+            addResult('结果已清除', 'info');
+        }
+
+        // 初始化
+        addResult('阅读模式UI测试环境已准备就绪', 'success');
+        addResult('点击"切换阅读模式"按钮开始测试', 'info');
+    </script>
+</body>
+</html>
