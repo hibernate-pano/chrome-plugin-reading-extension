@@ -69,9 +69,11 @@ pnpm run build:popup     # 仅构建弹出页面
 ```
 chrome-plugin-reading-extension/
 ├── src/                  # 源代码
+│   ├── components/       # UI组件系统 (Shadcn/UI)
+│   │   └── ui/          # 统一UI组件库
 │   ├── content/          # 内容脚本
 │   │   ├── features/     # 功能模块
-│   │   ├── ui/           # UI组件
+│   │   ├── ui/           # 内容相关UI组件
 │   │   ├── extractors/   # 内容提取器
 │   │   ├── workers/      # Web Workers
 │   │   └── contentLoader.ts  # 内容脚本入口（最小化注入）
@@ -83,7 +85,7 @@ chrome-plugin-reading-extension/
 ├── public/               # 静态资源
 │   └── manifest.json     # 扩展清单
 ├── dist/                 # 构建输出目录
-├── vite.*.config.ts      # Vite配置文件
+├── vite.config.ts        # Vite配置文件
 ├── package.json          # 项目依赖
 └── README.md             # 项目文档
 ```

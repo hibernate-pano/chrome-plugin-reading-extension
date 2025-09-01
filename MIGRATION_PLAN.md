@@ -6,13 +6,13 @@
 
 ## 迁移策略
 
-### 第一阶段：核心组件统一 ✅
+### 第一阶段：核心组件统一 ✅ (已完成)
 
 - [x] Button - 已扩展 Shadcn/UI Button，添加 loading、icon 支持
 - [x] Card - 已扩展 Shadcn/UI Card，添加变体和 padding 选项
-- [ ] Dialog - 使用 Shadcn/UI Dialog，功能更完整
-- [ ] Switch - 使用 Shadcn/UI Switch
-- [ ] Slider - 使用 Shadcn/UI Slider
+- [x] Dialog - 已使用 Shadcn/UI Dialog，功能更完整
+- [x] Switch - 已使用 Shadcn/UI Switch
+- [x] Slider - 已使用 Shadcn/UI Slider
 
 ### 第二阶段：高级组件迁移
 
