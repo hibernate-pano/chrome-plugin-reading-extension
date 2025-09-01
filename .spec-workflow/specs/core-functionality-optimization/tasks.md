@@ -72,7 +72,7 @@
   - _Leverage: Tailwind CSS响应式工具, 现有样式_
   - _Requirements: 2.5, 5.1, 5.2_
 
-- [-] 10. 无障碍功能完善
+- [x] 10. 无障碍功能完善
   - File: src/content/ui/accessibility/
   - 完善键盘导航和屏幕阅读器支持
   - 添加高对比度模式和焦点管理
@@ -80,7 +80,7 @@
   - _Leverage: Radix UI无障碍功能, ARIA标签_
   - _Requirements: 5.3, 5.4_
 
-- [ ] 11. 性能测试和优化
+- [x] 11. 性能测试和优化
   - File: tests/performance/
   - 实现性能基准测试
   - 优化关键性能指标
@@ -88,7 +88,7 @@
   - _Leverage: 性能测试工具, 基准测试_
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 12. 集成测试和验证
+- [x] 12. 集成测试和验证
   - File: tests/integration/
   - 实现端到端功能测试
   - 验证所有功能模块的集成
