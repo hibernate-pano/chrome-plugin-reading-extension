@@ -266,8 +266,8 @@ export const FloatingUIManager: React.FC<FloatingUIManagerProps> = ({
   // 控制设置按钮的显示
   useEffect(() => {
     // 在阅读模式中始终显示设置按钮
-    setShowSettingsButton(true);
-  }, []);
+    setShowSettingsButton(isReadingModeActive);
+  }, [isReadingModeActive]);
 
   return (
     <>
