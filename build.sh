@@ -28,21 +28,18 @@ rm -rf dist
 echo -e "${YELLOW}Installing dependencies...${NC}"
 pnpm install
 
-# 复制静态文件
-echo -e "${YELLOW}Copying static files...${NC}"
-cp -r public/* dist/
-
 # 构建各个部分
 echo -e "${YELLOW}Building extension...${NC}"
 
+echo -e "${GREEN}Building Popup, Background...${NC}"
+pnpm exec vite build
+
 echo -e "${GREEN}Building Content Script...${NC}"
-pnpm exec vite build --config vite.content-shadcn.config.ts
+pnpm exec vite build --config vite.content.config.ts
 
-echo -e "${GREEN}Building Background Script...${NC}"
-pnpm exec vite build --config vite.background.config.ts
-
-echo -e "${GREEN}Building Popup...${NC}"
-pnpm exec vite build --config vite.popup.config.ts
+# 复制静态文件
+echo -e "${YELLOW}Copying static files...${NC}"
+cp -r public/* dist/
 
 # 完成
 echo -e "${BLUE}======================================${NC}"

@@ -19,6 +19,9 @@ export default defineConfig({
       'turndown': resolve(__dirname, 'node_modules/turndown/lib/turndown.browser.cjs')
     }
   },
+  css: {
+    postcss: './postcss.config.js'
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: false,
@@ -28,11 +31,7 @@ export default defineConfig({
         // Popup 入口
         popup: resolve(__dirname, 'index.html'),
         // Background 入口
-        background: resolve(__dirname, 'src/background/background.ts'),
-        // Content 入口 (使用 Shadcn 版本)
-        content: resolve(__dirname, 'src/content/contentShadcn.ts'),
-        // Content Loader 入口 (备用)
-        contentLoader: resolve(__dirname, 'src/content/contentLoader.ts')
+        background: resolve(__dirname, 'src/background/background.ts')
       },
       output: {
         globals: {
@@ -46,10 +45,6 @@ export default defineConfig({
             return 'popup.js';
           } else if (name === 'background') {
             return 'background.js';
-          } else if (name === 'content') {
-            return 'contentShadcn.js';
-          } else if (name === 'contentLoader') {
-            return 'contentLoader.js';
           }
           return 'assets/[name]-[hash].js';
         },
@@ -133,27 +128,23 @@ export default defineConfig({
     },
     
     // 其他构建优化
-    sourcemap: process.env.NODE_ENV !== 'production', 
+    sourcemap: process.env.NODE_ENV !== 'production',
     assetsInlineLimit: 4096, // 4kb以下文件内联为base64
     reportCompressedSize: false, // 禁止报告压缩大小以提高构建性能
-    target: 'esnext',
+    target: 'es2020',
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false,
-        drop_debugger: true
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: true,
+        pure_funcs: process.env.NODE_ENV === 'production' ? ['console.log', 'console.debug', 'console.info'] : []
       }
     }
   },
-  
+
   // 开发服务器配置
   server: {
     port: 3000,
     open: false
-  },
-  
-  // CSS 配置
-  css: {
-    postcss: './postcss.config.js'
   }
 });

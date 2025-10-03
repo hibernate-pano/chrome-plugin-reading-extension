@@ -35,9 +35,6 @@
       "js": [
         "contentShadcn.js"
       ],
-      "css": [
-        "assets/style.css"
-      ],
       "run_at": "document_end"
     }
   ],
