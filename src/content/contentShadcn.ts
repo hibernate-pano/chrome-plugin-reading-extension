@@ -9,6 +9,7 @@ import { MESSAGE_TYPES } from '../constants';
 import { UserSettings } from '../types';
 
 // 导入样式
+import './styles/contentTailwind.css';
 import './styles/readingMode.css';
 
 // 全局状态

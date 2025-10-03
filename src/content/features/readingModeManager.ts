@@ -6,7 +6,7 @@
 import { UserSettings } from '../../types';
 import { getStorage, setStorage, StorageKeys } from '../../storage/storage';
 import { MESSAGE_TYPES } from '../../constants';
-import { mountFloatingUI } from '../ui/FloatingUIManager';
+import { mountNewFloatingUI } from '../ui/NewFloatingUIManager';
 
 export class ReadingModeManager {
   private isActive = false;
@@ -39,7 +39,7 @@ export class ReadingModeManager {
   private updateStyles(): void {
     if (!this.styleElement) return;
 
-    const { fontSize, lineHeight, paragraphSpacing, fontFamily, backgroundColor, theme } = this.settings;
+    const { fontSize, lineHeight, paragraphSpacing, fontFamily, pageWidth } = this.settings;
 
     const cssVariables = `
       :root {
@@ -47,6 +47,7 @@ export class ReadingModeManager {
         --reading-line-height: ${lineHeight};
         --reading-paragraph-spacing: ${paragraphSpacing}px;
         --reading-font-family: ${fontFamily};
+        --reading-page-width: ${pageWidth}px;
       }
     `;
 
@@ -146,6 +147,11 @@ export class ReadingModeManager {
 
     if (this.isActive && this.readerContainer) {
       this.applySettingsToContainer();
+    }
+
+    // 重要：更新浮动UI以同步新的设置值
+    if (this.isActive && this.floatingUICleanup) {
+      this.mountFloatingUI();
     }
   }
 
@@ -253,7 +259,7 @@ export class ReadingModeManager {
       this.floatingUICleanup();
     }
 
-    this.floatingUICleanup = mountFloatingUI({
+    this.floatingUICleanup = mountNewFloatingUI({
       isReadingModeActive: this.isActive,
       settings: this.settings,
       onSettingsChange: (key: keyof UserSettings, value: any) => {

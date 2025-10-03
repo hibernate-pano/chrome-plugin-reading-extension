@@ -16,7 +16,7 @@
   font-size: var(--reading-font-size, 16px);
   color: var(--reading-text-color, hsl(var(--foreground)));
   background-color: var(--reading-bg-color, hsl(var(--background)));
-  max-width: 800px;
+  max-width: var(--reading-page-width, 800px);
   margin: 0 auto;
   padding: 2rem;
   min-height: 100vh;
