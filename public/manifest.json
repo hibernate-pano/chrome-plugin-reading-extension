@@ -20,7 +20,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "assets/*"
+        "assets/*",
+        "workers/*"
       ],
       "matches": [
         "<all_urls>"

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Worker CSP 修复测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    h2 {
+      color: #666;
+      font-size: 18px;
+      margin-top: 0;
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    .button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    .button:hover {
+      background: #0056b3;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .steps {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    .steps ol {
+      margin: 10px 0 0 0;
+      padding-left: 20px;
+    }
+    .steps li {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Worker CSP 修复验证</h1>
+  
+  <div class="steps">
+    <strong>⚠️ 重要提示：请先完成以下步骤</strong>
+    <ol>
+      <li>打开 <code>chrome://extensions/</code></li>
+      <li>找到 "AI Reading Extension"</li>
+      <li><strong>完全删除扩展</strong>（点击"移除"）</li>
+      <li>点击"加载已解压的扩展程序"</li>
+      <li>选择 <code>dist</code> 目录</li>
+      <li>回到本页面，点击下方测试按钮</li>
+    </ol>
+  </div>
+
+  <div class="test-card">
+    <h2>测试 1: 检查 Worker 文件可访问性</h2>
+    <button class="button" onclick="testWorkerAccess()">运行测试</button>
+    <div id="test1-result"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>测试 2: 创建 Worker 实例</h2>
+    <button class="button" onclick="testWorkerCreation()">运行测试</button>
+    <div id="test2-result"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>测试 3: Worker 通信测试</h2>
+    <button class="button" onclick="testWorkerCommunication()">运行测试</button>
+    <div id="test3-result"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>测试 4: 检查 Console 错误</h2>
+    <p>打开开发者工具的 Console 标签，检查是否有以下错误：</p>
+    <pre>Refused to create a worker from 'blob:...'</pre>
+    <p>如果没有看到上述错误，说明修复成功！✅</p>
+  </div>
+
+  <script>
+    function testWorkerAccess() {
+      const resultDiv = document.getElementById('test1-result');
+      resultDiv.innerHTML = '<div class="result info">正在测试...</div>';
+      
+      const workerPaths = [
+        'workers/dataProcessing.worker.js',
+        'workers/contentExtraction.worker.js',
+        'workers/markdown.worker.js'
+      ];
+
+      let results = [];
+      let completed = 0;
+
+      workerPaths.forEach(path => {
+        const url = chrome.runtime.getURL(path);
+        
+        fetch(url)
+          .then(response => {
+            if (response.ok) {
+              results.push(`✅ ${path} - 可访问`);
+            } else {
+              results.push(`❌ ${path} - HTTP ${response.status}`);
+            }
+          })
+          .catch(error => {
+            results.push(`❌ ${path} - ${error.message}`);
+          })
+          .finally(() => {
+            completed++;
+            if (completed === workerPaths.length) {
+              const allSuccess = results.every(r => r.startsWith('✅'));
+              const className = allSuccess ? 'success' : 'error';
+              resultDiv.innerHTML = `<div class="result ${className}"><pre>${results.join('\n')}</pre></div>`;
+            }
+          });
+      });
+    }
+
+    function testWorkerCreation() {
+      const resultDiv = document.getElementById('test2-result');
+      
+      try {
+        const workerUrl = chrome.runtime.getURL('workers/dataProcessing.worker.js');
+        console.log('Worker URL:', workerUrl);
+        
+        const worker = new Worker(workerUrl);
+        
+        resultDiv.innerHTML = `<div class="result success">✅ Worker 创建成功！<br>URL: ${workerUrl}</div>`;
+        
+        // 清理
+        worker.terminate();
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="result error">❌ Worker 创建失败：<br>${error.message}<br><br>Stack: ${error.stack}</div>`;
+      }
+    }
+
+    function testWorkerCommunication() {
+      const resultDiv = document.getElementById('test3-result');
+      resultDiv.innerHTML = '<div class="result info">正在测试 Worker 通信...</div>';
+      
+      try {
+        const workerUrl = chrome.runtime.getURL('workers/dataProcessing.worker.js');
+        const worker = new Worker(workerUrl);
+        
+        const timeout = setTimeout(() => {
+          worker.terminate();
+          resultDiv.innerHTML = '<div class="result error">❌ Worker 响应超时（5秒）</div>';
+        }, 5000);
+        
+        worker.onmessage = (e) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          resultDiv.innerHTML = `<div class="result success">✅ Worker 通信成功！<br>响应数据: <pre>${JSON.stringify(e.data, null, 2)}</pre></div>`;
+        };
+        
+        worker.onerror = (e) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          resultDiv.innerHTML = `<div class="result error">❌ Worker 错误：<br>${e.message}</div>`;
+        };
+        
+        // 发送测试消息
+        worker.postMessage({
+          id: 'test-1',
+          type: 'process-data',
+          data: { test: 'Hello from test page!' }
+        });
+        
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="result error">❌ 测试失败：<br>${error.message}</div>`;
+      }
+    }
+
+    // 页面加载时显示扩展信息
+    window.addEventListener('load', () => {
+      console.log('Chrome Runtime ID:', chrome.runtime.id);
+      console.log('Extension Base URL:', chrome.runtime.getURL(''));
+    });
+  </script>
+</body>
+</html>
