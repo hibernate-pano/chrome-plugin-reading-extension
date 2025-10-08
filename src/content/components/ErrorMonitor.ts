@@ -4,7 +4,7 @@
  */
 
 import { ErrorType } from './RetryManager';
-import { ErrorMessage, ErrorContext } from './ErrorMessageManager';
+import { ErrorContext } from './ErrorMessageManager';
 
 export interface ErrorEvent {
   id: string;
@@ -188,7 +188,7 @@ export class ErrorMonitor {
   /**
    * 确定错误严重程度
    */
-  private determineSeverity(error: Error, context: ErrorContext): 'low' | 'medium' | 'high' | 'critical' {
+  private determineSeverity(error: Error, _context: ErrorContext): 'low' | 'medium' | 'high' | 'critical' {
     const errorMessage = error.message.toLowerCase();
 
     // 关键错误

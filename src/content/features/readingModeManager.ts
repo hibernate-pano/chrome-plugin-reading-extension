@@ -4,7 +4,7 @@
  */
 
 import { UserSettings } from '../../types';
-import { getStorage, setStorage, StorageKeys } from '../../storage/storage';
+import { getStorage, StorageKeys } from '../../storage/storage';
 import { MESSAGE_TYPES } from '../../constants';
 import { mountNewFloatingUI } from '../ui/NewFloatingUIManager';
 import { cacheStrategyManager } from '../dynamic/CacheStrategyManager';
@@ -12,11 +12,21 @@ import { ExtractorFactory } from '../extractors/ExtractorFactory';
 
 export class ReadingModeManager {
   private isActive = false;
-  private originalContent: HTMLElement | null = null;
   private readerContainer: HTMLElement | null = null;
+  private overlayElement: HTMLElement | null = null;
   private settings: UserSettings;
   private styleElement: HTMLStyleElement | null = null;
   private floatingUICleanup: (() => void) | null = null;
+  private previousBodyOverflow: string | null = null;
+  private previousBodyPaddingRight: string | null = null;
+  private handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.disable().catch((error) => {
+        console.error('退出阅读模式时发生错误:', error);
+      });
+    }
+  };
 
   constructor(settings: UserSettings) {
     this.settings = settings;
@@ -59,8 +69,8 @@ export class ReadingModeManager {
   /**
    * 启用阅读模式
    */
-  async enable(): Promise<void> {
-    if (this.isActive) return;
+  async enable(): Promise<boolean> {
+    if (this.isActive) return true;
 
     try {
       // 提取内容
@@ -68,9 +78,6 @@ export class ReadingModeManager {
       if (!content) {
         throw new Error('无法提取页面内容');
       }
-
-      // 保存原始内容
-      this.originalContent = document.body.cloneNode(true) as HTMLElement;
 
       // 创建阅读容器
       this.createReaderContainer(content);
@@ -83,14 +90,21 @@ export class ReadingModeManager {
       // 挂载浮动UI
       this.mountFloatingUI();
 
-      // 通知背景脚本
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.READING_MODE_ENABLED,
-        url: window.location.href
-      });
+      document.removeEventListener('keydown', this.handleKeydown);
+      document.addEventListener('keydown', this.handleKeydown);
 
+      await this.notifyBackground(MESSAGE_TYPES.READING_MODE_ENABLED);
+
+      if (this.overlayElement) {
+        // 聚焦覆盖层，便于辅助功能
+        this.overlayElement.focus({ preventScroll: true });
+      }
+
+      return true;
     } catch (error) {
       console.error('启用阅读模式失败:', error);
+      this.teardownReaderContainer();
+      this.removeReaderStyles();
       throw error;
     }
   }
@@ -98,45 +112,41 @@ export class ReadingModeManager {
   /**
    * 禁用阅读模式
    */
-  disable(): void {
-    if (!this.isActive) return;
+  async disable(): Promise<boolean> {
+    if (!this.isActive) return false;
 
     try {
-      // 恢复原始内容
-      if (this.originalContent) {
-        document.body.innerHTML = this.originalContent.innerHTML;
-      }
+      this.teardownReaderContainer();
 
       // 移除阅读模式样式
       this.removeReaderStyles();
 
       // 清理
-      this.readerContainer = null;
-      this.originalContent = null;
       this.isActive = false;
 
       // 清理浮动UI
       this.cleanupFloatingUI();
 
-      // 通知背景脚本
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.READING_MODE_DISABLED,
-        url: window.location.href
-      });
+      document.removeEventListener('keydown', this.handleKeydown);
 
+      await this.notifyBackground(MESSAGE_TYPES.READING_MODE_DISABLED);
+
+      return false;
     } catch (error) {
       console.error('禁用阅读模式失败:', error);
+      return false;
     }
   }
 
   /**
    * 切换阅读模式
    */
-  async toggle(): Promise<void> {
+  async toggle(): Promise<boolean> {
     if (this.isActive) {
-      this.disable();
+      await this.disable();
+      return false;
     } else {
-      await this.enable();
+      return this.enable();
     }
   }
 
@@ -194,11 +204,23 @@ export class ReadingModeManager {
   }
 
   private wrapArticleHtml(title: string, byline: string | undefined, content: string): string {
+    const safeTitle = this.escapeHtml(title) || this.escapeHtml(document.title) || '阅读模式';
+    const safeByline = this.escapeHtml(byline);
+    const url = new URL(window.location.href);
+    const safeHost = this.escapeHtml(url.hostname);
+    const sanitizedContent = this.sanitizeHtml(content);
+
     return `
-      <article class="reading-mode-content">
-        <h1 class="reading-mode-title">${title}</h1>
-        ${byline ? `<div class="reading-mode-subtitle">${byline}</div>` : ''}
-        <div class="reading-mode-body">${content}</div>
+      <div class="reading-mode-header" role="toolbar" aria-label="阅读模式工具栏">
+        <div class="reading-mode-header__meta">
+          <span class="reading-mode-header__site">${safeHost}</span>
+          ${safeByline ? `<span class="reading-mode-header__byline">${safeByline}</span>` : ''}
+        </div>
+        <button type="button" class="reading-mode-close-button" data-reading-mode-close aria-label="退出阅读模式">✕</button>
+      </div>
+      <article class="reading-mode-content" aria-labelledby="reading-mode-title">
+        <h1 id="reading-mode-title" class="reading-mode-title">${safeTitle}</h1>
+        <div class="reading-mode-body">${sanitizedContent}</div>
       </article>
     `;
   }
@@ -207,16 +229,52 @@ export class ReadingModeManager {
    * 创建阅读容器
    */
   private createReaderContainer(content: string): void {
-    // 清空 body
-    document.body.innerHTML = '';
+    this.teardownReaderContainer();
 
-    // 创建阅读容器
-    this.readerContainer = document.createElement('div');
-    this.readerContainer.className = 'reading-mode-container';
-    this.readerContainer.innerHTML = content;
+    const overlay = document.createElement('div');
+    overlay.id = 'reading-mode-overlay';
+    overlay.className = 'reading-mode-overlay reading-mode-overlay--light';
+    overlay.tabIndex = -1;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
 
-    document.body.appendChild(this.readerContainer);
+    const container = document.createElement('div');
+    container.className = 'reading-mode-container';
+    container.innerHTML = content;
+    container.setAttribute('role', 'document');
+
+    overlay.appendChild(container);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        this.disable().catch((error) => {
+          console.error('退出阅读模式时发生错误:', error);
+        });
+      }
+    });
+
+    const closeButton = container.querySelector('[data-reading-mode-close]');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        this.disable().catch((error) => {
+          console.error('退出阅读模式时发生错误:', error);
+        });
+      });
+    }
+
+    this.overlayElement = overlay;
+    this.readerContainer = container;
+
     this.applySettingsToContainer();
+  }
+
+  private teardownReaderContainer(): void {
+    if (this.overlayElement) {
+      this.overlayElement.remove();
+      this.overlayElement = null;
+    }
+    this.readerContainer = null;
   }
 
   /**
@@ -238,6 +296,11 @@ export class ReadingModeManager {
     if (theme === 'dark') {
       this.readerContainer.classList.add('dark');
     }
+
+    if (this.overlayElement) {
+      this.overlayElement.classList.remove('reading-mode-overlay--dark', 'reading-mode-overlay--light');
+      this.overlayElement.classList.add(theme === 'dark' ? 'reading-mode-overlay--dark' : 'reading-mode-overlay--light');
+    }
   }
 
   /**
@@ -245,9 +308,22 @@ export class ReadingModeManager {
    */
   private applyReaderStyles(): void {
     document.documentElement.classList.add('reading-mode-active');
-    document.body.style.overflow = 'auto';
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
+    document.body.classList.add('reading-mode-locked');
+
+    if (this.previousBodyOverflow === null) {
+      this.previousBodyOverflow = document.body.style.overflow || '';
+    }
+
+    if (this.previousBodyPaddingRight === null) {
+      this.previousBodyPaddingRight = document.body.style.paddingRight || '';
+    }
+
+    const scrollbarCompensation = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarCompensation > 0) {
+      document.body.style.paddingRight = `${scrollbarCompensation}px`;
+    }
+
+    document.body.style.overflow = 'hidden';
   }
 
   /**
@@ -255,9 +331,21 @@ export class ReadingModeManager {
    */
   private removeReaderStyles(): void {
     document.documentElement.classList.remove('reading-mode-active');
-    document.body.style.overflow = '';
-    document.body.style.margin = '';
-    document.body.style.padding = '';
+    document.body.classList.remove('reading-mode-locked');
+
+    if (this.previousBodyOverflow !== null) {
+      document.body.style.overflow = this.previousBodyOverflow;
+    } else {
+      document.body.style.overflow = '';
+    }
+    this.previousBodyOverflow = null;
+
+    if (this.previousBodyPaddingRight !== null) {
+      document.body.style.paddingRight = this.previousBodyPaddingRight;
+    } else {
+      document.body.style.paddingRight = '';
+    }
+    this.previousBodyPaddingRight = null;
   }
 
   /**
@@ -275,7 +363,14 @@ export class ReadingModeManager {
         this.updateSettings({ [key]: value });
       },
       onToggleReadingMode: () => {
-        this.toggle();
+        this.toggle().catch((error) => {
+          console.error('切换阅读模式失败:', error);
+        });
+      },
+      onClose: () => {
+        this.disable().catch((error) => {
+          console.error('退出阅读模式失败:', error);
+        });
       },
     });
   }
@@ -295,7 +390,9 @@ export class ReadingModeManager {
    */
   destroy(): void {
     if (this.isActive) {
-      this.disable();
+      this.disable().catch((error) => {
+        console.error('销毁阅读模式失败:', error);
+      });
     }
 
     this.cleanupFloatingUI();
@@ -303,6 +400,52 @@ export class ReadingModeManager {
     if (this.styleElement) {
       this.styleElement.remove();
       this.styleElement = null;
+    }
+
+    document.removeEventListener('keydown', this.handleKeydown);
+  }
+
+  private sanitizeHtml(html: string): string {
+    if (!html) {
+      return '';
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    doc.querySelectorAll('script, style, iframe, object, embed, link, meta, base').forEach((element) => element.remove());
+
+    doc.querySelectorAll('*').forEach((element) => {
+      Array.from(element.attributes).forEach((attr) => {
+        const { name, value } = attr;
+        if (name.startsWith('on') || /javascript:/i.test(value)) {
+          element.removeAttribute(name);
+        }
+      });
+    });
+
+    return doc.body.innerHTML;
+  }
+
+  private escapeHtml(value: string | undefined | null): string {
+    if (!value) {
+      return '';
+    }
+
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  private async notifyBackground(eventType: string): Promise<void> {
+    try {
+      await chrome.runtime.sendMessage({
+        action: eventType,
+        type: eventType,
+        url: window.location.href
+      });
+    } catch (error) {
+      console.debug('通知背景脚本失败:', error);
     }
   }
 }

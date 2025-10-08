@@ -99,19 +99,19 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   };
 
   // 处理字体大小变化
-  const handleFontSizeChange = (size: 'small' | 'medium' | 'large') => {
+  const _handleFontSizeChange = (size: 'small' | 'medium' | 'large') => {
     setFontSize(size);
     applyReadingStyles();
   };
 
   // 处理主题变化
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'sepia' | 'yellow') => {
+  const _handleThemeChange = (newTheme: 'light' | 'dark' | 'sepia' | 'yellow') => {
     setTheme(newTheme);
     applyReadingStyles();
   };
 
   // 处理行间距变化
-  const handleLineHeightChange = (height: 'tight' | 'normal' | 'loose') => {
+  const _handleLineHeightChange = (height: 'tight' | 'normal' | 'loose') => {
     setLineHeight(height);
     applyReadingStyles();
   };

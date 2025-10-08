@@ -1,9 +1,4 @@
 import { UserSettings } from '../types';
-import { StorageKeys, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
-import {
-  DEFAULT_LINE_HEIGHT,
-  DEFAULT_PARAGRAPH_SPACING
-} from './options';
 
 /**
  * 默认设置

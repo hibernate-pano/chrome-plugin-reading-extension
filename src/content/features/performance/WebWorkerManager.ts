@@ -538,17 +538,17 @@ export class WebWorkerManager {
         if (!html || typeof html !== 'string') return '';
         let text = html;
         // 移除<script>与<style>
-        text = text.replace(/<script[\s\S]*?<\/script>/gi, '')
-                   .replace(/<style[\s\S]*?<\/style>/gi, '');
+        text = text.replace(/<script[\\s\\S]*?<\\/script>/gi, '')
+                   .replace(/<style[\\s\\S]*?<\\/style>/gi, '');
 
         // 代码块 <pre><code>
-        text = text.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, function(_, code){
+        text = text.replace(/<pre[^>]*><code[^>]*>([\\s\\S]*?)<\\/code><\\/pre>/gi, function(_, code){
           const decoded = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
           return 'CODE_BLOCK_START' + decoded + 'CODE_BLOCK_END';
         });
 
         // 行内代码
-        text = text.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, function(_, code){
+        text = text.replace(/<code[^>]*>([\\s\\S]*?)<\\/code>/gi, function(_, code){
           const decoded = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
           return 'INLINE_CODE_START' + decoded + 'INLINE_CODE_END';
         });
@@ -560,25 +560,25 @@ export class WebWorkerManager {
         }
 
         // 段落与换行
-        text = text.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, function(_, c){ return '\n' + stripTags(c).trim() + '\n\n'; })
-                   .replace(/<br\s*\/?>(\s*)/gi, '\n');
+        text = text.replace(/<p[^>]*>([\\s\\S]*?)<\\/p>/gi, function(_, c){ return '\\n' + stripTags(c).trim() + '\\n\\n'; })
+                   .replace(/<br\\s*\\/?(\\s*)/gi, '\\n');
 
         // 引用
-        text = text.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, function(_, c){
+        text = text.replace(/<blockquote[^>]*>([\\s\\S]*?)<\\/blockquote>/gi, function(_, c){
           const lines = stripTags(c).split(/\n+/).map(l => l ? '> ' + l : '>');
           return '\n' + lines.join('\n') + '\n\n';
         });
 
         // 图片与链接
         text = text.replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]+)"[^>]*>/gi, '![$1]($2)')
-                   .replace(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)');
+                   .replace(/<a[^>]*href="([^"]+)"[^>]*>([\\s\\S]*?)<\\/a>/gi, '[$2]($1)');
 
         // 粗体与斜体
-        text = text.replace(/<(strong|b)[^>]*>([\s\S]*?)<\/(strong|b)>/gi, '**$2**')
-                   .replace(/<(em|i)[^>]*>([\s\S]*?)<\/(em|i)>/gi, '*$2*');
+        text = text.replace(/<(strong|b)[^>]*>([\\s\\S]*?)<\\/(strong|b)>/gi, '**$2**')
+                   .replace(/<(em|i)[^>]*>([\\s\\S]*?)<\\/(em|i)>/gi, '*$2*');
 
         // 列表 li（简化为无序）
-        text = text.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, function(_, c){ return '\n- ' + stripTags(c).trim(); });
+        text = text.replace(/<li[^>]*>([\\s\\S]*?)<\\/li>/gi, function(_, c){ return '\\n- ' + stripTags(c).trim(); });
         text = text.replace(/<\/(ul|ol)>/gi, '\n\n');
 
         // 余下去标签
@@ -1101,19 +1101,19 @@ export class WebWorkerManager {
   /**
    * 设置事件回调
    */
-  public onTaskComplete(callback: (task: WorkerTask) => void): void {
+  public setTaskCompleteCallback(callback: (task: WorkerTask) => void): void {
     this.onTaskComplete = callback;
   }
 
-  public onTaskProgress(callback: (taskId: string, progress: number) => void): void {
+  public setTaskProgressCallback(callback: (taskId: string, progress: number) => void): void {
     this.onTaskProgress = callback;
   }
 
-  public onWorkerError(callback: (worker: Worker, error: ErrorEvent) => void): void {
+  public setWorkerErrorCallback(callback: (worker: Worker, error: ErrorEvent) => void): void {
     this.onWorkerError = callback;
   }
 
-  public onStatsUpdate(callback: (stats: WorkerStats) => void): void {
+  public setStatsUpdateCallback(callback: (stats: WorkerStats) => void): void {
     this.onStatsUpdate = callback;
   }
 

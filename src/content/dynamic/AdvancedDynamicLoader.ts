@@ -1,5 +1,3 @@
-import { performanceMonitor } from '../../utils/performance';
-
 /**
  * 模块加载优先级
  */
@@ -84,7 +82,7 @@ export class AdvancedDynamicLoader {
   private moduleStates: Map<string, LoadStatus> = new Map();
   private moduleInfos: Map<string, ModuleInfo> = new Map();
   private moduleCache: Map<string, any> = new Map();
-  private loadingQueue: Array<{ type: string; priority: LoadPriority; resolve: Function; reject: Function }> = [];
+  private loadingQueue: Array<{ type: string; priority: LoadPriority; resolve: (value: any) => void; reject: (reason: any) => void }> = [];
   
   // 配置和状态
   private config: LoadStrategyConfig;
@@ -588,19 +586,19 @@ export class AdvancedDynamicLoader {
   /**
    * 设置事件回调
    */
-  public onModuleLoad(callback: (type: string, loadTime: number) => void): void {
+  public setModuleLoadCallback(callback: (type: string, loadTime: number) => void): void {
     this.onModuleLoad = callback;
   }
 
-  public onModuleError(callback: (type: string, error: Error) => void): void {
+  public setModuleErrorCallback(callback: (type: string, error: Error) => void): void {
     this.onModuleError = callback;
   }
 
-  public onCacheHit(callback: (type: string) => void): void {
+  public setCacheHitCallback(callback: (type: string) => void): void {
     this.onCacheHit = callback;
   }
 
-  public onPreloadComplete(callback: (types: string[]) => void): void {
+  public setPreloadCompleteCallback(callback: (types: string[]) => void): void {
     this.onPreloadComplete = callback;
   }
 

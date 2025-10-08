@@ -4,7 +4,7 @@
  */
 
 // 缓存已加载的模块
-const loadedModules: Record<string, boolean> = {};
+const _loadedModules: Record<string, boolean> = {};
 
 // 模块加载状态
 enum LoadStatus {

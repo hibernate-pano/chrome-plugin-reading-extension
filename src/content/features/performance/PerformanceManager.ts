@@ -499,21 +499,21 @@ export class PerformanceManager {
   /**
    * 设置指标更新回调
    */
-  public onMetricsUpdate(callback: (metrics: PerformanceMetrics) => void): void {
+  public setMetricsUpdateCallback(callback: (metrics: PerformanceMetrics) => void): void {
     this.onMetricsUpdate = callback;
   }
 
   /**
    * 设置阈值超出回调
    */
-  public onThresholdExceeded(callback: (threshold: string, value: number) => void): void {
+  public setThresholdExceededCallback(callback: (threshold: string, value: number) => void): void {
     this.onThresholdExceeded = callback;
   }
 
   /**
    * 设置优化建议回调
    */
-  public onRecommendation(callback: (recommendation: PerformanceRecommendation) => void): void {
+  public setRecommendationCallback(callback: (recommendation: PerformanceRecommendation) => void): void {
     this.onRecommendation = callback;
   }
 

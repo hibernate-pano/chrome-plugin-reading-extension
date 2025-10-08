@@ -899,15 +899,15 @@ export class UserFeedbackManager {
   /**
    * 设置事件回调
    */
-  public onNotificationShow(callback: (notification: UserFeedback) => void): void {
+  public setNotificationShowCallback(callback: (notification: UserFeedback) => void): void {
     this.onNotificationShow = callback;
   }
 
-  public onNotificationDismiss(callback: (notification: UserFeedback) => void): void {
+  public setNotificationDismissCallback(callback: (notification: UserFeedback) => void): void {
     this.onNotificationDismiss = callback;
   }
 
-  public onActionClick(callback: (action: FeedbackAction, notification: UserFeedback) => void): void {
+  public setActionClickCallback(callback: (action: FeedbackAction, notification: UserFeedback) => void): void {
     this.onActionClick = callback;
   }
 

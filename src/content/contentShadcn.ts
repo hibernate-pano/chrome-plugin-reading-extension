@@ -4,7 +4,7 @@
  */
 
 import { ReadingModeManager } from './features/readingModeManager';
-import { getStorage, setStorage, StorageKeys } from '../storage/storage';
+import { getStorage, StorageKeys } from '../storage/storage';
 import { MESSAGE_TYPES } from '../constants';
 import { UserSettings } from '../types';
 
@@ -133,7 +133,7 @@ async function disableReadingMode(): Promise<void> {
   try {
     const { isActive } = readingModeManager.getStatus();
     if (isActive) {
-      await     readingModeManager.disable();
+      await readingModeManager.disable();
       console.log('✅ 阅读模式已禁用');
     } else {
       console.log('ℹ️ 阅读模式已经是禁用状态');
@@ -175,7 +175,7 @@ function setupMessageListeners(): void {
         sendResponse({ success: true });
         break;
 
-      case MESSAGE_TYPES.GET_READING_MODE_STATE:
+      case MESSAGE_TYPES.GET_READING_MODE_STATE: {
         console.log('📊 处理获取阅读模式状态消息');
         const status = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
         console.log('📤 返回状态:', status);
@@ -186,6 +186,7 @@ function setupMessageListeners(): void {
           settings: status.settings
         });
         break;
+      }
 
       case MESSAGE_TYPES.UPDATE_SETTINGS:
         console.log('⚙️ 处理更新设置消息');
@@ -199,11 +200,12 @@ function setupMessageListeners(): void {
         sendResponse({ success: true });
         break;
 
-      case MESSAGE_TYPES.GET_READING_STATUS:
+      case MESSAGE_TYPES.GET_READING_STATUS: {
         console.log('📊 处理获取阅读状态消息（旧版）');
         const oldStatus = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
         sendResponse(oldStatus);
         break;
+      }
 
       default:
         console.warn('⚠️ 未知消息类型:', messageType, message);

@@ -340,7 +340,7 @@ export class ErrorManager {
       description: '重试内容提取',
       priority: 1,
       applicable: (error) => error.type === ErrorType.EXTRACTION && error.retryCount < error.maxRetries,
-      execute: async (error) => {
+      execute: async (_error) => {
         // 模拟重试逻辑
         await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
         
@@ -361,7 +361,7 @@ export class ErrorManager {
       description: '使用降级UI',
       priority: 2,
       applicable: (error) => error.type === ErrorType.RENDERING,
-      execute: async (error) => {
+      execute: async (_error) => {
         return {
           success: true,
           recovered: true,
@@ -379,7 +379,7 @@ export class ErrorManager {
       description: '性能优化',
       priority: 3,
       applicable: (error) => error.type === ErrorType.PERFORMANCE,
-      execute: async (error) => {
+      execute: async (_error) => {
         // 模拟性能优化
         await new Promise(resolve => setTimeout(resolve, 500));
         
@@ -400,7 +400,7 @@ export class ErrorManager {
       description: '网络重试',
       priority: 4,
       applicable: (error) => error.type === ErrorType.NETWORK && error.retryCount < error.maxRetries,
-      execute: async (error) => {
+      execute: async (_error) => {
         await new Promise(resolve => setTimeout(resolve, this.config.retryDelay * 2));
         
         return {
@@ -635,15 +635,15 @@ export class ErrorManager {
   /**
    * 设置事件回调
    */
-  public onError(callback: (error: ErrorInfo) => void): void {
+  public setErrorCallback(callback: (error: ErrorInfo) => void): void {
     this.onError = callback;
   }
 
-  public onRecovery(callback: (error: ErrorInfo, result: ErrorHandlingResult) => void): void {
+  public setRecoveryCallback(callback: (error: ErrorInfo, result: ErrorHandlingResult) => void): void {
     this.onRecovery = callback;
   }
 
-  public onStatsUpdate(callback: (stats: ErrorStats) => void): void {
+  public setStatsUpdateCallback(callback: (stats: ErrorStats) => void): void {
     this.onStatsUpdate = callback;
   }
 

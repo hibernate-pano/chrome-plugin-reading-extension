@@ -15,7 +15,7 @@ export class ContentExtractor extends BaseExtractor {
   /**
    * 从当前页面提取内容 (简化为直接调用 Readability)
    */
-  public async extract(document: Document, url: string): Promise<ExtractedContent> {
+  public async extract(document: Document, _url: string): Promise<ExtractedContent> {
     // 使用性能监控器测量提取性能
     return performanceMonitor.measure('extract', async () => {
       try {

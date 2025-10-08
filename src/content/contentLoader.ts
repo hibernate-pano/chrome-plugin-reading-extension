@@ -24,7 +24,7 @@ const loadModule = async (modulePath: string, options: {
   preload?: boolean;
   cache?: boolean;
 } = {}) => {
-  const { priority = 'idle', preload = false, cache = true } = options;
+  const { priority = 'idle', cache = true } = options;
   
   // 检查缓存
   if (cache && moduleCache.has(modulePath as any)) {
@@ -354,7 +354,7 @@ async function handleSaveReadingProgress(message: {
  * 加载阅读模式模块 (优化版)
  * 使用更高效的资源加载策略
  */
-async function loadReaderModule(): Promise<void> {
+async function _loadReaderModule(): Promise<void> {
   try {
     // 加载基础样式
     await loadStyles();

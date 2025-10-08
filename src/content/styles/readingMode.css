@@ -10,6 +10,40 @@
 }
 
 /* 阅读模式容器 */
+.reading-mode-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 4vh clamp(1rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  backdrop-filter: blur(12px);
+  background-color: rgba(17, 24, 39, 0.65);
+  transition: background-color 0.25s ease;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .reading-mode-overlay {
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+}
+
+.reading-mode-overlay--light {
+  background-color: rgba(249, 250, 251, 0.75);
+}
+
+.reading-mode-overlay--dark {
+  background-color: rgba(15, 23, 42, 0.85);
+}
+
+.reading-mode-overlay:focus {
+  outline: none;
+}
+
 .reading-mode-container {
   font-family: var(--font-reading, Georgia, 'Times New Roman', serif);
   line-height: var(--reading-line-height, 1.6);
@@ -17,10 +51,18 @@
   color: var(--reading-text-color, hsl(var(--foreground)));
   background-color: var(--reading-bg-color, hsl(var(--background)));
   max-width: var(--reading-page-width, 800px);
-  margin: 0 auto;
-  padding: 2rem;
-  min-height: 100vh;
+  width: min(100%, var(--reading-page-width, 800px));
+  margin: auto;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  min-height: 70vh;
+  border-radius: clamp(12px, 1.5vw, 20px);
+  box-shadow: 0 40px 80px -40px rgba(15, 23, 42, 0.35);
   transition: all 0.3s ease;
+}
+
+body.reading-mode-locked {
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 /* 阅读模式标题 */
@@ -30,6 +72,69 @@
   line-height: 1.2;
   margin-bottom: 1rem;
   color: hsl(var(--foreground));
+  text-align: left;
+}
+
+.reading-mode-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.reading-mode-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+}
+
+.reading-mode-header__site {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: hsl(var(--primary));
+}
+
+.reading-mode-header__byline {
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+.reading-mode-close-button {
+  border: none;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border-radius: 999px;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  box-shadow: 0 10px 20px -12px rgba(15, 23, 42, 0.4);
+}
+
+.reading-mode-close-button:hover {
+  transform: translateY(-1px) scale(1.02);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.reading-mode-close-button:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 3px;
+}
+
+.reading-mode-body {
+  display: block;
+  color: inherit;
 }
 
 /* 阅读模式副标题 */

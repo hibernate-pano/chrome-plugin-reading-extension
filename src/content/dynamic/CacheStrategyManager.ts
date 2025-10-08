@@ -408,7 +408,7 @@ export class CacheStrategyManager {
    */
   private updateAccessOrder(key: string): void {
     switch (this.config.strategy) {
-      case CacheStrategy.LRU:
+      case CacheStrategy.LRU: {
         // 最近最少使用：将访问的项移到末尾
         const lruIndex = this.accessOrder.indexOf(key);
         if (lruIndex > -1) {
@@ -416,6 +416,7 @@ export class CacheStrategyManager {
         }
         this.accessOrder.push(key);
         break;
+      }
         
       case CacheStrategy.LFU:
         // 最少使用频率：根据访问频率排序
@@ -525,7 +526,6 @@ export class CacheStrategyManager {
    */
   private adaptiveEviction(itemsToEvict: string[]): void {
     // 分析缓存使用模式
-    const highUsage = this.accessOrder.slice(-Math.floor(this.stats.totalItems * 0.3));
     const lowUsage = this.accessOrder.slice(0, Math.floor(this.stats.totalItems * 0.3));
     
     // 优先保留高频使用的项
@@ -574,14 +574,14 @@ export class CacheStrategyManager {
     if (this.cleanupTimer) return;
     
     this.cleanupTimer = setInterval(() => {
-      this.cleanup();
+      this.cleanupExpiredItems();
     }, this.config.cleanupInterval);
   }
 
   /**
    * 清理过期项
    */
-  private cleanup(): void {
+  private cleanupExpiredItems(): void {
     const expiredKeys: string[] = [];
     
     for (const [key, item] of this.cache) {
@@ -647,19 +647,19 @@ export class CacheStrategyManager {
   /**
    * 设置事件回调
    */
-  public onCacheHit(callback: (key: string) => void): void {
+  public setCacheHitCallback(callback: (key: string) => void): void {
     this.onCacheHit = callback;
   }
 
-  public onCacheMiss(callback: (key: string) => void): void {
+  public setCacheMissCallback(callback: (key: string) => void): void {
     this.onCacheMiss = callback;
   }
 
-  public onCacheEviction(callback: (key: string, reason: string) => void): void {
+  public setCacheEvictionCallback(callback: (key: string, reason: string) => void): void {
     this.onCacheEviction = callback;
   }
 
-  public onCacheFull(callback: () => void): void {
+  public setCacheFullCallback(callback: () => void): void {
     this.onCacheFull = callback;
   }
 

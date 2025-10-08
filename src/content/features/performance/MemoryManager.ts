@@ -493,28 +493,28 @@ export class MemoryManager {
   /**
    * 设置内存监控回调
    */
-  public onMemoryUpdate(callback: (memoryInfo: MemoryInfo) => void): void {
+  public setMemoryUpdateCallback(callback: (memoryInfo: MemoryInfo) => void): void {
     this.onMemoryUpdate = callback;
   }
 
   /**
    * 设置内存警告回调
    */
-  public onMemoryWarning(callback: (memoryInfo: MemoryInfo) => void): void {
+  public setMemoryWarningCallback(callback: (memoryInfo: MemoryInfo) => void): void {
     this.onMemoryWarning = callback;
   }
 
   /**
    * 设置内存严重警告回调
    */
-  public onMemoryCritical(callback: (memoryInfo: MemoryInfo) => void): void {
+  public setMemoryCriticalCallback(callback: (memoryInfo: MemoryInfo) => void): void {
     this.onMemoryCritical = callback;
   }
 
   /**
    * 设置优化完成回调
    */
-  public onOptimizationComplete(callback: (strategy: string, savings: number) => void): void {
+  public setOptimizationCompleteCallback(callback: (strategy: string, savings: number) => void): void {
     this.onOptimizationComplete = callback;
   }
 

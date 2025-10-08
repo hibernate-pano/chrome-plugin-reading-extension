@@ -215,9 +215,7 @@ export class ErrorMessageManager {
   /**
    * 获取错误键
    */
-  private getErrorKey(error: Error, errorType: ErrorType, context: ErrorContext): string {
-    const errorMessage = error.message.toLowerCase();
-    
+  private getErrorKey(error: Error, errorType: ErrorType, _context: ErrorContext): string {
     // 根据错误类型和上下文确定错误键
     switch (errorType) {
       case ErrorType.NETWORK:
@@ -284,7 +282,7 @@ export class ErrorMessageManager {
   /**
    * 创建错误通知
    */
-  private createErrorNotification(errorMessage: ErrorMessage, context: ErrorContext): void {
+  private createErrorNotification(errorMessage: ErrorMessage, _context: ErrorContext): void {
     const notification = document.createElement('div');
     notification.className = 'error-notification';
     notification.style.cssText = `

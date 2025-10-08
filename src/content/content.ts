@@ -1,4 +1,4 @@
-import { StorageKeys, getStorage, setStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
+import { StorageKeys, getStorage, FONT_FAMILIES, BACKGROUND_COLORS, CODE_THEMES } from '../storage/storage';
 // 不再直接导入 highlight.js，改为动态导入
 // import hljs from 'highlight.js';
 
@@ -378,7 +378,6 @@ document.head.appendChild(customCodeStyles);
 
 // 导入 highlight.js 样式
 // 导入性能监控器和工具
-import { performanceMonitor } from '../utils/performance';
 import toastManager from './ui/feedback/ToastManager';
 import { removeFloatingButton } from './ui/readerFloatingButton';
 import { handleMediaElements } from './processors/mediaProcessor';
@@ -386,7 +385,6 @@ import { handleMediaElements } from './processors/mediaProcessor';
 // 导入增强提取器
 import {
   ExtractorFactory,
-  contentExtractor,
 } from './extractors';
 
 // 导入基础变量系统
@@ -910,7 +908,7 @@ function disableReadingMode() {
 }
 
 // 监听存储变化
-chrome.storage.onChanged.addListener(async (changes) => {
+chrome.storage.onChanged.addListener(async (_changes) => {
   // 如果不在阅读模式下，不应用样式
   if (!isReadingMode) return;
 
@@ -948,14 +946,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === MESSAGE_TYPES.TOGGLE_READER_MODE) {
     asyncResponse = true;
-    toggleReadingMode()
-      .then(result => {
-        sendResponse({ success: true, isReadingMode: result });
-      })
-      .catch((error: Error) => {
-        console.error('切换阅读模式失败:', error);
-        sendResponse({ success: false, error: error.message });
-      });
+      toggleReadingMode()
+        .then(result => {
+          sendResponse({ success: true, isReadingMode: result });
+        })
+        .catch((error: Error) => {
+          console.error('切换阅读模式失败:', error);
+          sendResponse({ success: false, error: error.message });
+        });
   }
   else if (message.action === MESSAGE_TYPES.ENABLE_READING_MODE) {
     asyncResponse = true;

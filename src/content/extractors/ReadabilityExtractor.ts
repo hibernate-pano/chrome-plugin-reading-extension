@@ -165,7 +165,7 @@ export class ReadabilityExtractor extends BaseExtractor {
   /**
    * 执行实际的内容提取
    */
-  private async performExtraction(document: Document, url: string): Promise<ExtractedContent> {
+  private async performExtraction(document: Document, _url: string): Promise<ExtractedContent> {
     let lastError: Error | null = null;
     
     // 尝试多次提取
