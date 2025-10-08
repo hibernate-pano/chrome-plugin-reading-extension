@@ -1,18 +1,13 @@
 import { ContentProcessor } from './ContentProcessorManager';
 import { ReadingModeSettings } from '../types';
+import { imageLoadingManager, ImageLoadingOptions } from '../components/ImageLoadingManager';
 
 /**
- * 图片处理器选项
+ * 图片处理器选项（扩展了基础的ImageLoadingOptions）
  */
-export interface ImageProcessorOptions {
-  enableLazyLoading?: boolean;
-  enableResponsiveImages?: boolean;
-  enableErrorHandling?: boolean;
-  enableImageOptimization?: boolean;
+export interface ImageProcessorOptions extends ImageLoadingOptions {
   enableLightbox?: boolean;
   enableCaption?: boolean;
-  maxImageWidth?: number;
-  defaultImageQuality?: number;
   placeholderColor?: string;
   errorImageUrl?: string;
 }
@@ -29,19 +24,74 @@ export class EnhancedImageProcessor implements ContentProcessor {
   private processedImages: Set<string> = new Set();
 
   constructor(options: Partial<ImageProcessorOptions> = {}) {
-    this.options = {
+    // 默认配置（使用ImageLoadingManager的默认配置加上扩展选项）
+    const defaultOptions: ImageProcessorOptions = {
       enableLazyLoading: true,
+      lazyLoadingThreshold: 1.0,
+      preloadDistance: 2,
+      enablePreloading: true,
+      maxPreloadCount: 5,
+      preloadPriority: 'medium',
       enableResponsiveImages: true,
-      enableErrorHandling: true,
-      enableImageOptimization: true,
-      enableLightbox: true,
-      enableCaption: true,
+      enableNetworkAdaptive: true,
+      enableDeviceAdaptive: true,
       maxImageWidth: 1200,
       defaultImageQuality: 85,
+      showLoadingIndicator: true,
+      enableErrorRetry: true,
+      maxRetryCount: 3,
+      enableImageCache: true,
+      cacheMaxSize: 50 * 1024 * 1024,
+      cacheMaxAge: 24 * 60 * 60 * 1000,
+
+      // 扩展选项
+      enableLightbox: true,
+      enableCaption: true,
       placeholderColor: '#f0f0f0',
       errorImageUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDE5VjVhMiAyIDAgMCAwLTItMkg1YTIgMiAwIDAgMC0yIDJ2MTRhMiAyIDAgMCAwIDIgMmgxNGEyIDIgMCAwIDAgMi0yWiIgc3Ryb2tlPSIjOTk5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNOC41IDEyLjVMMTIgMTZsMTUuNS0xNS41IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=',
       ...options
     };
+
+    this.options = { ...defaultOptions, ...options };
+
+    // 初始化ImageLoadingManager
+    this.initializeImageLoadingManager();
+  }
+
+  /**
+   * 初始化图片加载管理器
+   */
+  private async initializeImageLoadingManager(): Promise<void> {
+    try {
+      // 将配置传递给ImageLoadingManager（排除UI相关选项）
+      const loadingManagerOptions: ImageLoadingOptions = {
+        enableLazyLoading: this.options.enableLazyLoading,
+        lazyLoadingThreshold: this.options.lazyLoadingThreshold,
+        preloadDistance: this.options.preloadDistance,
+        enablePreloading: this.options.enablePreloading,
+        maxPreloadCount: this.options.maxPreloadCount,
+        preloadPriority: this.options.preloadPriority,
+        enableResponsiveImages: this.options.enableResponsiveImages,
+        enableNetworkAdaptive: this.options.enableNetworkAdaptive,
+        enableDeviceAdaptive: this.options.enableDeviceAdaptive,
+        maxImageWidth: this.options.maxImageWidth,
+        defaultImageQuality: this.options.defaultImageQuality,
+        showLoadingIndicator: this.options.showLoadingIndicator,
+        enableErrorRetry: this.options.enableErrorRetry,
+        maxRetryCount: this.options.maxRetryCount,
+        enableImageCache: this.options.enableImageCache,
+        cacheMaxSize: this.options.cacheMaxSize,
+        cacheMaxAge: this.options.cacheMaxAge,
+      };
+
+      // 更新ImageLoadingManager的配置
+      Object.assign(imageLoadingManager, loadingManagerOptions);
+
+      // 初始化
+      await imageLoadingManager.initialize();
+    } catch (error) {
+      console.error('初始化图片加载管理器失败:', error);
+    }
   }
 
   /**
@@ -54,7 +104,7 @@ export class EnhancedImageProcessor implements ContentProcessor {
   /**
    * 处理HTML内容
    */
-  public async process(content: string, settings?: ReadingModeSettings): Promise<string> {
+  public async process(content: string, _settings?: ReadingModeSettings): Promise<string> {
     try {
       let processedContent = content;
 
@@ -82,7 +132,7 @@ export class EnhancedImageProcessor implements ContentProcessor {
    */
   private processImageTags(content: string): string {
     const imgRegex = /<img([^>]*)>/gi;
-    
+
     return content.replace(imgRegex, (match, attributes) => {
       // 检查是否已经处理过
       if (attributes.includes('data-processed')) {
@@ -90,7 +140,8 @@ export class EnhancedImageProcessor implements ContentProcessor {
       }
 
       const enhancedAttributes = this.enhanceImageAttributes(attributes);
-      
+
+      // 创建增强的图片标签
       return `<img${enhancedAttributes} data-processed="true">`;
     });
   }
@@ -101,22 +152,17 @@ export class EnhancedImageProcessor implements ContentProcessor {
   private enhanceImageAttributes(attributes: string): string {
     let enhanced = attributes;
 
-    // 添加懒加载
-    if (this.options.enableLazyLoading && !enhanced.includes('loading=')) {
-      enhanced += ' loading="lazy"';
+    // 添加错误处理（由ImageLoadingManager接管懒加载）
+    if (this.options.enableErrorRetry && !enhanced.includes('onerror=')) {
+      enhanced += ` onerror="this.onerror=null;this.classList.add('image-error');console.warn('图片加载失败:', this.src)"`;
     }
 
-    // 添加错误处理
-    if (this.options.enableErrorHandling && !enhanced.includes('onerror=')) {
-      enhanced += ` onerror="this.onerror=null;this.src='${this.options.errorImageUrl}';this.classList.add('image-error')"`;
-    }
-
-    // 添加响应式支持
+    // 添加响应式支持（如果启用了）
     if (this.options.enableResponsiveImages) {
       enhanced = this.addResponsiveAttributes(enhanced);
     }
 
-    // 添加图片优化
+    // 添加图片优化属性
     if (this.options.enableImageOptimization) {
       enhanced = this.addOptimizationAttributes(enhanced);
     }
@@ -131,6 +177,12 @@ export class EnhancedImageProcessor implements ContentProcessor {
     // 添加点击放大功能
     if (this.options.enableLightbox && !enhanced.includes('onclick=')) {
       enhanced += ' onclick="openImageLightbox(this)"';
+    }
+
+    // 添加标题支持
+    if (this.options.enableCaption && !enhanced.includes('alt=') && !enhanced.includes('title=')) {
+      // 从上下文中提取标题或使用默认值
+      enhanced += ' alt="图片"';
     }
 
     return enhanced;
@@ -409,6 +461,32 @@ export class EnhancedImageProcessor implements ContentProcessor {
    */
   public updateOptions(newOptions: Partial<ImageProcessorOptions>): void {
     this.options = { ...this.options, ...newOptions };
+
+    // 同步更新ImageLoadingManager的配置
+    if (imageLoadingManager && typeof imageLoadingManager === 'object') {
+      const loadingManagerOptions: Partial<ImageLoadingOptions> = {
+        enableLazyLoading: this.options.enableLazyLoading,
+        lazyLoadingThreshold: this.options.lazyLoadingThreshold,
+        preloadDistance: this.options.preloadDistance,
+        enablePreloading: this.options.enablePreloading,
+        maxPreloadCount: this.options.maxPreloadCount,
+        preloadPriority: this.options.preloadPriority,
+        enableResponsiveImages: this.options.enableResponsiveImages,
+        enableNetworkAdaptive: this.options.enableNetworkAdaptive,
+        enableDeviceAdaptive: this.options.enableDeviceAdaptive,
+        maxImageWidth: this.options.maxImageWidth,
+        defaultImageQuality: this.options.defaultImageQuality,
+        showLoadingIndicator: this.options.showLoadingIndicator,
+        enableErrorRetry: this.options.enableErrorRetry,
+        maxRetryCount: this.options.maxRetryCount,
+        enableImageCache: this.options.enableImageCache,
+        cacheMaxSize: this.options.cacheMaxSize,
+        cacheMaxAge: this.options.cacheMaxAge,
+      };
+
+      // 更新配置并重新初始化（如果需要）
+      Object.assign(imageLoadingManager, loadingManagerOptions);
+    }
   }
 
   /**

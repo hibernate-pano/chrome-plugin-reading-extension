@@ -10,6 +10,7 @@ import { mountNewFloatingUI } from '../ui/NewFloatingUIManager';
 import { cacheStrategyManager } from '../dynamic/CacheStrategyManager';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
 import { mountReadingSettingsPanel, unmountReadingSettingsPanel, updateReadingSettingsPanelSettings } from '../ui/ReadingSettingsPanelManager';
+import { imageLoadingManager } from '../components/ImageLoadingManager';
 
 export class ReadingModeManager {
   private isActive = false;
@@ -183,6 +184,9 @@ export class ReadingModeManager {
       // 挂载设置面板
       this.mountSettingsPanel();
 
+      // 初始化图片加载管理器
+      await this.initializeImageLoading();
+
       document.removeEventListener('keydown', this.handleKeydown);
       document.addEventListener('keydown', this.handleKeydown);
 
@@ -223,6 +227,9 @@ export class ReadingModeManager {
       // 清理设置面板
       this.cleanupSettingsPanel();
 
+      // 清理图片加载管理器
+      this.cleanupImageLoading();
+
       document.removeEventListener('keydown', this.handleKeydown);
 
       await this.notifyBackground(MESSAGE_TYPES.READING_MODE_DISABLED);
@@ -261,6 +268,9 @@ export class ReadingModeManager {
     if (this.isActive && this.settingsPanelCleanup) {
       updateReadingSettingsPanelSettings(this.settings);
     }
+
+    // 更新图片加载管理器设置
+    imageLoadingManager.updateSettings(newSettings);
   }
 
   /**
@@ -558,6 +568,53 @@ export class ReadingModeManager {
     const div = document.createElement('div');
     div.textContent = value;
     return div.innerHTML;
+  }
+
+  /**
+   * 初始化图片加载管理器
+   */
+  private async initializeImageLoading(): Promise<void> {
+    try {
+      await imageLoadingManager.initialize();
+
+      // 等待DOM完全渲染
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 注册阅读容器中的所有图片
+      if (this.readerContainer) {
+        const images = this.readerContainer.querySelectorAll('img');
+        console.log(`📸 发现 ${images.length} 张图片，开始注册到图片加载管理器`);
+        
+        images.forEach((img, index) => {
+          // 设置优先级，越靠前的图片优先级越高
+          const priority = Math.max(1, 10 - Math.floor(index / 3));
+          
+          // 确保图片有src属性
+          if (!img.src && !img.dataset.src) {
+            console.warn('图片缺少src属性，跳过:', img);
+            return;
+          }
+
+          // 注册图片
+          imageLoadingManager.registerImage(img, priority);
+        });
+
+        console.log(`✅ 图片注册完成，共注册 ${images.length} 张图片`);
+      }
+    } catch (error) {
+      console.error('初始化图片加载失败:', error);
+    }
+  }
+
+  /**
+   * 清理图片加载管理器
+   */
+  private cleanupImageLoading(): void {
+    try {
+      imageLoadingManager.cleanup();
+    } catch (error) {
+      console.error('清理图片加载管理器失败:', error);
+    }
   }
 
   private async notifyBackground(eventType: string): Promise<void> {

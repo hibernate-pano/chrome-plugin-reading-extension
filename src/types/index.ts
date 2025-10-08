@@ -23,6 +23,12 @@ export interface UserSettings {
   pageWidth: number;    // 页面宽度
   backgroundColor: string; // 背景颜色
 
+  // 图片加载设置
+  enableImageLazyLoading?: boolean;   // 是否启用图片懒加载
+  enableImagePreloading?: boolean;    // 是否启用智能预加载
+  imageQuality?: number;              // 图片质量（50-100%）
+  imageCacheSize?: number;            // 图片缓存大小（MB）
+
   // 预设相关
   presets: any[];       // 预设列表
   activePreset: string | null; // 当前激活的预设ID

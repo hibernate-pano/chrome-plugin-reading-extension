@@ -360,8 +360,24 @@ export class ReadabilityExtractor extends BaseExtractor {
       return;
     }
 
+    // 处理所有图片，确保懒加载的图片也能被正确提取
+    const images = Array.from(doc.querySelectorAll('img'));
+    images.forEach(img => {
+      // 提取真实的图片URL（处理懒加载图片）
+      const realSrc = this.extractRealImageSrc(img);
+      if (realSrc && realSrc !== img.src) {
+        img.src = realSrc;
+      }
+
+      // 移除懒加载属性，确保图片能正常显示
+      img.removeAttribute('loading');
+      img.removeAttribute('data-lazy');
+      img.removeAttribute('data-src');
+      img.removeAttribute('data-original');
+      img.removeAttribute('data-srcset');
+    });
+
     if (this.options.maxImages && this.options.maxImages > 0) {
-      const images = Array.from(doc.querySelectorAll('img'));
       if (images.length > this.options.maxImages) {
         // 保留最重要的图片（有alt文本、合适的尺寸等）
         const sortedImages = images.sort((a, b) => {
@@ -378,6 +394,95 @@ export class ReadabilityExtractor extends BaseExtractor {
         });
       }
     }
+  }
+
+  /**
+   * 提取真实的图片URL（处理各种懒加载方案）
+   */
+  private extractRealImageSrc(img: HTMLImageElement): string | null {
+    // 常见的懒加载属性列表（按优先级排序）
+    const lazyAttributes = [
+      'data-src',
+      'data-original',
+      'data-original-src',
+      'data-lazy-src',
+      'data-srcset',
+      'data-background-image',
+      'data-bg',
+      'data-image',
+      'data-url',
+    ];
+
+    // 尝试从各种懒加载属性中提取URL
+    for (const attr of lazyAttributes) {
+      const value = img.getAttribute(attr);
+      if (value && value.trim() && this.isValidImageUrl(value)) {
+        return value.trim();
+      }
+    }
+
+    // 检查srcset属性
+    if (img.srcset) {
+      const srcsetParts = img.srcset.split(',')[0].trim().split(' ');
+      if (srcsetParts[0] && this.isValidImageUrl(srcsetParts[0])) {
+        return srcsetParts[0];
+      }
+    }
+
+    // 如果src是占位符或base64小图，尝试从style中提取
+    if (img.src && (
+      img.src.includes('placeholder') || 
+      img.src.includes('loading') ||
+      img.src.startsWith('data:image') && img.src.length < 1000
+    )) {
+      const bgImage = img.style.backgroundImage;
+      if (bgImage) {
+        const match = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+        if (match && match[1] && this.isValidImageUrl(match[1])) {
+          return match[1];
+        }
+      }
+    }
+
+    // 返回原始src（如果有效）
+    if (img.src && this.isValidImageUrl(img.src)) {
+      return img.src;
+    }
+
+    return null;
+  }
+
+  /**
+   * 验证URL是否为有效的图片URL
+   */
+  private isValidImageUrl(url: string): boolean {
+    if (!url || url.trim() === '') return false;
+    
+    // 排除占位符和无效URL
+    const invalidPatterns = [
+      /^data:image\/svg\+xml.*1x1/i,  // 1x1占位符
+      /placeholder/i,
+      /loading\.gif/i,
+      /spinner/i,
+      /^about:blank/i,
+      /^javascript:/i,
+    ];
+
+    for (const pattern of invalidPatterns) {
+      if (pattern.test(url)) {
+        return false;
+      }
+    }
+
+    // 检查是否为有效的图片格式
+    const validExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?.*)?$/i;
+    const isValidExtension = validExtensions.test(url);
+    
+    // 或者是有效的URL格式（包括base64大图）
+    const isValidUrl = url.startsWith('http') || url.startsWith('//') || 
+                      (url.startsWith('data:image') && url.length > 1000);
+
+    return isValidExtension || isValidUrl;
   }
 
   /**

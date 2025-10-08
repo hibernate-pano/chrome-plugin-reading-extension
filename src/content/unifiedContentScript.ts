@@ -24,6 +24,7 @@ import {
 // 导入样式
 import './styles/contentTailwind.css';
 import './styles/readingMode.css';
+import './styles/image-loading.css';
 
 // 全局状态
 let readingModeManager: Awaited<ReturnType<typeof getReadingModeManager>> | null = null;

@@ -26,7 +26,7 @@ const THEMES = [
 export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
   settings,
   onSettingsChange,
-  onClose,
+  onClose: _onClose,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -352,6 +352,99 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '12px', color: '#9ca3af' }}>
                 <span>窄</span>
                 <span>宽</span>
+              </div>
+            </div>
+
+            {/* 图片加载设置 */}
+            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🖼️ 图片加载设置
+              </h3>
+
+              {/* 启用懒加载 */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.enableImageLazyLoading !== false}
+                    onChange={(e) => handleChange('enableImageLazyLoading', e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span>启用图片懒加载</span>
+                </label>
+                <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6b7280' }}>
+                  仅在图片进入视口时才加载，提升页面性能
+                </p>
+              </div>
+
+              {/* 启用预加载 */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.enableImagePreloading !== false}
+                    onChange={(e) => handleChange('enableImagePreloading', e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span>启用智能预加载</span>
+                </label>
+                <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6b7280' }}>
+                  预加载视口下方即将可见的图片，提升浏览体验
+                </p>
+              </div>
+
+              {/* 图片质量 */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                  图片质量：{settings.imageQuality || 85}%
+                </label>
+                <input
+                  type="range"
+                  min="50"
+                  max="100"
+                  step="5"
+                  value={settings.imageQuality || 85}
+                  onChange={(e) => handleChange('imageQuality', parseInt(e.target.value))}
+                  style={{
+                    width: '100%',
+                    height: '5px',
+                    borderRadius: '3px',
+                    background: '#e5e7eb',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                  <span>低质量</span>
+                  <span>高质量</span>
+                </div>
+              </div>
+
+              {/* 缓存大小 */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                  图片缓存大小：{settings.imageCacheSize || 50}MB
+                </label>
+                <input
+                  type="range"
+                  min="10"
+                  max="200"
+                  step="10"
+                  value={settings.imageCacheSize || 50}
+                  onChange={(e) => handleChange('imageCacheSize', parseInt(e.target.value))}
+                  style={{
+                    width: '100%',
+                    height: '5px',
+                    borderRadius: '3px',
+                    background: '#e5e7eb',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                  <span>小缓存</span>
+                  <span>大缓存</span>
+                </div>
               </div>
             </div>
           </div>
