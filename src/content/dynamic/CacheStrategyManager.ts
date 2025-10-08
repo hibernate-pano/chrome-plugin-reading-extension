@@ -207,14 +207,14 @@ export class CacheStrategyManager {
       
       const item = this.cache.get(key);
       if (!item) {
-        this.recordCacheMiss();
+        this.recordCacheMiss(key);
         return null;
       }
       
       // 检查TTL
       if (this.isExpired(item)) {
         this.remove(key);
-        this.recordCacheMiss();
+        this.recordCacheMiss(key);
         return null;
       }
       
@@ -222,7 +222,7 @@ export class CacheStrategyManager {
       this.updateAccessInfo(key);
       
       // 记录缓存命中
-      this.recordCacheHit();
+      this.recordCacheHit(key);
       
       // 更新访问时间统计
       const accessTime = performance.now() - startTime;
@@ -237,7 +237,7 @@ export class CacheStrategyManager {
       
     } catch (error) {
       console.error('获取缓存项失败:', error);
-      this.recordCacheMiss();
+      this.recordCacheMiss(key);
       return null;
     }
   }
@@ -535,19 +535,19 @@ export class CacheStrategyManager {
   /**
    * 记录缓存命中
    */
-  private recordCacheHit(): void {
+  private recordCacheHit(key?: string): void {
     this.stats.hitCount++;
     this.updateHitRate();
-    this.onCacheHit?.(key);
+    if (key) this.onCacheHit?.(key);
   }
 
   /**
    * 记录缓存未命中
    */
-  private recordCacheMiss(): void {
+  private recordCacheMiss(key?: string): void {
     this.stats.missCount++;
     this.updateHitRate();
-    this.onCacheMiss?.(key);
+    if (key) this.onCacheMiss?.(key);
   }
 
   /**

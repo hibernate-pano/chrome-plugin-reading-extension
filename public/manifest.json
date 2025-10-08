@@ -33,7 +33,7 @@
         "<all_urls>"
       ],
       "js": [
-        "contentShadcn.js"
+        "unifiedContentScript.js"
       ],
       "run_at": "document_end"
     }

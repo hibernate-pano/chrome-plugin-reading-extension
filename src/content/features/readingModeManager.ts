@@ -7,6 +7,8 @@ import { UserSettings } from '../../types';
 import { getStorage, setStorage, StorageKeys } from '../../storage/storage';
 import { MESSAGE_TYPES } from '../../constants';
 import { mountNewFloatingUI } from '../ui/NewFloatingUIManager';
+import { cacheStrategyManager } from '../dynamic/CacheStrategyManager';
+import { ExtractorFactory } from '../extractors/ExtractorFactory';
 
 export class ReadingModeManager {
   private isActive = false;
@@ -83,7 +85,7 @@ export class ReadingModeManager {
 
       // 通知背景脚本
       chrome.runtime.sendMessage({
-        type: 'READING_MODE_ENABLED',
+        type: MESSAGE_TYPES.READING_MODE_ENABLED,
         url: window.location.href
       });
 
@@ -118,7 +120,7 @@ export class ReadingModeManager {
 
       // 通知背景脚本
       chrome.runtime.sendMessage({
-        type: 'READING_MODE_DISABLED',
+        type: MESSAGE_TYPES.READING_MODE_DISABLED,
         url: window.location.href
       });
 
@@ -170,28 +172,35 @@ export class ReadingModeManager {
    */
   private async extractContent(): Promise<string | null> {
     try {
-      // 使用 @mozilla/readability 提取内容
-      const { Readability } = await import('@mozilla/readability');
-      
-      const documentClone = document.cloneNode(true) as Document;
-      const reader = new Readability(documentClone);
-      const article = reader.parse();
-
-      if (article && article.content) {
-        return `
-          <article class="reading-mode-content">
-            <h1 class="reading-mode-title">${article.title || document.title}</h1>
-            ${article.byline ? `<div class="reading-mode-subtitle">${article.byline}</div>` : ''}
-            <div class="reading-mode-body">${article.content}</div>
-          </article>
-        `;
+      await cacheStrategyManager.initialize();
+      const url = window.location.href;
+      const cacheKey = `extract:${url}`;
+      const cached = cacheStrategyManager.get<any>(cacheKey);
+      if (cached && cached.content) {
+        return this.wrapArticleHtml(cached.title || document.title, cached.byline, cached.content);
       }
 
+      const extractor = await ExtractorFactory.createExtractor(url);
+      const result = await extractor.extract(document, url);
+      cacheStrategyManager.set(cacheKey, result, { type: 'extract', url });
+      if (result && result.content) {
+        return this.wrapArticleHtml(result.title || document.title, (result as any).byline, result.content);
+      }
       return null;
     } catch (error) {
       console.error('内容提取失败:', error);
       return null;
     }
+  }
+
+  private wrapArticleHtml(title: string, byline: string | undefined, content: string): string {
+    return `
+      <article class="reading-mode-content">
+        <h1 class="reading-mode-title">${title}</h1>
+        ${byline ? `<div class="reading-mode-subtitle">${byline}</div>` : ''}
+        <div class="reading-mode-body">${content}</div>
+      </article>
+    `;
   }
 
   /**

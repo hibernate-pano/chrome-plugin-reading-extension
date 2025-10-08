@@ -55,6 +55,7 @@ export class WebWorkerManager {
   private config: WorkerConfig;
   private isInitialized: boolean = false;
   private workerScripts: Map<string, string> = new Map();
+  private taskResolvers: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void }> = new Map();
   
   // 事件回调
   private onTaskComplete: ((task: WorkerTask) => void) | null = null;
@@ -314,6 +315,305 @@ export class WebWorkerManager {
         return recommendations;
       }
     `);
+
+    // 代码处理Worker
+    this.workerScripts.set('code-processing', `
+      self.onmessage = function(e) {
+        const { id, type, data } = e.data;
+        
+        try {
+          let result;
+          
+          switch (type) {
+            case 'highlight-code':
+              result = { highlighted: highlightCode(data.code, data.language) };
+              break;
+            case 'format-code':
+              result = { formatted: formatCode(data.code, data.language) };
+              break;
+            case 'validate-code':
+              result = { valid: validateCode(data.code, data.language) };
+              break;
+            default:
+              throw new Error('Unknown task type: ' + type);
+          }
+          
+          self.postMessage({
+            id,
+            status: 'completed',
+            result
+          });
+        } catch (error) {
+          self.postMessage({
+            id,
+            status: 'failed',
+            error: error.message
+          });
+        }
+      };
+      
+      function highlightCode(code, language) {
+        // 简单的代码高亮逻辑（基础版）
+        if (!code) return '';
+        
+        // 根据语言类型进行基础高亮
+        switch (language.toLowerCase()) {
+          case 'javascript':
+          case 'js':
+            return highlightJavaScript(code);
+          case 'python':
+            return highlightPython(code);
+          case 'html':
+            return highlightHTML(code);
+          case 'css':
+            return highlightCSS(code);
+          default:
+            return escapeHtml(code);
+        }
+      }
+      
+      function highlightJavaScript(code) {
+        return code
+          .replace(/\\b(function|const|let|var|if|else|for|while|return|class|import|export)\\b/g, '<span class="keyword">$1</span>')
+          .replace(/\\b(true|false|null|undefined)\\b/g, '<span class="literal">$1</span>')
+          .replace(/\\b(\\d+)\\b/g, '<span class="number">$1</span>')
+          .replace(/(['"])([^'"]*)\\1/g, '<span class="string">$1$2$1</span>')
+          .replace(/\\/\\/.*$/gm, '<span class="comment">$&</span>')
+          .replace(/\\/\\*[\\s\\S]*?\\*\\//g, '<span class="comment">$&</span>');
+      }
+      
+      function highlightPython(code) {
+        return code
+          .replace(/\\b(def|class|if|else|elif|for|while|return|import|from|try|except|finally|with|as)\\b/g, '<span class="keyword">$1</span>')
+          .replace(/\\b(True|False|None)\\b/g, '<span class="literal">$1</span>')
+          .replace(/\\b(\\d+)\\b/g, '<span class="number">$1</span>')
+          .replace(/(['"])([^'"]*)\\1/g, '<span class="string">$1$2$1</span>')
+          .replace(/#.*$/gm, '<span class="comment">$&</span>');
+      }
+      
+      function highlightHTML(code) {
+        return code
+          .replace(/<([^>]+)>/g, '<span class="tag">&lt;$1&gt;</span>')
+          .replace(/&lt;\\/([^>]+)&gt;/g, '<span class="tag">&lt;/$1&gt;</span>');
+      }
+      
+      function highlightCSS(code) {
+        return code
+          .replace(/\\b([a-zA-Z-]+)\\s*:/g, '<span class="property">$1</span>:')
+          .replace(/\\b(\\d+[a-zA-Z%]*)\\b/g, '<span class="number">$1</span>')
+          .replace(/(['"])([^'"]*)\\1/g, '<span class="string">$1$2$1</span>')
+          .replace(/\\/\\*[\\s\\S]*?\\*\\//g, '<span class="comment">$&</span>');
+      }
+      
+      function formatCode(code, language) {
+        // 简单的代码格式化
+        return code
+          .replace(/;\\s*/g, ';\\n')
+          .replace(/{\\s*/g, '{\\n  ')
+          .replace(/}\\s*/g, '\\n}\\n')
+          .replace(/,\\s*/g, ',\\n  ')
+          .trim();
+      }
+      
+      function validateCode(code, language) {
+        // 简单的代码验证
+        if (!code || code.trim().length === 0) return false;
+        
+        switch (language.toLowerCase()) {
+          case 'javascript':
+            return validateJavaScript(code);
+          case 'python':
+            return validatePython(code);
+          default:
+            return true;
+        }
+      }
+      
+      function validateJavaScript(code) {
+        // 检查基本的JavaScript语法
+        try {
+          // 简单的括号匹配检查
+          const openBraces = (code.match(/{/g) || []).length;
+          const closeBraces = (code.match(/}/g) || []).length;
+          const openParens = (code.match(/\\(/g) || []).length;
+          const closeParens = (code.match(/\\)/g) || []).length;
+          
+          return openBraces === closeBraces && openParens === closeParens;
+        } catch {
+          return false;
+        }
+      }
+      
+      function validatePython(code) {
+        // 检查基本的Python语法
+        const lines = code.split('\\n');
+        let indentLevel = 0;
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          
+          const currentIndent = line.length - line.trimStart().length;
+          
+          if (trimmed.endsWith(':')) {
+            // 缩进应该增加
+            if (currentIndent <= indentLevel) return false;
+            indentLevel = currentIndent;
+          } else {
+            // 缩进应该保持一致或减少
+            if (currentIndent > indentLevel) return false;
+            indentLevel = currentIndent;
+          }
+        }
+        
+        return true;
+      }
+      
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    `);
+
+    // 图片处理Worker
+    this.workerScripts.set('image-processing', `
+      self.onmessage = function(e) {
+        const { id, type, data } = e.data;
+        
+        try {
+          let result;
+          
+          switch (type) {
+            case 'process-image':
+              result = { processed: processImage(data.imageData, data.options) };
+              break;
+            case 'resize-image':
+              result = { resized: resizeImage(data.imageData, data.width, data.height) };
+              break;
+            case 'compress-image':
+              result = { compressed: compressImage(data.imageData, data.quality) };
+              break;
+            default:
+              throw new Error('Unknown task type: ' + type);
+          }
+          
+          self.postMessage({
+            id,
+            status: 'completed',
+            result
+          });
+        } catch (error) {
+          self.postMessage({
+            id,
+            status: 'failed',
+            error: error.message
+          });
+        }
+      };
+      
+      function processImage(imageData, options = {}) {
+        // 简单的图片处理逻辑
+        if (!imageData) return '';
+        
+        // 这里可以实现图片处理逻辑
+        // 由于Worker环境的限制，这里只是返回原始数据
+        return imageData;
+      }
+      
+      function resizeImage(imageData, width, height) {
+        // 图片尺寸调整逻辑
+        return imageData;
+      }
+      
+      function compressImage(imageData, quality = 0.8) {
+        // 图片压缩逻辑
+        return imageData;
+      }
+    `);
+
+    // Markdown 转换Worker（基础版，无 DOM 依赖）
+    this.workerScripts.set('markdown-processing', `
+      function htmlToMarkdown(html) {
+        if (!html || typeof html !== 'string') return '';
+        let text = html;
+        // 移除<script>与<style>
+        text = text.replace(/<script[\s\S]*?<\/script>/gi, '')
+                   .replace(/<style[\s\S]*?<\/style>/gi, '');
+
+        // 代码块 <pre><code>
+        text = text.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, function(_, code){
+          const decoded = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+          return '\n```\n' + decoded + '\n```\n\n';
+        });
+
+        // 行内代码
+        text = text.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, function(_, code){
+          const decoded = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+          return '\\`' + decoded + '\\`';
+        });
+
+        // 标题 h1-h6
+        for (let i = 6; i >= 1; i--) {
+          const re = new RegExp('<h' + i + '[^>]*>([\\s\\S]*?)<\\/h' + i + '>', 'gi');
+          text = text.replace(re, function(_, c){ return '\n' + '#'.repeat(i) + ' ' + stripTags(c).trim() + '\n\n'; });
+        }
+
+        // 段落与换行
+        text = text.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, function(_, c){ return '\n' + stripTags(c).trim() + '\n\n'; })
+                   .replace(/<br\s*\/?>(\s*)/gi, '\n');
+
+        // 引用
+        text = text.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, function(_, c){
+          const lines = stripTags(c).split(/\n+/).map(l => l ? '> ' + l : '>');
+          return '\n' + lines.join('\n') + '\n\n';
+        });
+
+        // 图片与链接
+        text = text.replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]+)"[^>]*>/gi, '![$1]($2)')
+                   .replace(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)');
+
+        // 粗体与斜体
+        text = text.replace(/<(strong|b)[^>]*>([\s\S]*?)<\/\1>/gi, '**$2**')
+                   .replace(/<(em|i)[^>]*>([\s\S]*?)<\/\1>/gi, '*$2*');
+
+        // 列表 li（简化为无序）
+        text = text.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, function(_, c){ return '\n- ' + stripTags(c).trim(); });
+        text = text.replace(/<\/(ul|ol)>/gi, '\n\n');
+
+        // 余下去标签
+        text = stripTags(text);
+
+        // 规范空行
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        return text;
+      }
+
+      function stripTags(s){
+        return s.replace(/<[^>]+>/g, '')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&amp;/g, '&');
+      }
+
+      self.onmessage = function(e){
+        const { id, type, data } = e.data;
+        try {
+          let result;
+          switch(type){
+            case 'html-to-markdown':
+              result = { markdown: htmlToMarkdown(data.html || '') };
+              break;
+            default:
+              throw new Error('Unknown task type: ' + type);
+          }
+          self.postMessage({ id, status: 'completed', result });
+        } catch (err){
+          self.postMessage({ id, status: 'failed', error: err && err.message ? err.message : String(err) });
+        }
+      };
+    `);
   }
 
   /**
@@ -392,12 +692,20 @@ export class WebWorkerManager {
         task.status = 'completed';
         task.result = result;
         this.completeTask(task);
+        {
+          const resolver = this.taskResolvers.get(id);
+          if (resolver) { resolver.resolve(result); this.taskResolvers.delete(id); }
+        }
         break;
         
       case 'failed':
         task.status = 'failed';
         task.error = error;
         this.failTask(task);
+        {
+          const resolver = this.taskResolvers.get(id);
+          if (resolver) { resolver.reject(new Error(error)); this.taskResolvers.delete(id); }
+        }
         break;
         
       case 'progress':
@@ -622,6 +930,102 @@ export class WebWorkerManager {
     
     // 继续处理队列
     this.processQueue();
+
+    const resolver = this.taskResolvers.get(task.id);
+    if (resolver) { resolver.reject(new Error('任务超时')); this.taskResolvers.delete(task.id); }
+  }
+
+  /**
+   * 便捷：提交任务并等待结果
+   */
+  public async runTask<T = any>(
+    type: string,
+    data: any,
+    priority: WorkerTask['priority'] = 'normal',
+    scriptType: string = 'data-processing'
+  ): Promise<T> {
+    const id = await this.submitTask(type, data, priority, scriptType);
+    return new Promise<T>((resolve, reject) => {
+      this.taskResolvers.set(id, { resolve, reject });
+    });
+  }
+
+  /**
+   * 便捷：HTML转Markdown
+   */
+  public async convertHtmlToMarkdown(html: string): Promise<string> {
+    const result = await this.runTask<{ markdown: string }>(
+      'html-to-markdown',
+      { html },
+      'high',
+      'markdown-processing'
+    );
+    return result.markdown;
+  }
+
+  /**
+   * 便捷：内容提取
+   */
+  public async extractContent(html: string): Promise<string> {
+    const result = await this.runTask<{ content: string }>(
+      'extract-text',
+      { html },
+      'normal',
+      'content-extraction'
+    );
+    return result.content;
+  }
+
+  /**
+   * 便捷：内容清理
+   */
+  public async cleanContent(content: string): Promise<string> {
+    const result = await this.runTask<{ content: string }>(
+      'clean-content',
+      { content },
+      'normal',
+      'content-extraction'
+    );
+    return result.content;
+  }
+
+  /**
+   * 便捷：解析元数据
+   */
+  public async parseMetadata(html: string): Promise<any> {
+    const result = await this.runTask<{ metadata: any }>(
+      'parse-metadata',
+      { html },
+      'normal',
+      'content-extraction'
+    );
+    return result.metadata;
+  }
+
+  /**
+   * 便捷：代码高亮处理
+   */
+  public async highlightCode(code: string, language: string = 'text'): Promise<string> {
+    const result = await this.runTask<{ highlighted: string }>(
+      'highlight-code',
+      { code, language },
+      'normal',
+      'code-processing'
+    );
+    return result.highlighted;
+  }
+
+  /**
+   * 便捷：图片处理
+   */
+  public async processImage(imageData: string, options: any = {}): Promise<string> {
+    const result = await this.runTask<{ processed: string }>(
+      'process-image',
+      { imageData, options },
+      'low',
+      'image-processing'
+    );
+    return result.processed;
   }
 
   /**

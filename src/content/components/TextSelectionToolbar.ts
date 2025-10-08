@@ -1,7 +1,9 @@
 /**
  * 文本选择工具栏
- * 用于在用户选择文本时显示复制、搜索、翻译等功能
+ * 用于在用户选择文本时显示复制、搜索、翻译、高亮、注释等功能
  */
+
+import { annotationManager } from '../features/annotation/AnnotationManager';
 
 // 工具栏选项
 interface ToolbarOption {
@@ -300,31 +302,41 @@ export const defaultToolbarOptions: ToolbarOption[] = [
     action: (text: string) => {
       navigator.clipboard.writeText(text)
         .then(() => {
-          // 显示复制成功提示
-          const toast = document.createElement('div');
-          toast.textContent = '已复制到剪贴板';
-          toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-size: 14px;
-            z-index: 10000;
-          `;
-          document.body.appendChild(toast);
-
-          // 2秒后移除提示
-          setTimeout(() => {
-            document.body.removeChild(toast);
-          }, 2000);
+          showToast('已复制到剪贴板');
         })
         .catch(err => {
           console.error('复制失败:', err);
+          showToast('复制失败', 'error');
         });
+    }
+  },
+  {
+    id: 'highlight-yellow',
+    icon: '🖍️',
+    label: '高亮',
+    action: (text: string) => {
+      const annotationId = annotationManager.createHighlight(text, '#ffeb3b');
+      if (annotationId) {
+        showToast('高亮已添加');
+      } else {
+        showToast('高亮添加失败', 'error');
+      }
+    }
+  },
+  {
+    id: 'note',
+    icon: '📝',
+    label: '注释',
+    action: (text: string) => {
+      const note = prompt('请输入注释内容:');
+      if (note !== null && note.trim()) {
+        const annotationId = annotationManager.createHighlight(text, '#a5d6a7', note.trim());
+        if (annotationId) {
+          showToast('注释已添加');
+        } else {
+          showToast('注释添加失败', 'error');
+        }
+      }
     }
   },
   {
@@ -344,3 +356,116 @@ export const defaultToolbarOptions: ToolbarOption[] = [
     }
   }
 ];
+
+// 导出工具栏选项
+export const exportToolbarOptions: ToolbarOption[] = [
+  {
+    id: 'export-markdown',
+    icon: '📤',
+    label: '导出MD',
+    action: async () => {
+      try {
+        const content = await annotationManager.exportAnnotations({
+          format: 'markdown',
+          includeMetadata: true,
+          includeHighlights: true,
+          includeNotes: true,
+          filename: `${document.title}_annotations.md`
+        });
+        
+        annotationManager.downloadFile(
+          content,
+          `${document.title}_annotations.md`,
+          'text/markdown'
+        );
+        showToast('Markdown导出成功');
+      } catch (error) {
+        console.error('导出失败:', error);
+        showToast('导出失败', 'error');
+      }
+    }
+  },
+  {
+    id: 'export-html',
+    icon: '💾',
+    label: '导出HTML',
+    action: async () => {
+      try {
+        const content = await annotationManager.exportAnnotations({
+          format: 'html',
+          includeMetadata: true,
+          includeHighlights: true,
+          includeNotes: true,
+          filename: `${document.title}_annotations.html`
+        });
+        
+        annotationManager.downloadFile(
+          content,
+          `${document.title}_annotations.html`,
+          'text/html'
+        );
+        showToast('HTML导出成功');
+      } catch (error) {
+        console.error('导出失败:', error);
+        showToast('导出失败', 'error');
+      }
+    }
+  },
+  {
+    id: 'export-json',
+    icon: '📊',
+    label: '导出JSON',
+    action: async () => {
+      try {
+        const content = await annotationManager.exportAnnotations({
+          format: 'json',
+          includeMetadata: true,
+          includeHighlights: true,
+          includeNotes: true,
+          filename: `${document.title}_annotations.json`
+        });
+        
+        annotationManager.downloadFile(
+          content,
+          `${document.title}_annotations.json`,
+          'application/json'
+        );
+        showToast('JSON导出成功');
+      } catch (error) {
+        console.error('导出失败:', error);
+        showToast('导出失败', 'error');
+      }
+    }
+  }
+];
+
+// 显示提示消息
+function showToast(message: string, type: 'success' | 'error' = 'success'): void {
+  const toast = document.createElement('div');
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: ${type === 'success' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(220, 38, 38, 0.9)'};
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 10000;
+    transition: opacity 0.3s ease;
+  `;
+  
+  document.body.appendChild(toast);
+
+  // 2秒后移除提示
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 300);
+  }, 2000);
+}

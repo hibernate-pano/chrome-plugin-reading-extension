@@ -379,8 +379,8 @@ document.head.appendChild(customCodeStyles);
 // 导入 highlight.js 样式
 // 导入性能监控器和工具
 import { performanceMonitor } from '../utils/performance';
-import { Toast } from '../ui/components/Toast';
-import { createFloatingButton, removeFloatingButton } from './ui/readerFloatingButton';
+import toastManager from './ui/feedback/ToastManager';
+import { removeFloatingButton } from './ui/readerFloatingButton';
 import { handleMediaElements } from './processors/mediaProcessor';
 
 // 导入增强提取器
@@ -397,6 +397,7 @@ import './extractors/extractors.css';
 import './styles/github-code-new.css';
 
 import { MarkdownWorkerManager } from "./workers/markdownWorkerManager";
+import { cacheStrategyManager } from './dynamic/CacheStrategyManager';
 
 // Import structured errors and logger
 import { ReaderError, ErrorCode, ContentExtractionError } from '../types/errors';
@@ -431,6 +432,7 @@ interface ReadingModeSettings {
 let originalContent: string | null = null;
 let isReadingMode = false;
 let textSelectionToolbar: TextSelectionToolbar | null = null;
+let annotationsStore: Array<{ text: string; note?: string }> = [];
 let markdownWorkerManager: MarkdownWorkerManager | null = null;
 
 import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
@@ -461,7 +463,11 @@ function handleError(error: unknown, context: string): void {
 
   // Show a user-friendly toast message based on the error code
   const message = userFriendlyMessages[readerError.code] || userFriendlyMessages.UNEXPECTED_STATE;
-  Toast.error(message);
+  try {
+    toastManager.show({ title: '错误', message, duration: 3000 });
+  } catch {
+    // ignore
+  }
   // TODO: Consider showing a more detailed error UI if needed, possibly based on specific error types
 }
 
@@ -694,6 +700,7 @@ async function applyStyles(settings: ReadingModeSettings) {
 // 将 createFloatingButton 和 removeFloatingButton 移动到 src/content/ui/readerFloatingButton.ts
 
 async function toggleReadingMode() {
+  await cacheStrategyManager.initialize();
   const settings = await fetchSettings();
 
   if (!isReadingMode) {
@@ -704,22 +711,27 @@ async function toggleReadingMode() {
 
     try {
       // Show loading toast
-      loadingToast = Toast.info('正在准备阅读模式...', {
-        duration: 0, // Indefinite duration
-        showProgress: true
-      });
+      loadingToast = toastManager.show({ title: '请稍候', message: '正在准备阅读模式...', duration: 0, showProgress: true });
 
       // Initialize extractor and worker manager if not already
       if (!markdownWorkerManager) {
         markdownWorkerManager = new MarkdownWorkerManager();
       }
 
-      // 1. Extract content
+      // 1. Extract content（带缓存）
       let extractedContent;
       try {
-        // 使用ExtractorFactory代替defuddleExtractorInstance
-        const extractor = await ExtractorFactory.createExtractor(window.location.href);
-        extractedContent = await extractor.extract(document, window.location.href);
+        const url = window.location.href;
+        const cacheKey = `extract:${url}`;
+        const cached = cacheStrategyManager.get<any>(cacheKey);
+        if (cached && cached.content) {
+          extractedContent = cached;
+          console.log('命中提取缓存');
+        } else {
+          const extractor = await ExtractorFactory.createExtractor(url);
+          extractedContent = await extractor.extract(document, url);
+          cacheStrategyManager.set(cacheKey, extractedContent, { type: 'extract', url });
+        }
         console.log('内容提取完成');
         // Check if extraction was successful based on ExtractedContent interface (if applicable)
         if (!extractedContent || !extractedContent.content) { // Assuming extractedContent has a 'content' property
@@ -735,10 +747,20 @@ async function toggleReadingMode() {
         }
       }
 
-      // 2. Convert to Markdown
+      // 2. Convert to Markdown（带缓存）
       let markdown;
       try {
-        markdown = await markdownWorkerManager.convertToMarkdown(extractedContent.content);
+        const html = extractedContent.content;
+        const hash = simpleStringHash(html);
+        const mdCacheKey = `md:${hash}`;
+        const mdCached = cacheStrategyManager.get<string>(mdCacheKey);
+        if (mdCached) {
+          markdown = mdCached;
+          console.log('命中Markdown缓存');
+        } else {
+          markdown = await markdownWorkerManager.convertToMarkdown(html);
+          cacheStrategyManager.set(mdCacheKey, markdown, { type: 'markdown' });
+        }
         console.log('Markdown 转换完成');
         if (!markdown) {
           throw new RenderError('Markdown 转换失败: 转换结果为空', { htmlLength: extractedContent.content.length });
@@ -790,16 +812,14 @@ async function toggleReadingMode() {
       document.body.innerHTML = "";
       document.body.appendChild(readingModeContainer);
 
-      // 7. Initialize toolbar
-      // initToolbar(settings); // Removed: Function not defined
-      // TODO: Initialize text selection toolbar (TextSelectionToolbar is imported but not initialized)
-      console.log('TODO: 初始化文本选择工具栏');
+      // 7. Initialize toolbar（选择工具条：高亮/批注/导出）
+      initTextSelectionToolbar();
 
       isReadingMode = true;
 
       // Close loading toast and show success toast
       if (loadingToast) loadingToast.close();
-      Toast.success('阅读模式已启用');
+      toastManager.show({ title: '成功', message: '阅读模式已启用', duration: 2000 });
 
     } catch (error: any) {
       // This catches errors re-thrown from specific steps or unexpected errors
@@ -837,7 +857,7 @@ async function toggleReadingMode() {
     isReadingMode = false;
 
     // Show exit toast
-    Toast.info('已退出阅读模式');
+    toastManager.show({ title: '提示', message: '已退出阅读模式', duration: 2000 });
   }
 }
 
@@ -919,6 +939,10 @@ async function extractContent(): Promise<any> {
 }
 
 // 监听消息
+// 如果新版统一内容脚本已激活，则跳过旧版监听注册，避免重复处理
+if ((window as any).__UNIFIED_CONTENT_SCRIPT_ACTIVE || (window as any).__READER_SHADCN_ACTIVE) {
+  console.warn('检测到统一内容脚本已激活，旧版 content.ts 跳过消息监听注册');
+} else {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   let asyncResponse = false;
 
@@ -933,7 +957,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: error.message });
       });
   }
-  else if (message.action === MESSAGE_TYPES.ENABLE_READING_MODE || message.action === 'ENABLE_READING_MODE') {
+  else if (message.action === MESSAGE_TYPES.ENABLE_READING_MODE) {
     asyncResponse = true;
     if (!isReadingMode) {
       toggleReadingMode()
@@ -948,7 +972,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true, readingMode: true });
     }
   }
-  else if (message.action === MESSAGE_TYPES.DISABLE_READING_MODE || message.action === 'DISABLE_READING_MODE') {
+  else if (message.action === MESSAGE_TYPES.DISABLE_READING_MODE) {
     asyncResponse = true;
     if (isReadingMode) {
       toggleReadingMode()
@@ -963,7 +987,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true, readingMode: false });
     }
   }
-  else if (message.action === MESSAGE_TYPES.APPLY_PRESET || message.action === 'APPLY_PRESET') {
+  else if (message.action === MESSAGE_TYPES.APPLY_PRESET) {
     asyncResponse = true;
     try {
       // 应用预设样式
@@ -1031,5 +1055,107 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // This is only needed for the async case (TOGGLE_READER_MODE)
   return asyncResponse;
 });
+}
 
 // ... rest of content.ts ...
+
+// 简单字符串哈希（非加密，用于缓存键）
+function simpleStringHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const chr = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0; // 转32位
+  }
+  return String(hash >>> 0);
+}
+
+// 初始化文本选择工具条（高亮/批注/导出）
+function initTextSelectionToolbar(): void {
+  if (textSelectionToolbar) return;
+
+  ensureHighlightStyles();
+
+  textSelectionToolbar = new TextSelectionToolbar({
+    options: [
+      { id: 'highlight', icon: '🖍️', label: '高亮', action: () => highlightCurrentSelection() },
+      { id: 'annotate', icon: '📝', label: '批注', action: () => annotateCurrentSelection() },
+      { id: 'export-md', icon: '📤', label: '导出MD', action: async () => exportCurrentAsMarkdown() },
+      { id: 'export-html', icon: '💾', label: '导出HTML', action: () => exportCurrentAsHtml() },
+    ],
+    position: 'top',
+    theme: (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light',
+  });
+}
+
+function ensureHighlightStyles(): void {
+  if (document.getElementById('reader-highlight-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'reader-highlight-styles';
+  style.textContent = `
+    .reader-highlight { background: rgba(255, 235, 59, 0.6); border-radius: 2px; padding: 0 2px; }
+    .dark .reader-highlight { background: rgba(255, 235, 59, 0.4); }
+  `;
+  document.head.appendChild(style);
+}
+
+function highlightCurrentSelection(): void {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return;
+  const range = selection.getRangeAt(0);
+  const span = document.createElement('span');
+  span.className = 'reader-highlight';
+  range.surroundContents(span);
+  const text = span.textContent || '';
+  annotationsStore.push({ text });
+  selection.removeAllRanges();
+}
+
+function annotateCurrentSelection(): void {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return;
+  const note = prompt('添加批注内容');
+  if (note == null) return;
+  const range = selection.getRangeAt(0);
+  const span = document.createElement('span');
+  span.className = 'reader-highlight';
+  span.setAttribute('data-note', note);
+  range.surroundContents(span);
+  const text = span.textContent || '';
+  annotationsStore.push({ text, note });
+  selection.removeAllRanges();
+}
+
+async function exportCurrentAsMarkdown(): Promise<void> {
+  try {
+    const container = document.getElementById('reading-mode-container') || document.body;
+    const html = container.innerHTML;
+    if (!markdownWorkerManager) markdownWorkerManager = new MarkdownWorkerManager();
+    const markdown = await markdownWorkerManager.convertToMarkdown(html);
+    triggerDownload('reading.md', new Blob([markdown], { type: 'text/markdown;charset=utf-8' }));
+  } catch (e) {
+    console.error('导出Markdown失败:', e);
+  }
+}
+
+function exportCurrentAsHtml(): void {
+  try {
+    const container = document.getElementById('reading-mode-container') || document.body;
+    const html = container.innerHTML;
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${document.title}</title></head><body>${html}</body></html>`;
+    triggerDownload('reading.html', new Blob([doc], { type: 'text/html;charset=utf-8' }));
+  } catch (e) {
+    console.error('导出HTML失败:', e);
+  }
+}
+
+function triggerDownload(filename: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

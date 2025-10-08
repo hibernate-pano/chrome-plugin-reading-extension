@@ -20,6 +20,12 @@ let currentSettings: UserSettings;
  * 初始化内容脚本
  */
 async function initialize(): Promise<void> {
+  // 防重复初始化标记（避免与统一内容脚本和旧版 content.ts 冲突）
+  if ((window as any).__UNIFIED_CONTENT_SCRIPT_ACTIVE || (window as any).__READER_SHADCN_ACTIVE) {
+    console.warn('统一内容脚本或Shadcn内容脚本已激活，跳过重复初始化');
+    return;
+  }
+  (window as any).__READER_SHADCN_ACTIVE = true;
   try {
     // 加载设置
     currentSettings = await loadSettings();

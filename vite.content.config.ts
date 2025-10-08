@@ -27,7 +27,7 @@ export default defineConfig({
     rollupOptions: {
       external: ['chrome'],
       input: {
-        content: resolve(__dirname, 'src/content/contentShadcn.ts')
+        unifiedContentScript: resolve(__dirname, 'src/content/unifiedContentScript.ts')
       },
       output: {
         globals: {
@@ -35,7 +35,7 @@ export default defineConfig({
         },
         format: 'iife',
         dir: 'dist',
-        entryFileNames: () => 'contentShadcn.js',
+        entryFileNames: () => 'unifiedContentScript.js',
         chunkFileNames: 'assets/content-chunks/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]'
       }
