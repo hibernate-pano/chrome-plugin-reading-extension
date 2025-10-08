@@ -18,7 +18,6 @@ interface MountOptions {
  */
 export function updateReadingSettingsPanelSettings(settings: UserSettings): void {
   if (!settingsPanelRoot || !currentOnSettingsChange) {
-    console.warn('⚠️ [SettingsPanel] 面板未挂载，无法更新 settings');
     return;
   }
 
@@ -33,16 +32,12 @@ export function updateReadingSettingsPanelSettings(settings: UserSettings): void
       />
     </div>
   );
-  
-  console.log('🔄 [SettingsPanel] Settings 已更新');
 }
 
 /**
  * 挂载阅读设置面板
  */
 export function mountReadingSettingsPanel(options: MountOptions): () => void {
-  console.log('⚙️ [SettingsPanel] 挂载设置面板');
-  
   // 保存当前的 settings 和回调
   currentSettings = options.settings;
   currentOnSettingsChange = options.onSettingsChange;
@@ -65,12 +60,10 @@ export function mountReadingSettingsPanel(options: MountOptions): () => void {
   // 子元素的 pointer-events: auto 已经足够处理事件穿透问题
 
   document.body.appendChild(settingsPanelContainer);
-  console.log('⚙️ [SettingsPanel] 容器已添加到页面');
 
   // 创建 React 根
   try {
     settingsPanelRoot = createRoot(settingsPanelContainer);
-    console.log('⚙️ [SettingsPanel] 创建React根节点');
 
     // 渲染组件
     settingsPanelRoot.render(
@@ -81,7 +74,6 @@ export function mountReadingSettingsPanel(options: MountOptions): () => void {
         />
       </div>
     );
-    console.log('✅ [SettingsPanel] 设置面板已渲染');
   } catch (error) {
     console.error('❌ [SettingsPanel] 渲染失败:', error);
     unmountReadingSettingsPanel();
@@ -96,12 +88,9 @@ export function mountReadingSettingsPanel(options: MountOptions): () => void {
  * 卸载阅读设置面板
  */
 export function unmountReadingSettingsPanel(): void {
-  console.log('⚙️ [SettingsPanel] 卸载设置面板');
-  
   if (settingsPanelRoot) {
     try {
       settingsPanelRoot.unmount();
-      console.log('⚙️ [SettingsPanel] React根节点已卸载');
     } catch (error) {
       console.error('❌ [SettingsPanel] 卸载React根节点失败:', error);
     }
@@ -110,7 +99,6 @@ export function unmountReadingSettingsPanel(): void {
 
   if (settingsPanelContainer && settingsPanelContainer.parentNode) {
     settingsPanelContainer.parentNode.removeChild(settingsPanelContainer);
-    console.log('⚙️ [SettingsPanel] 容器已从页面移除');
   }
   settingsPanelContainer = null;
 }

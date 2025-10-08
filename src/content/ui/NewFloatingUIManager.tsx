@@ -264,15 +264,11 @@ export function createNewFloatingUI(
   props: NewFloatingUIManagerProps
 ): () => void {
   try {
-    console.log('🎨 [FloatingUI] 创建React根节点...');
     const root = createRoot(container);
-    console.log('🎨 [FloatingUI] 渲染React组件...');
     root.render(<NewFloatingUIManager {...props} />);
-    console.log('✅ [FloatingUI] React组件渲染成功');
 
     return () => {
       try {
-        console.log('🎨 [FloatingUI] 卸载React根节点');
         root.unmount();
       } catch (e) {
         console.error('❌ [FloatingUI] 卸载失败:', e);
@@ -289,15 +285,9 @@ export function createNewFloatingUI(
  */
 export function mountNewFloatingUI(props: NewFloatingUIManagerProps): () => void {
   try {
-    console.log('🎨 [FloatingUI] 开始挂载浮动UI...', {
-      isReadingModeActive: props.isReadingModeActive,
-      settings: props.settings
-    });
-
     // 移除旧的UI容器
     const existingContainer = document.getElementById('reading-extension-floating-ui');
     if (existingContainer) {
-      console.log('🎨 [FloatingUI] 移除旧的UI容器');
       existingContainer.remove();
     }
 
@@ -323,16 +313,13 @@ export function mountNewFloatingUI(props: NewFloatingUIManagerProps): () => void
 
     // 添加到页面
     document.body.appendChild(container);
-    console.log('🎨 [FloatingUI] 容器已添加到页面');
 
     // 创建浮动UI
     const cleanup = createNewFloatingUI(innerContainer, props);
-    console.log('🎨 [FloatingUI] 浮动UI已创建');
 
     // 返回清理函数
     return () => {
       try {
-        console.log('🎨 [FloatingUI] 清理浮动UI');
         cleanup();
         container.remove();
       } catch (e) {

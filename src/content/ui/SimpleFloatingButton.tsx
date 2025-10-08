@@ -29,15 +29,6 @@ export const SimpleFloatingButton: React.FC<SimpleFloatingButtonProps> = ({
   const [buttonSize, setButtonSize] = useState({ width: 56, height: 56 });
   const buttonRef = useRef<HTMLDivElement>(null);
 
-  // 组件挂载时的日志
-  useEffect(() => {
-    console.log('🔘 [FloatingButton] 组件挂载', { isVisible, position, isReadingModeActive });
-  }, []);
-
-  useEffect(() => {
-    console.log('🔘 [FloatingButton] 可见性变化:', isVisible);
-  }, [isVisible]);
-
   // 根据屏幕尺寸调整按钮大小
   useEffect(() => {
     const updateSize = () => {

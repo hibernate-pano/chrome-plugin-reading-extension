@@ -53,7 +53,6 @@ async function ensureInitialized(): Promise<void> {
  */
 async function initialize(): Promise<void> {
   if (isInitialized) {
-    console.warn('统一内容脚本已初始化，跳过重复初始化');
     return;
   }
 
@@ -61,39 +60,29 @@ async function initialize(): Promise<void> {
   (window as any).__UNIFIED_CONTENT_SCRIPT_ACTIVE = true;
 
   try {
-    console.log('🚀 初始化统一阅读模式内容脚本');
-    
     // 初始化增强处理管理器
     await enhancedProcessingManager.initialize();
-    console.log('⚙️ 增强处理管理器初始化完成');
 
     // 初始化注释管理器
     await annotationManager.initialize();
-    console.log('📝 注释管理器初始化完成');
 
     // 加载设置
     currentSettings = await loadSettings();
-    console.log('📋 设置加载完成:', currentSettings);
 
     // 创建阅读模式管理器
     readingModeManager = await getReadingModeManager();
     readingModeManager.updateSettings(currentSettings);
-    console.log('🎯 阅读模式管理器创建完成');
 
     // 设置存储监听器
     setupStorageListeners();
-    console.log('💾 存储监听器设置完成');
 
     // 初始化文本选择工具栏
     initializeTextSelectionToolbar();
-    console.log('🖱️ 文本选择工具栏初始化完成');
 
     // 注册键盘快捷键
     registerKeyboardShortcuts();
-    console.log('⌨️ 键盘快捷键注册完成');
 
     isInitialized = true;
-    console.log('✅ 统一内容脚本初始化完成');
 
   } catch (error) {
     console.error('❌ 统一内容脚本初始化失败:', error);
@@ -142,15 +131,12 @@ async function loadSettings(): Promise<UserSettings> {
  * 统一的消息处理函数
  */
 function handleMessage(message: any, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean {
-  console.log('📥 收到消息:', message);
-
   const messageType = message.action || message.type;
   let asyncResponse = false;
 
   try {
     switch (messageType) {
       case MESSAGE_TYPES.TOGGLE_READING_MODE:
-        console.log('🔄 处理切换阅读模式消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => toggleReadingMode())
@@ -164,7 +150,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.ENABLE_READING_MODE:
-        console.log('🟢 处理启用阅读模式消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => enableReadingMode(message.settings))
@@ -176,7 +161,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.DISABLE_READING_MODE:
-        console.log('🔴 处理禁用阅读模式消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => disableReadingMode())
@@ -188,7 +172,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.GET_READING_MODE_STATE:
-        console.log('📊 处理获取阅读模式状态消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => {
@@ -213,7 +196,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.UPDATE_SETTINGS:
-        console.log('⚙️ 处理更新设置消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => {
@@ -227,7 +209,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.APPLY_PRESET:
-        console.log('🎨 处理应用预设消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => applyPreset(message.preset))
@@ -239,7 +220,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.EXTRACT_CONTENT:
-        console.log('📄 处理提取内容消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => extractContent())
@@ -251,7 +231,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.SAVE_READING_PROGRESS:
-        console.log('💾 处理保存阅读进度消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => saveReadingProgress(message))
@@ -263,7 +242,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case 'GET_PERFORMANCE_STATS':
-        console.log('📊 处理获取性能统计消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => {
@@ -277,7 +255,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case 'GENERATE_PERFORMANCE_REPORT':
-        console.log('📋 处理生成性能报告消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => {
@@ -291,7 +268,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case 'GET_ANNOTATION_STATS':
-        console.log('📊 处理获取注释统计消息');
         asyncResponse = true;
         ensureInitialized()
           .then(() => {
@@ -305,7 +281,6 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case 'EXPORT_ANNOTATIONS':
-        console.log('📤 处理导出注释消息');
         asyncResponse = true;
         ensureInitialized()
           .then(async () => {
@@ -350,11 +325,9 @@ function setupStorageListeners(): void {
     );
 
     if (settingsChanged) {
-      console.log('📋 检测到设置变化，重新加载设置');
       loadSettings().then(newSettings => {
         currentSettings = newSettings;
         readingModeManager?.updateSettings(newSettings);
-        console.log('✅ 设置已更新');
       });
     }
   });
@@ -383,8 +356,6 @@ async function toggleReadingMode(): Promise<void> {
     loadingStateManager.showSuccess(loadingId, 
       isActive ? '阅读模式已启用' : '阅读模式已关闭'
     );
-    
-    console.log('✅ 阅读模式切换成功，当前状态:', isActive);
   } catch (error) {
     console.error('❌ 切换阅读模式失败:', error);
     loadingStateManager.showError(loadingId, '切换阅读模式失败，请重试');
@@ -424,9 +395,6 @@ async function enableReadingMode(settings?: UserSettings): Promise<void> {
     const { isActive } = readingModeManager.getStatus();
     if (!isActive) {
       await readingModeManager.enable();
-      console.log('✅ 阅读模式已启用');
-    } else {
-      console.log('ℹ️ 阅读模式已经是启用状态');
     }
   } catch (error) {
     console.error('❌ 启用阅读模式失败:', error);
@@ -446,9 +414,6 @@ async function disableReadingMode(): Promise<void> {
     const { isActive } = readingModeManager.getStatus();
     if (isActive) {
       readingModeManager.disable();
-      console.log('✅ 阅读模式已禁用');
-    } else {
-      console.log('ℹ️ 阅读模式已经是禁用状态');
     }
   } catch (error) {
     console.error('❌ 禁用阅读模式失败:', error);
@@ -460,7 +425,6 @@ async function disableReadingMode(): Promise<void> {
  * 更新设置
  */
 function updateSettings(newSettings: Partial<UserSettings>): void {
-  console.log('⚙️ 更新设置:', newSettings);
   currentSettings = { ...currentSettings, ...newSettings };
   readingModeManager?.updateSettings(newSettings);
 }
@@ -469,7 +433,6 @@ function updateSettings(newSettings: Partial<UserSettings>): void {
  * 应用预设
  */
 async function applyPreset(preset: any): Promise<void> {
-  console.log('🎨 应用预设:', preset);
   if (!preset || !preset.settings) {
     throw new Error('预设数据无效');
   }
@@ -482,9 +445,6 @@ async function applyPreset(preset: any): Promise<void> {
     const { isActive } = readingModeManager?.getStatus() || { isActive: false };
     if (isActive) {
       await readingModeManager?.updateSettings(preset.settings);
-      console.log('✅ 预设已应用到当前阅读模式');
-    } else {
-      console.log('ℹ️ 预设已保存，将在下次启用阅读模式时生效');
     }
   } catch (error) {
     console.error('❌ 应用预设失败:', error);
@@ -524,9 +484,6 @@ async function extractContent(): Promise<any> {
       })
     ]);
     
-    console.log(`📊 内容提取完成 - 缓存命中: ${extractionResult.fromCache}, 处理时间: ${extractionResult.processingTime.toFixed(2)}ms`);
-    console.log(`📊 元数据解析完成 - 缓存命中: ${metadataResult.fromCache}, 处理时间: ${metadataResult.processingTime.toFixed(2)}ms`);
-    
     // 更新加载进度
     loadingStateManager.updateProgress(loadingId, 70, '正在保存文档元数据...');
     
@@ -543,7 +500,6 @@ async function extractContent(): Promise<any> {
         tags: metadataResult.data.tags || [],
         category: metadataResult.data.category || 'uncategorized'
       });
-      console.log('📝 文档元数据已保存到统一存储');
     } catch (error) {
       console.warn('保存文档元数据失败:', error);
     }
@@ -804,15 +760,12 @@ function registerKeyboardShortcuts(): void {
       preventDefault: true
     }
   ]);
-
-  console.log('⌨️ 键盘快捷键注册完成');
 }
 
 /**
  * 清理资源
  */
 function cleanup(): void {
-  console.log('🧹 清理统一内容脚本资源');
   readingModeManager?.destroy();
   readingModeManager = null;
   enhancedProcessingManager.cleanup();
@@ -829,7 +782,6 @@ function cleanup(): void {
 
 // 立即注册消息监听器（在初始化之前）
 // 这样可以确保即使初始化还在进行中，popup 的消息也能被接收到
-console.log('📡 注册消息监听器（立即执行）');
 chrome.runtime.onMessage.addListener(handleMessage);
 
 // 页面卸载时清理资源

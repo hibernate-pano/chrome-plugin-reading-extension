@@ -41,7 +41,6 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
   };
 
   const handleChange = (key: keyof UserSettings, value: any) => {
-    console.log(`⚙️ [Panel] 设置变更: ${key} = ${value}`);
     onSettingsChange(key, value);
     // 注意：不要关闭面板，让用户可以连续调整多个设置
   };
@@ -62,7 +61,6 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
       }
 
       // 点击外部，关闭面板
-      console.log('🔘 [Panel] 点击外部，关闭面板');
       closePanel();
     };
 
