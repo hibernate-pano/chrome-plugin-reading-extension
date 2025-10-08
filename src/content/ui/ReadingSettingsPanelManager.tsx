@@ -5,6 +5,8 @@ import { UserSettings } from '../../types';
 
 let settingsPanelRoot: Root | null = null;
 let settingsPanelContainer: HTMLElement | null = null;
+let currentSettings: UserSettings | null = null;
+let currentOnSettingsChange: ((key: keyof UserSettings, value: any) => void) | null = null;
 
 interface MountOptions {
   settings: UserSettings;
@@ -12,10 +14,38 @@ interface MountOptions {
 }
 
 /**
+ * 更新设置面板的 settings（不重新挂载整个组件）
+ */
+export function updateReadingSettingsPanelSettings(settings: UserSettings): void {
+  if (!settingsPanelRoot || !currentOnSettingsChange) {
+    console.warn('⚠️ [SettingsPanel] 面板未挂载，无法更新 settings');
+    return;
+  }
+
+  currentSettings = settings;
+  
+  // 重新渲染，传入新的 settings
+  settingsPanelRoot.render(
+    <div style={{ pointerEvents: 'auto' }}>
+      <ReadingSettingsPanel
+        settings={settings}
+        onSettingsChange={currentOnSettingsChange}
+      />
+    </div>
+  );
+  
+  console.log('🔄 [SettingsPanel] Settings 已更新');
+}
+
+/**
  * 挂载阅读设置面板
  */
 export function mountReadingSettingsPanel(options: MountOptions): () => void {
   console.log('⚙️ [SettingsPanel] 挂载设置面板');
+  
+  // 保存当前的 settings 和回调
+  currentSettings = options.settings;
+  currentOnSettingsChange = options.onSettingsChange;
   
   // 如果已存在，先清理
   if (settingsPanelContainer) {
@@ -31,10 +61,8 @@ export function mountReadingSettingsPanel(options: MountOptions): () => void {
     pointer-events: none;
   `;
   
-  // 允许子元素响应鼠标事件
-  settingsPanelContainer.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-  });
+  // 注意：不要在这里阻止事件冒泡，否则会影响滑块等交互元素的正常工作
+  // 子元素的 pointer-events: auto 已经足够处理事件穿透问题
 
   document.body.appendChild(settingsPanelContainer);
   console.log('⚙️ [SettingsPanel] 容器已添加到页面');

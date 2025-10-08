@@ -265,6 +265,7 @@ export const FloatingSettingsPanel: React.FC<FloatingSettingsPanelProps> = ({
         top: position.y,
         width: isCollapsed ? '48px' : `${panelSize.width}px`,
         maxHeight: `${panelSize.height}px`,
+        pointerEvents: 'auto',
       }}
       role="dialog"
       aria-label="阅读设置面板"

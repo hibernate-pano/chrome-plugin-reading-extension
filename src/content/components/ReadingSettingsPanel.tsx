@@ -376,6 +376,30 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
           border: none;
           box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
         }
+
+        input[type="range"]::-webkit-slider-track {
+          transition: background 0.2s ease;
+        }
+
+        input[type="range"]::-moz-range-track {
+          transition: background 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+          transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb:active {
+          transform: scale(1.2);
+        }
+
+        input[type="range"]:hover::-webkit-slider-thumb {
+          box-shadow: 0 2px 12px rgba(102, 126, 234, 0.6);
+        }
+
+        input[type="range"]:hover::-moz-range-thumb {
+          box-shadow: 0 2px 12px rgba(102, 126, 234, 0.6);
+        }
       `}</style>
     </>
   );

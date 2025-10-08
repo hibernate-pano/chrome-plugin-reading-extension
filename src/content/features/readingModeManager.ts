@@ -9,7 +9,7 @@ import { MESSAGE_TYPES } from '../../constants';
 import { mountNewFloatingUI } from '../ui/NewFloatingUIManager';
 import { cacheStrategyManager } from '../dynamic/CacheStrategyManager';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
-import { mountReadingSettingsPanel, unmountReadingSettingsPanel } from '../ui/ReadingSettingsPanelManager';
+import { mountReadingSettingsPanel, unmountReadingSettingsPanel, updateReadingSettingsPanelSettings } from '../ui/ReadingSettingsPanelManager';
 
 export class ReadingModeManager {
   private isActive = false;
@@ -100,8 +100,27 @@ export class ReadingModeManager {
         max-width: ${pageWidth}px !important;
       }
       
-      .reading-mode-content p {
+      .reading-mode-content,
+      .reading-mode-body {
+        font-family: ${actualFontFamily} !important;
+        font-size: ${fontSize}px !important;
+        line-height: ${lineHeight} !important;
+        color: ${textColor} !important;
+      }
+      
+      .reading-mode-content p,
+      .reading-mode-body p {
         margin-bottom: ${paragraphSpacing}em !important;
+        font-size: ${fontSize}px !important;
+        line-height: ${lineHeight} !important;
+      }
+      
+      .reading-mode-content div,
+      .reading-mode-content span,
+      .reading-mode-body div,
+      .reading-mode-body span {
+        font-size: inherit !important;
+        line-height: inherit !important;
       }
       
       .reading-mode-title,
@@ -112,6 +131,7 @@ export class ReadingModeManager {
       .reading-mode-content h5,
       .reading-mode-content h6 {
         color: ${textColor} !important;
+        font-family: ${actualFontFamily} !important;
       }
       
       .reading-mode-content a {
@@ -234,8 +254,10 @@ export class ReadingModeManager {
       this.applySettingsToContainer();
     }
 
-    // 注意：不要重新挂载浮动UI和设置面板，避免UI闪烁和状态丢失
-    // 设置变化会通过 updateStyles() 自动应用
+    // 更新设置面板的显示值（但不重新挂载整个组件）
+    if (this.isActive && this.settingsPanelCleanup) {
+      updateReadingSettingsPanelSettings(this.settings);
+    }
   }
 
   /**
