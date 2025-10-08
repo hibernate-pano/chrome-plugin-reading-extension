@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserSettings } from '../../types';
 
 interface ReadingSettingsPanelProps {
@@ -29,6 +29,8 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
   onClose,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const togglePanel = () => {
     setIsOpen(!isOpen);
@@ -44,10 +46,42 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
     // 注意：不要关闭面板，让用户可以连续调整多个设置
   };
 
+  // 点击外部关闭面板
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      
+      // 如果点击的是面板内部或按钮，不关闭
+      if (
+        panelRef.current?.contains(target) ||
+        buttonRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      // 点击外部，关闭面板
+      console.log('🔘 [Panel] 点击外部，关闭面板');
+      closePanel();
+    };
+
+    // 延迟添加监听器，避免立即触发
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   return (
     <>
       {/* 悬浮按钮 */}
       <button
+        ref={buttonRef}
         onClick={togglePanel}
         className="reading-settings-trigger"
         aria-label="打开阅读设置"
@@ -86,6 +120,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
       {/* 设置面板 */}
       {isOpen && (
         <div
+          ref={panelRef}
           className="reading-settings-panel"
           style={{
             position: 'fixed',

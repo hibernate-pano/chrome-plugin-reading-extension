@@ -67,7 +67,7 @@ async function loadSettings(): Promise<UserSettings> {
     fontFamily: fontFamily || 'default',
     backgroundColor: backgroundColor || 'white',
     theme: (theme as 'light' | 'dark' | 'sepia' | 'custom') || 'light',
-    pageWidth: 800,
+    pageWidth: 900,
     presets: [],
     activePreset: null
   };

@@ -10,7 +10,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   lineHeight: 1.6,
   fontFamily: 'default',
   paragraphSpacing: 1.2,
-  pageWidth: 800,
+  pageWidth: 900,
   backgroundColor: 'white',
 
   // 预设相关
