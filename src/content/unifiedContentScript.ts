@@ -11,6 +11,13 @@ import { logger } from '../utils/logManager';
 import { enhancedProcessingManager } from './features/performance/EnhancedProcessingManager';
 import { annotationManager } from './features/annotation/AnnotationManager';
 import { TextSelectionToolbar, defaultToolbarOptions, exportToolbarOptions } from './components/TextSelectionToolbar';
+import { loadingStateManager } from './components/LoadingStateManager';
+import { keyboardShortcutManager } from './components/KeyboardShortcutManager';
+import { 
+  documentMetadataModel, 
+  documentReadingProgressModel, 
+  userSettingsModel 
+} from '../storage/models/UnifiedDocumentModel';
 
 // 导入样式
 import './styles/contentTailwind.css';
@@ -64,6 +71,10 @@ async function initialize(): Promise<void> {
     // 初始化文本选择工具栏
     initializeTextSelectionToolbar();
     console.log('🖱️ 文本选择工具栏初始化完成');
+
+    // 注册键盘快捷键
+    registerKeyboardShortcuts();
+    console.log('⌨️ 键盘快捷键注册完成');
 
     isInitialized = true;
     console.log('✅ 统一内容脚本初始化完成');
@@ -124,7 +135,9 @@ function handleMessage(message: any, sender: chrome.runtime.MessageSender, sendR
         console.log('🔄 处理切换阅读模式消息');
         asyncResponse = true;
         toggleReadingMode()
-          .then(() => sendResponse({ success: true }))
+          .then(() => {
+            sendResponse({ success: true });
+          })
           .catch((error: Error) => {
             console.error('切换阅读模式失败:', error);
             sendResponse({ success: false, error: error.message });
@@ -305,12 +318,27 @@ async function toggleReadingMode(): Promise<void> {
     throw new Error('阅读模式管理器未初始化');
   }
 
+  const loadingId = 'toggle-reading-mode';
+  
   try {
+    // 显示加载状态
+    loadingStateManager.showLoading(loadingId, {
+      message: '正在切换阅读模式...',
+      timeout: 5000
+    });
+
     await readingModeManager.toggle();
     const { isActive } = readingModeManager.getStatus();
+    
+    // 显示成功状态
+    loadingStateManager.showSuccess(loadingId, 
+      isActive ? '阅读模式已启用' : '阅读模式已关闭'
+    );
+    
     console.log('✅ 阅读模式切换成功，当前状态:', isActive);
   } catch (error) {
     console.error('❌ 切换阅读模式失败:', error);
+    loadingStateManager.showError(loadingId, '切换阅读模式失败，请重试');
     throw error;
   }
 }
@@ -407,7 +435,15 @@ async function extractContent(): Promise<any> {
     throw new Error('阅读模式管理器未初始化');
   }
 
+  const loadingId = 'extract-content';
+  
   try {
+    // 显示加载状态
+    loadingStateManager.showLoading(loadingId, {
+      message: '正在提取页面内容...',
+      showProgress: true
+    });
+
     const url = window.location.href;
     const html = document.documentElement.outerHTML;
     
@@ -426,10 +462,37 @@ async function extractContent(): Promise<any> {
     console.log(`📊 内容提取完成 - 缓存命中: ${extractionResult.fromCache}, 处理时间: ${extractionResult.processingTime.toFixed(2)}ms`);
     console.log(`📊 元数据解析完成 - 缓存命中: ${metadataResult.fromCache}, 处理时间: ${metadataResult.processingTime.toFixed(2)}ms`);
     
+    // 更新加载进度
+    loadingStateManager.updateProgress(loadingId, 70, '正在保存文档元数据...');
+    
+    const title = metadataResult.data.title || document.title;
+    const content = extractionResult.data;
+
+    // 保存文档元数据到统一存储
+    try {
+      await documentMetadataModel.createMetadata(url, title, content, {
+        type: 'webpage',
+        language: metadataResult.data.language || 'zh-CN',
+        author: metadataResult.data.author,
+        publishDate: metadataResult.data.publishDate,
+        tags: metadataResult.data.tags || [],
+        category: metadataResult.data.category || 'uncategorized'
+      });
+      console.log('📝 文档元数据已保存到统一存储');
+    } catch (error) {
+      console.warn('保存文档元数据失败:', error);
+    }
+    
+    // 完成加载
+    loadingStateManager.updateProgress(loadingId, 100, '内容提取完成');
+    setTimeout(() => {
+      loadingStateManager.hideLoading(loadingId);
+    }, 500);
+    
     return {
-      title: metadataResult.data.title || document.title,
+      title,
       url: url,
-      content: extractionResult.data,
+      content,
       metadata: metadataResult.data,
       performance: {
         extractionTime: extractionResult.processingTime,
@@ -439,6 +502,7 @@ async function extractContent(): Promise<any> {
     };
   } catch (error) {
     console.error('提取内容失败:', error);
+    loadingStateManager.showError(loadingId, '内容提取失败，请重试');
     throw error;
   }
 }
@@ -447,10 +511,25 @@ async function extractContent(): Promise<any> {
  * 保存阅读进度
  */
 async function saveReadingProgress(message: any): Promise<void> {
-  const { url, scrollPosition, title } = message;
+  const { url, scrollPosition, title, readingPercentage } = message;
 
   try {
-    // 发送消息到background.js保存阅读进度
+    // 使用统一存储系统保存阅读进度
+    const existingProgress = await documentReadingProgressModel.getByUrl(url);
+    
+    if (existingProgress) {
+      // 更新现有进度
+      await documentReadingProgressModel.updatePosition(
+        existingProgress.documentId,
+        scrollPosition,
+        readingPercentage || 0
+      );
+    } else {
+      // 创建新的阅读进度
+      await documentReadingProgressModel.createProgress(url, title || document.title, scrollPosition);
+    }
+
+    // 同时发送消息到background.js（保持兼容性）
     await chrome.runtime.sendMessage({
       action: MESSAGE_TYPES.SAVE_READING_PROGRESS,
       progress: {
@@ -460,7 +539,8 @@ async function saveReadingProgress(message: any): Promise<void> {
         title
       }
     });
-    console.log('✅ 阅读进度已保存');
+    
+    console.log('✅ 阅读进度已保存到统一存储');
   } catch (error) {
     console.error('❌ 保存阅读进度失败:', error);
     throw error;
@@ -487,6 +567,145 @@ function initializeTextSelectionToolbar(): void {
 }
 
 /**
+ * 注册键盘快捷键
+ */
+function registerKeyboardShortcuts(): void {
+  // 阅读模式快捷键
+  keyboardShortcutManager.registerShortcuts([
+    {
+      key: 'r',
+      ctrl: true,
+      description: '切换阅读模式',
+      action: () => toggleReadingMode(),
+      preventDefault: true
+    },
+    {
+      key: 'e',
+      ctrl: true,
+      description: '启用阅读模式',
+      action: () => enableReadingMode(),
+      preventDefault: true
+    },
+    {
+      key: 'd',
+      ctrl: true,
+      description: '禁用阅读模式',
+      action: () => disableReadingMode(),
+      preventDefault: true
+    }
+  ]);
+
+  // 文本操作快捷键
+  keyboardShortcutManager.registerShortcuts([
+    {
+      key: 'c',
+      ctrl: true,
+      shift: true,
+      description: '复制选中文本',
+      action: () => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+          navigator.clipboard.writeText(selection.toString());
+          loadingStateManager.showSuccess('copy-text', '文本已复制到剪贴板');
+        }
+      },
+      preventDefault: true
+    },
+    {
+      key: 's',
+      ctrl: true,
+      shift: true,
+      description: '搜索选中文本',
+      action: () => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(selection.toString())}`;
+          window.open(searchUrl, '_blank');
+          loadingStateManager.showSuccess('search-text', '正在搜索选中文本');
+        }
+      },
+      preventDefault: true
+    }
+  ]);
+
+  // 注释功能快捷键
+  keyboardShortcutManager.registerShortcuts([
+    {
+      key: 'h',
+      ctrl: true,
+      shift: true,
+      description: '高亮选中文本',
+      action: () => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+          const annotationId = annotationManager.createHighlight(selection.toString(), '#ffeb3b');
+          if (annotationId) {
+            loadingStateManager.showSuccess('highlight-text', '文本已高亮');
+          } else {
+            loadingStateManager.showError('highlight-text', '高亮失败');
+          }
+        }
+      },
+      preventDefault: true
+    },
+    {
+      key: 'n',
+      ctrl: true,
+      shift: true,
+      description: '为选中文本添加注释',
+      action: () => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+          const note = prompt('请输入注释内容:');
+          if (note !== null && note.trim()) {
+            const annotationId = annotationManager.createHighlight(selection.toString(), '#a5d6a7', note.trim());
+            if (annotationId) {
+              loadingStateManager.showSuccess('note-text', '注释已添加');
+            } else {
+              loadingStateManager.showError('note-text', '注释添加失败');
+            }
+          }
+        }
+      },
+      preventDefault: true
+    }
+  ]);
+
+  // 系统功能快捷键
+  keyboardShortcutManager.registerShortcuts([
+    {
+      key: '?',
+      ctrl: true,
+      shift: true,
+      description: '显示快捷键帮助',
+      action: () => keyboardShortcutManager.showHelpDialog(),
+      preventDefault: true
+    },
+    {
+      key: 's',
+      ctrl: true,
+      description: '保存当前页面阅读进度',
+      action: () => {
+        const scrollPosition = window.pageYOffset;
+        const readingPercentage = (scrollPosition / (document.body.scrollHeight - window.innerHeight)) * 100;
+        
+        saveReadingProgress({
+          url: window.location.href,
+          scrollPosition,
+          title: document.title,
+          readingPercentage
+        });
+        
+        loadingStateManager.showSuccess('save-progress', '阅读进度已保存');
+      },
+      preventDefault: true
+    }
+  ]);
+
+  console.log('⌨️ 键盘快捷键注册完成');
+}
+
+/**
  * 清理资源
  */
 function cleanup(): void {
@@ -497,6 +716,8 @@ function cleanup(): void {
   annotationManager.cleanup();
   textSelectionToolbar?.destroy();
   textSelectionToolbar = null;
+  loadingStateManager.cleanup();
+  keyboardShortcutManager.cleanup();
   isInitialized = false;
 }
 

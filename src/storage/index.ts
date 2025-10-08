@@ -336,4 +336,9 @@ class Storage {
 }
 
 // 创建并导出单例
-export const storage = new Storage(); 
+export const storage = new Storage();
+
+// 导出新的统一存储系统
+export * from './UnifiedStorageManager';
+export * from './models/UnifiedDocumentModel';
+export * from './StorageMigration'; 

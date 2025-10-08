@@ -42,6 +42,88 @@ export class TextSelectionToolbar {
 
     this.createToolbar();
     this.attachEventListeners();
+    this.addAnimationStyles();
+  }
+
+  /**
+   * 添加动画样式
+   */
+  private addAnimationStyles(): void {
+    if (document.getElementById('text-selection-toolbar-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'text-selection-toolbar-styles';
+    style.textContent = `
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes fadeOutDown {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+      }
+      
+      @keyframes slideInFromTop {
+        from {
+          opacity: 0;
+          transform: translateY(-20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      
+      @keyframes slideOutToTop {
+        from {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-20px) scale(0.95);
+        }
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      
+      .text-selection-toolbar.show {
+        animation: slideInFromTop 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      
+      .text-selection-toolbar.hide {
+        animation: slideOutToTop 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      
+      .toolbar-option:hover .toolbar-icon {
+        transform: scale(1.1);
+      }
+      
+      .toolbar-option:active .toolbar-icon {
+        transform: scale(0.95);
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   /**
@@ -55,17 +137,19 @@ export class TextSelectionToolbar {
       position: absolute;
       display: none;
       z-index: 9999;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      padding: 6px;
-      transition: opacity 0.2s, transform 0.2s;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       opacity: 0;
-      transform: translateY(10px);
-      background-color: ${this.theme === 'light' ? '#ffffff' : '#333333'};
+      transform: translateY(20px) scale(0.95);
+      background-color: ${this.theme === 'light' ? '#ffffff' : '#2d2d2d'};
       color: ${this.theme === 'light' ? '#333333' : '#ffffff'};
-      border: 1px solid ${this.theme === 'light' ? '#e0e0e0' : '#555555'};
+      border: 1px solid ${this.theme === 'light' ? '#e1e5e9' : '#404040'};
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 14px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     `;
 
     // 创建工具栏选项
@@ -76,7 +160,7 @@ export class TextSelectionToolbar {
       gap: 8px;
     `;
 
-    this.options.forEach(option => {
+    this.options.forEach((option, index) => {
       const button = document.createElement('button');
       button.id = `toolbar-option-${option.id}`;
       button.className = 'toolbar-option';
@@ -88,14 +172,42 @@ export class TextSelectionToolbar {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 6px;
-        border-radius: 4px;
+        padding: 8px 12px;
+        border-radius: 8px;
         color: ${this.theme === 'light' ? '#333333' : '#ffffff'};
-        transition: background-color 0.2s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeInUp 0.3s ease-out ${index * 0.05}s forwards;
+        position: relative;
+        overflow: hidden;
       `;
+      
+      // 添加悬停效果
+      button.addEventListener('mouseenter', () => {
+        button.style.backgroundColor = this.theme === 'light' ? '#f5f5f5' : '#404040';
+        button.style.transform = 'translateY(-2px) scale(1.05)';
+        button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+      });
+      
+      button.addEventListener('mouseleave', () => {
+        button.style.backgroundColor = 'transparent';
+        button.style.transform = 'translateY(0) scale(1)';
+        button.style.boxShadow = 'none';
+      });
+      
+      // 添加点击效果
+      button.addEventListener('mousedown', () => {
+        button.style.transform = 'translateY(0) scale(0.95)';
+      });
+      
+      button.addEventListener('mouseup', () => {
+        button.style.transform = 'translateY(-2px) scale(1.05)';
+      });
+      
       button.innerHTML = `
-        <span style="font-size: 16px;">${option.icon}</span>
-        <span style="margin-left: 4px; font-size: 12px;">${option.label}</span>
+        <span style="font-size: 16px; transition: transform 0.2s;">${option.icon}</span>
+        <span style="margin-left: 6px; font-size: 12px; font-weight: 500;">${option.label}</span>
       `;
 
       // 添加悬停效果
@@ -219,13 +331,9 @@ export class TextSelectionToolbar {
     this.toolbar.style.top = `${top}px`;
     this.toolbar.style.display = 'block';
 
-    // 添加动画效果
-    setTimeout(() => {
-      if (this.toolbar) {
-        this.toolbar.style.opacity = '1';
-        this.toolbar.style.transform = 'translateY(0)';
-      }
-    }, 10);
+    // 添加显示动画
+    this.toolbar.classList.remove('hide');
+    this.toolbar.classList.add('show');
 
     this.isVisible = true;
   }
@@ -236,12 +344,14 @@ export class TextSelectionToolbar {
   private hideToolbar(): void {
     if (!this.toolbar || !this.isVisible) return;
 
-    this.toolbar.style.opacity = '0';
-    this.toolbar.style.transform = `translateY(${this.position === 'top' ? '-10px' : '10px'})`;
+    // 添加隐藏动画
+    this.toolbar.classList.remove('show');
+    this.toolbar.classList.add('hide');
 
     setTimeout(() => {
       if (this.toolbar) {
         this.toolbar.style.display = 'none';
+        this.toolbar.classList.remove('hide');
       }
     }, 200);
 
