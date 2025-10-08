@@ -9,6 +9,7 @@ import { MESSAGE_TYPES } from '../../constants';
 import { mountNewFloatingUI } from '../ui/NewFloatingUIManager';
 import { cacheStrategyManager } from '../dynamic/CacheStrategyManager';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
+import { mountReadingSettingsPanel, unmountReadingSettingsPanel } from '../ui/ReadingSettingsPanelManager';
 
 export class ReadingModeManager {
   private isActive = false;
@@ -17,6 +18,7 @@ export class ReadingModeManager {
   private settings: UserSettings;
   private styleElement: HTMLStyleElement | null = null;
   private floatingUICleanup: (() => void) | null = null;
+  private settingsPanelCleanup: (() => void) | null = null;
   private previousBodyOverflow: string | null = null;
   private previousBodyPaddingRight: string | null = null;
   private handleKeydown = (event: KeyboardEvent) => {
@@ -51,15 +53,69 @@ export class ReadingModeManager {
   private updateStyles(): void {
     if (!this.styleElement) return;
 
-    const { fontSize, lineHeight, paragraphSpacing, fontFamily, pageWidth } = this.settings;
+    const { fontSize, lineHeight, paragraphSpacing, fontFamily, pageWidth, theme } = this.settings;
+
+    // 字体映射
+    const fontFamilyMap: Record<string, string> = {
+      default: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      songti: '"Songti SC", "SimSun", STSong, serif',
+      heiti: '"Heiti SC", "SimHei", STHeiti, sans-serif',
+      kaiti: '"Kaiti SC", "KaiTi", STKaiti, serif',
+      fangsong: '"Fangsong SC", "FangSong", STFangsong, serif',
+      georgia: 'Georgia, serif',
+      times: '"Times New Roman", Times, serif',
+    };
+
+    const actualFontFamily = fontFamilyMap[fontFamily] || fontFamilyMap.default;
+
+    // 主题颜色
+    let bgColor = '#ffffff';
+    let textColor = '#1a1a1a';
+    
+    if (theme === 'dark') {
+      bgColor = '#0f172a'; // slate-900
+      textColor = '#f1f5f9'; // slate-100
+    } else if (theme === 'sepia') {
+      bgColor = '#f5f2e9';
+      textColor = '#4a3728';
+    }
 
     const cssVariables = `
       :root {
         --reading-font-size: ${fontSize}px;
         --reading-line-height: ${lineHeight};
-        --reading-paragraph-spacing: ${paragraphSpacing}px;
-        --reading-font-family: ${fontFamily};
+        --reading-paragraph-spacing: ${paragraphSpacing}em;
+        --font-reading: ${actualFontFamily};
         --reading-page-width: ${pageWidth}px;
+        --reading-bg-color: ${bgColor};
+        --reading-text-color: ${textColor};
+      }
+      
+      .reading-mode-container {
+        font-family: ${actualFontFamily} !important;
+        font-size: ${fontSize}px !important;
+        line-height: ${lineHeight} !important;
+        background-color: ${bgColor} !important;
+        color: ${textColor} !important;
+        max-width: ${pageWidth}px !important;
+      }
+      
+      .reading-mode-content p {
+        margin-bottom: ${paragraphSpacing}em !important;
+      }
+      
+      .reading-mode-title,
+      .reading-mode-content h1,
+      .reading-mode-content h2,
+      .reading-mode-content h3,
+      .reading-mode-content h4,
+      .reading-mode-content h5,
+      .reading-mode-content h6 {
+        color: ${textColor} !important;
+      }
+      
+      .reading-mode-content a {
+        color: ${theme === 'dark' ? '#60a5fa' : '#2563eb'} !important;
       }
     `;
 
@@ -100,6 +156,9 @@ export class ReadingModeManager {
       // 挂载浮动UI
       this.mountFloatingUI();
 
+      // 挂载设置面板
+      this.mountSettingsPanel();
+
       document.removeEventListener('keydown', this.handleKeydown);
       document.addEventListener('keydown', this.handleKeydown);
 
@@ -138,6 +197,9 @@ export class ReadingModeManager {
       // 清理浮动UI
       this.cleanupFloatingUI();
 
+      // 清理设置面板
+      this.cleanupSettingsPanel();
+
       document.removeEventListener('keydown', this.handleKeydown);
 
       await this.notifyBackground(MESSAGE_TYPES.READING_MODE_DISABLED);
@@ -172,10 +234,8 @@ export class ReadingModeManager {
       this.applySettingsToContainer();
     }
 
-    // 重要：更新浮动UI以同步新的设置值
-    if (this.isActive && this.floatingUICleanup) {
-      this.mountFloatingUI();
-    }
+    // 注意：不要重新挂载浮动UI和设置面板，避免UI闪烁和状态丢失
+    // 设置变化会通过 updateStyles() 自动应用
   }
 
   /**
@@ -409,6 +469,33 @@ export class ReadingModeManager {
   }
 
   /**
+   * 挂载设置面板
+   */
+  private mountSettingsPanel(): void {
+    if (this.settingsPanelCleanup) {
+      this.settingsPanelCleanup();
+    }
+
+    this.settingsPanelCleanup = mountReadingSettingsPanel({
+      settings: this.settings,
+      onSettingsChange: (key: keyof UserSettings, value: any) => {
+        console.log(`⚙️ [Settings] 设置变更: ${key} = ${value}`);
+        this.updateSettings({ [key]: value });
+      },
+    });
+  }
+
+  /**
+   * 清理设置面板
+   */
+  private cleanupSettingsPanel(): void {
+    if (this.settingsPanelCleanup) {
+      this.settingsPanelCleanup();
+      this.settingsPanelCleanup = null;
+    }
+  }
+
+  /**
    * 销毁管理器
    */
   destroy(): void {
@@ -419,6 +506,7 @@ export class ReadingModeManager {
     }
 
     this.cleanupFloatingUI();
+    this.cleanupSettingsPanel();
 
     if (this.styleElement) {
       this.styleElement.remove();
