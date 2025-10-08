@@ -135,9 +135,9 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: process.env.NODE_ENV === 'production',
-        drop_debugger: true,
-        pure_funcs: process.env.NODE_ENV === 'production' ? ['console.log', 'console.debug', 'console.info'] : []
+        drop_console: false, // 暂时禁用以便调试
+        drop_debugger: false,
+        pure_funcs: []
       }
     }
   },

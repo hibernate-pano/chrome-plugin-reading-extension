@@ -73,8 +73,17 @@ export class ReadingModeManager {
     if (this.isActive) return true;
 
     try {
+      console.log('🚀 [Enable] 开始启用阅读模式');
+      
       // 提取内容
       const content = await this.extractContent();
+      console.log('🚀 [Enable] 内容提取完成，内容类型:', typeof content);
+      console.log('🚀 [Enable] 内容是否为空:', !content);
+      if (content) {
+        console.log('🚀 [Enable] 内容长度:', content.length);
+        console.log('🚀 [Enable] 内容预览:', content.substring(0, 200));
+      }
+      
       if (!content) {
         throw new Error('无法提取页面内容');
       }
@@ -84,6 +93,7 @@ export class ReadingModeManager {
 
       // 应用阅读模式样式
       this.applyReaderStyles();
+      console.log('🚀 [Enable] 阅读模式样式已应用');
 
       this.isActive = true;
 
@@ -100,6 +110,7 @@ export class ReadingModeManager {
         this.overlayElement.focus({ preventScroll: true });
       }
 
+      console.log('🚀 [Enable] 阅读模式启用完成');
       return true;
     } catch (error) {
       console.error('启用阅读模式失败:', error);
@@ -229,6 +240,9 @@ export class ReadingModeManager {
    * 创建阅读容器
    */
   private createReaderContainer(content: string): void {
+    console.log('📦 [ReaderContainer] 开始创建阅读容器');
+    console.log('📦 [ReaderContainer] 内容长度:', content.length);
+    
     this.teardownReaderContainer();
 
     const overlay = document.createElement('div');
@@ -237,14 +251,19 @@ export class ReadingModeManager {
     overlay.tabIndex = -1;
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
+    console.log('📦 [ReaderContainer] Overlay 元素已创建');
 
     const container = document.createElement('div');
     container.className = 'reading-mode-container';
     container.innerHTML = content;
     container.setAttribute('role', 'document');
+    console.log('📦 [ReaderContainer] Container 元素已创建');
 
     overlay.appendChild(container);
     document.body.appendChild(overlay);
+    console.log('📦 [ReaderContainer] 元素已添加到 DOM');
+    console.log('📦 [ReaderContainer] Body children count:', document.body.children.length);
+    console.log('📦 [ReaderContainer] Overlay在DOM中:', document.body.contains(overlay));
 
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) {
@@ -256,17 +275,21 @@ export class ReadingModeManager {
 
     const closeButton = container.querySelector('[data-reading-mode-close]');
     if (closeButton) {
+      console.log('📦 [ReaderContainer] 找到关闭按钮');
       closeButton.addEventListener('click', () => {
         this.disable().catch((error) => {
           console.error('退出阅读模式时发生错误:', error);
         });
       });
+    } else {
+      console.warn('📦 [ReaderContainer] 未找到关闭按钮');
     }
 
     this.overlayElement = overlay;
     this.readerContainer = container;
 
     this.applySettingsToContainer();
+    console.log('📦 [ReaderContainer] 阅读容器创建完成');
   }
 
   private teardownReaderContainer(): void {

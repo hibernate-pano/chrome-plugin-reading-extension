@@ -3,7 +3,7 @@
  * 使用新的阅读模式管理器和现代化UI组件
  */
 
-import { ReadingModeManager } from './features/readingModeManager';
+import { getReadingModeManager } from './services/readingModeService';
 import { getStorage, StorageKeys } from '../storage/storage';
 import { MESSAGE_TYPES } from '../constants';
 import { UserSettings } from '../types';
@@ -13,7 +13,7 @@ import './styles/contentTailwind.css';
 import './styles/readingMode.css';
 
 // 全局状态
-let readingModeManager: ReadingModeManager | null = null;
+let readingModeManager: Awaited<ReturnType<typeof getReadingModeManager>> | null = null;
 let currentSettings: UserSettings;
 
 /**
@@ -31,7 +31,8 @@ async function initialize(): Promise<void> {
     currentSettings = await loadSettings();
 
     // 创建阅读模式管理器
-    readingModeManager = new ReadingModeManager(currentSettings);
+    readingModeManager = await getReadingModeManager();
+    readingModeManager.updateSettings(currentSettings);
 
     // 监听来自popup的消息
     setupMessageListeners();
@@ -78,8 +79,7 @@ async function loadSettings(): Promise<UserSettings> {
 async function toggleReadingMode(): Promise<void> {
   console.log('🔄 切换阅读模式');
   if (!readingModeManager) {
-    console.error('❌ 阅读模式管理器未初始化');
-    return;
+    readingModeManager = await getReadingModeManager();
   }
 
   try {
@@ -99,8 +99,7 @@ async function toggleReadingMode(): Promise<void> {
 async function enableReadingMode(settings?: UserSettings): Promise<void> {
   console.log('🟢 启用阅读模式，设置:', settings);
   if (!readingModeManager) {
-    console.error('❌ 阅读模式管理器未初始化');
-    return;
+    readingModeManager = await getReadingModeManager();
   }
 
   try {
@@ -126,8 +125,7 @@ async function enableReadingMode(settings?: UserSettings): Promise<void> {
 async function disableReadingMode(): Promise<void> {
   console.log('🔴 禁用阅读模式');
   if (!readingModeManager) {
-    console.error('❌ 阅读模式管理器未初始化');
-    return;
+    readingModeManager = await getReadingModeManager();
   }
 
   try {

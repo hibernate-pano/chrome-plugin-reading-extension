@@ -64,15 +64,15 @@ export class EnhancedProcessingManager {
    * 设置缓存事件监听
    */
   private setupCacheEventListeners(): void {
-    cacheStrategyManager.onCacheHit((key) => {
+    cacheStrategyManager.setCacheHitCallback((key) => {
       console.log(`🎯 缓存命中: ${key}`);
     });
 
-    cacheStrategyManager.onCacheMiss((key) => {
+    cacheStrategyManager.setCacheMissCallback((key) => {
       console.log(`❌ 缓存未命中: ${key}`);
     });
 
-    cacheStrategyManager.onCacheEviction((key, reason) => {
+    cacheStrategyManager.setCacheEvictionCallback((key, reason) => {
       console.log(`🗑️ 缓存驱逐: ${key} (原因: ${reason})`);
     });
   }

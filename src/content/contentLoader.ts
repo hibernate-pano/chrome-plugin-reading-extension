@@ -286,13 +286,14 @@ async function handleToggleReaderMode(): Promise<boolean> {
     if (!state.readerInitialized) {
       // 使用动态加载器更高效地管理依赖
       const { ModuleType, loadModuleWithDependencies } = await import('./dynamic/dynamicLoader');
-      await loadModuleWithDependencies(ModuleType.READER_MODE);
+      await loadModuleWithDependencies(ModuleType.READING_MANAGER);
       state.readerInitialized = true;
     }
 
     // 动态导入阅读模式模块
-    const { toggleReadingMode } = await import('./features/readingMode');
-    const result = await toggleReadingMode();
+    const { getReadingModeManager } = await import('./services/readingModeService');
+    const manager = await getReadingModeManager();
+    const result = await manager.toggle();
     state.readerActive = result;
 
     // 懒加载按钮更新函数
@@ -361,7 +362,7 @@ async function _loadReaderModule(): Promise<void> {
 
     // 并行预加载核心模块 (使用Promise.all优化)
     await Promise.all([
-      import('./features/readingMode').catch(() => { }),
+      import('./services/readingModeService').catch(() => { }),
       import('./features/contentExtraction').catch(() => { })
     ]);
   } catch (err) {

@@ -51,7 +51,7 @@ function setupUserInteractionTriggers(): void {
     
     // 用户可能要点击按钮，预加载核心模块
     preloadOnIdle(() => {
-      preloadModules([ModuleType.READER_MODE], true);
+      preloadModules([ModuleType.READING_MANAGER], true);
     }, 300);
   }, { passive: true });
 }
@@ -122,7 +122,7 @@ function setupScrollTriggers(): void {
       // 用户滚动后停止，可能准备阅读
       if (isDeepScroll()) {
         preloadOnIdle(() => {
-          preloadModules([ModuleType.READER_MODE, ModuleType.CONTENT_EXTRACTION], false);
+          preloadModules([ModuleType.READING_MANAGER, ModuleType.CONTENT_EXTRACTION], false);
         }, 2000);
       }
       

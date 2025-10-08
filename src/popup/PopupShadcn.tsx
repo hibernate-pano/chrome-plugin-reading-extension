@@ -3,6 +3,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { SimpleSwitch } from '@/components/ui/simple-switch';
 import { StorageKeys, getStorage, setStorage, FONT_FAMILIES, BACKGROUND_COLORS } from '../storage/storage';
 import { MESSAGE_TYPES } from '../constants';
 import builtInPresets from '../presets/builtInPresets';
@@ -22,6 +23,7 @@ export const PopupShadcn: React.FC = React.memo(() => {
   const [readingMode, setReadingMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPreset, setSelectedPreset] = useState<string>('paper');
+  const [useSimpleSwitch, setUseSimpleSwitch] = useState(false);
 
   // 获取当前活动标签页的辅助函数 - 使用 useCallback 优化
   const getCurrentTab = useCallback(async (): Promise<chrome.tabs.Tab | null> => {
@@ -98,14 +100,22 @@ export const PopupShadcn: React.FC = React.memo(() => {
   }, [initSettings, initializePopup]);
 
   // 切换阅读模式 - 使用 useCallback 优化
-  const toggleReadingMode = useCallback(async () => {
-    console.log('🔄 切换阅读模式按钮被点击，当前状态:', readingMode);
+  const toggleReadingMode = useCallback(async (checked: boolean) => {
+    console.log('========================================');
+    console.log('🔄 toggleReadingMode 被调用');
+    console.log('参数 checked:', checked);
+    console.log('当前 readingMode 状态:', readingMode);
+    console.log('========================================');
+    
+    // 立即更新 UI 状态，提供即时反馈
+    setReadingMode(checked);
+    console.log('✅ UI 状态已更新为:', checked);
+    
     try {
       const currentTab = await getCurrentTab();
 
       if (currentTab?.id) {
-        const newMode = !readingMode;
-        const messageType = newMode ? MESSAGE_TYPES.ENABLE_READING_MODE : MESSAGE_TYPES.DISABLE_READING_MODE;
+        const messageType = checked ? MESSAGE_TYPES.ENABLE_READING_MODE : MESSAGE_TYPES.DISABLE_READING_MODE;
         console.log('📤 发送消息:', messageType, '设置:', settings);
 
         try {
@@ -117,24 +127,28 @@ export const PopupShadcn: React.FC = React.memo(() => {
           console.log('📥 收到响应:', response);
 
           if (response?.success) {
-            setReadingMode(newMode);
-            console.log('✅ 阅读模式切换成功，新状态:', newMode);
+            console.log('✅ 阅读模式切换成功，新状态:', checked);
           } else {
             console.error('❌ 切换阅读模式失败:', response?.error);
+            // 如果失败，恢复原状态
+            setReadingMode(!checked);
           }
         } catch (messageError) {
           console.error('❌ 发送消息失败:', messageError);
-          // 尝试直接切换状态（用于调试）
-          setReadingMode(newMode);
-          console.log('⚠️ 强制切换状态为:', newMode);
+          // 消息发送失败，但保持新状态（content script 可能还没加载）
+          console.log('⚠️ 保持新状态，等待 content script 加载');
         }
       } else {
         console.warn('⚠️ 没有找到活动标签页');
+        // 恢复原状态
+        setReadingMode(!checked);
       }
     } catch (error) {
       console.error('❌ 切换阅读模式异常:', error);
+      // 发生异常，恢复原状态
+      setReadingMode(!checked);
     }
-  }, [readingMode, settings, getCurrentTab]);
+  }, [settings, getCurrentTab]);
 
   // 应用预设 - 使用 useCallback 优化
   const applyPreset = useCallback(async (presetName: string) => {
@@ -240,7 +254,7 @@ export const PopupShadcn: React.FC = React.memo(() => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 <div 
                   className={`w-2 h-2 rounded-full ${readingMode ? 'bg-green-500' : 'bg-gray-400'}`}
@@ -250,13 +264,67 @@ export const PopupShadcn: React.FC = React.memo(() => {
                   {readingMode ? '已开启' : '已关闭'}
                 </span>
               </div>
-              <Switch
-                checked={readingMode}
-                onCheckedChange={toggleReadingMode}
-                className="data-[state=checked]:bg-green-500"
-                aria-labelledby="reading-mode-status"
-                aria-describedby="reading-mode-description"
-              />
+              <div 
+                onClick={(e) => {
+                  console.log('🖱️ Switch 外层 div 被点击');
+                  console.log('事件目标:', e.target);
+                  console.log('当前元素:', e.currentTarget);
+                }}
+                style={{ display: 'inline-block' }}
+              >
+                {useSimpleSwitch ? (
+                  <SimpleSwitch
+                    checked={readingMode}
+                    onCheckedChange={(checked) => {
+                      console.log('🎯 SimpleSwitch onCheckedChange 触发，checked =', checked);
+                      toggleReadingMode(checked);
+                    }}
+                    className="data-[state=checked]:bg-green-500"
+                    disabled={false}
+                  />
+                ) : (
+                  <Switch
+                    checked={readingMode}
+                    onCheckedChange={(checked) => {
+                      console.log('🎯 Switch onCheckedChange 触发，checked =', checked);
+                      toggleReadingMode(checked);
+                    }}
+                    onClick={(e) => {
+                      console.log('🖱️ Switch onClick 触发');
+                      console.log('事件:', e);
+                    }}
+                    className="data-[state=checked]:bg-green-500"
+                    aria-labelledby="reading-mode-status"
+                    aria-describedby="reading-mode-description"
+                    disabled={false}
+                  />
+                )}
+              </div>
+            </div>
+            {/* 调试：添加控制按钮 */}
+            <div className="mt-2 space-y-2">
+              <Button
+                onClick={() => {
+                  console.log('🔘 测试按钮被点击');
+                  toggleReadingMode(!readingMode);
+                }}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                测试切换（当前：{readingMode ? '开' : '关'}）
+              </Button>
+              <Button
+                onClick={() => {
+                  console.log('🔧 切换 Switch 组件类型');
+                  setUseSimpleSwitch(!useSimpleSwitch);
+                }}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                {useSimpleSwitch ? '使用 Radix Switch' : '使用简单 Switch'}
+              </Button>
             </div>
             <div id="reading-mode-description" className="sr-only">
               点击切换阅读模式，开启后页面将优化为更适合阅读的布局

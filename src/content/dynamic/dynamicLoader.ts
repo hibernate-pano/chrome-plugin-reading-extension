@@ -16,7 +16,7 @@ enum LoadStatus {
 
 // 模块类型
 export enum ModuleType {
-  READER_MODE = 'reader-mode',
+  READING_MANAGER = 'reading-manager',
   CONTENT_EXTRACTION = 'content-extraction',
   PERFORMANCE = 'performance',
   UTILS = 'utils',
@@ -76,8 +76,8 @@ export async function loadModule(type: ModuleType): Promise<void> {
   
   try {
     switch (type) {
-      case ModuleType.READER_MODE:
-        await import('../../content/features/readingMode');
+      case ModuleType.READING_MANAGER:
+        await import('../../content/services/readingModeService');
         break;
       case ModuleType.CONTENT_EXTRACTION:
         await import('../../content/features/contentExtraction');
@@ -160,7 +160,7 @@ export function getModuleStatus(type: ModuleType): LoadStatus {
  * 定义模块之间的依赖关系，用于优化加载顺序
  */
 const moduleDependencies: Record<ModuleType, ModuleType[]> = {
-  [ModuleType.READER_MODE]: [ModuleType.CONTENT_EXTRACTION, ModuleType.UI_COMPONENTS, ModuleType.HIGHLIGHT_JS],
+  [ModuleType.READING_MANAGER]: [ModuleType.CONTENT_EXTRACTION, ModuleType.UI_COMPONENTS, ModuleType.HIGHLIGHT_JS],
   [ModuleType.CONTENT_EXTRACTION]: [ModuleType.UTILS],
   [ModuleType.PERFORMANCE]: [ModuleType.UTILS],
   [ModuleType.UTILS]: [],

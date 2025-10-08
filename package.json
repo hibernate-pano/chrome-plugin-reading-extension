@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && vite build --config vite.content.config.ts && cp -r public/* dist/",
+    "build:debug": "vite build --mode development && vite build --mode development --config vite.content.config.ts && cp -r public/* dist/",
     "build:dev": "NODE_ENV=development pnpm run build",
     "build:prod": "NODE_ENV=production pnpm run build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",

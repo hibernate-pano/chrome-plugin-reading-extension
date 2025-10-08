@@ -10,10 +10,6 @@ import { logger } from '../../utils/logManager';
 import { TextSelectionToolbar } from '../components/TextSelectionToolbar';
 import { MarkdownWorkerManager } from '../workers/markdownWorkerManager';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
-import { ContentExtractor } from '../extractors/contentExtractor';
-import { ReadabilityExtractor } from '../extractors/ReadabilityExtractor';
-import { DOMUtils } from '../../utils/dom';
-import { RenderError } from '../../types/errors';
 
 // Toast通知组件（简化版，实际项目中可能需要导入或实现）
 const Toast = {
