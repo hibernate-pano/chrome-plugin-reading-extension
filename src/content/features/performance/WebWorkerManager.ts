@@ -544,13 +544,13 @@ export class WebWorkerManager {
         // 代码块 <pre><code>
         text = text.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, function(_, code){
           const decoded = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-          return '\n```\n' + decoded + '\n```\n\n';
+          return 'CODE_BLOCK_START' + decoded + 'CODE_BLOCK_END';
         });
 
         // 行内代码
         text = text.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, function(_, code){
           const decoded = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-          return '\\`' + decoded + '\\`';
+          return 'INLINE_CODE_START' + decoded + 'INLINE_CODE_END';
         });
 
         // 标题 h1-h6
@@ -574,8 +574,8 @@ export class WebWorkerManager {
                    .replace(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)');
 
         // 粗体与斜体
-        text = text.replace(/<(strong|b)[^>]*>([\s\S]*?)<\/\1>/gi, '**$2**')
-                   .replace(/<(em|i)[^>]*>([\s\S]*?)<\/\1>/gi, '*$2*');
+        text = text.replace(/<(strong|b)[^>]*>([\s\S]*?)<\/(strong|b)>/gi, '**$2**')
+                   .replace(/<(em|i)[^>]*>([\s\S]*?)<\/(em|i)>/gi, '*$2*');
 
         // 列表 li（简化为无序）
         text = text.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, function(_, c){ return '\n- ' + stripTags(c).trim(); });

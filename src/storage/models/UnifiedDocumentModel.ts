@@ -145,13 +145,20 @@ export abstract class UnifiedDocumentModel<T extends BaseDocument> {
     updates?: Partial<Omit<T, keyof BaseDocument>>;
   }>): Promise<Array<T | null>> {
     try {
-      const storageOperations = operations.map(op => ({
-        type: op.type === 'get' ? 'get' as const : 
-              op.type === 'update' ? 'set' as const : 'delete' as const,
-        key: this.storageKey,
-        documentId: op.documentId,
-        data: op.type === 'update' && op.updates ? 
-          await this.update(op.documentId, op.updates) : undefined
+      const storageOperations = await Promise.all(operations.map(async op => {
+        let data: T | undefined;
+        
+        if (op.type === 'update' && op.updates) {
+          data = await this.update(op.documentId, op.updates);
+        }
+        
+        return {
+          type: op.type === 'get' ? 'get' as const : 
+                op.type === 'update' ? 'set' as const : 'delete' as const,
+          key: this.storageKey,
+          documentId: op.documentId,
+          data
+        };
       }));
 
       return await unifiedStorageManager.batch(storageOperations);

@@ -4,7 +4,7 @@
  */
 
 import { ReadingModeManager } from './features/readingModeManager';
-import { getStorage, setStorage, StorageKeys } from '../storage/storage';
+import { getStorage, StorageKeys } from '../storage/storage';
 import { MESSAGE_TYPES } from '../constants';
 import { UserSettings } from '../types';
 import { logger } from '../utils/logManager';
@@ -13,10 +13,12 @@ import { annotationManager } from './features/annotation/AnnotationManager';
 import { TextSelectionToolbar, defaultToolbarOptions, exportToolbarOptions } from './components/TextSelectionToolbar';
 import { loadingStateManager } from './components/LoadingStateManager';
 import { keyboardShortcutManager } from './components/KeyboardShortcutManager';
+import { retryManager } from './components/RetryManager';
+import { errorMessageManager } from './components/ErrorMessageManager';
+import { errorMonitor } from './components/ErrorMonitor';
 import { 
   documentMetadataModel, 
-  documentReadingProgressModel, 
-  userSettingsModel 
+  documentReadingProgressModel
 } from '../storage/models/UnifiedDocumentModel';
 
 // 导入样式
@@ -81,7 +83,7 @@ async function initialize(): Promise<void> {
 
   } catch (error) {
     console.error('❌ 统一内容脚本初始化失败:', error);
-    logger.logError(error as Error);
+        logger.logError(error as any);
   }
 }
 
@@ -90,13 +92,12 @@ async function initialize(): Promise<void> {
  */
 async function loadSettings(): Promise<UserSettings> {
   const [
-    fontSize, 
-    lineHeight, 
-    paragraphSpacing, 
-    fontFamily, 
-    backgroundColor, 
-    theme,
-    pageWidth
+    fontSize,
+    lineHeight,
+    paragraphSpacing,
+    fontFamily,
+    backgroundColor,
+    theme
   ] = await Promise.all([
     getStorage<number>(StorageKeys.FONT_SIZE),
     getStorage<number>(StorageKeys.LINE_HEIGHT),
@@ -104,7 +105,7 @@ async function loadSettings(): Promise<UserSettings> {
     getStorage<string>(StorageKeys.FONT_FAMILY),
     getStorage<string>(StorageKeys.BACKGROUND_COLOR),
     getStorage<string>(StorageKeys.THEME),
-    getStorage<number>('pageWidth')
+    getStorage<number>(StorageKeys.FONT_SIZE)
   ]);
 
   return {
@@ -114,7 +115,7 @@ async function loadSettings(): Promise<UserSettings> {
     fontFamily: fontFamily || 'default',
     backgroundColor: backgroundColor || 'white',
     theme: (theme as 'light' | 'dark' | 'sepia' | 'custom') || 'light',
-    pageWidth: pageWidth || 800,
+    pageWidth: 800,
     presets: [],
     activePreset: null
   };
@@ -123,7 +124,7 @@ async function loadSettings(): Promise<UserSettings> {
 /**
  * 统一的消息处理函数
  */
-function handleMessage(message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean {
+function handleMessage(message: any, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean {
   console.log('📥 收到消息:', message);
 
   const messageType = message.action || message.type;
@@ -252,20 +253,22 @@ function handleMessage(message: any, sender: chrome.runtime.MessageSender, sendR
       case 'EXPORT_ANNOTATIONS':
         console.log('📤 处理导出注释消息');
         asyncResponse = true;
-        try {
-          const { format, options } = message;
-          const content = await annotationManager.exportAnnotations({
-            format: format || 'markdown',
-            includeMetadata: options?.includeMetadata !== false,
-            includeHighlights: options?.includeHighlights !== false,
-            includeNotes: options?.includeNotes !== false,
-            filename: options?.filename
-          });
-          sendResponse({ success: true, content, format });
-        } catch (error) {
-          console.error('导出注释失败:', error);
-          sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-        }
+        (async () => {
+          try {
+            const { format, options } = message;
+            const content = await annotationManager.exportAnnotations({
+              format: format || 'markdown',
+              includeMetadata: options?.includeMetadata !== false,
+              includeHighlights: options?.includeHighlights !== false,
+              includeNotes: options?.includeNotes !== false,
+              filename: options?.filename
+            });
+            sendResponse({ success: true, content, format });
+          } catch (error) {
+            console.error('导出注释失败:', error);
+            sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+          }
+        })();
         break;
 
       default:
@@ -339,6 +342,22 @@ async function toggleReadingMode(): Promise<void> {
   } catch (error) {
     console.error('❌ 切换阅读模式失败:', error);
     loadingStateManager.showError(loadingId, '切换阅读模式失败，请重试');
+    
+    // 显示用户友好的错误消息
+    const errorContext = {
+      operation: 'toggle-reading-mode',
+      component: 'unifiedContentScript',
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+    
+    const errorMessage = errorMessageManager.getErrorMessage(error as Error, errorContext);
+    errorMessageManager.showErrorMessage(errorMessage, errorContext);
+    
+    // 记录错误到监控系统
+    errorMonitor.captureError(error as Error, errorContext);
+    
     throw error;
   }
 }
@@ -503,6 +522,22 @@ async function extractContent(): Promise<any> {
   } catch (error) {
     console.error('提取内容失败:', error);
     loadingStateManager.showError(loadingId, '内容提取失败，请重试');
+    
+    // 显示用户友好的错误消息
+    const errorContext = {
+      operation: 'content-extraction',
+      component: 'unifiedContentScript',
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+    
+    const errorMessage = errorMessageManager.getErrorMessage(error as Error, errorContext);
+    errorMessageManager.showErrorMessage(errorMessage, errorContext);
+    
+    // 记录错误到监控系统
+    errorMonitor.captureError(error as Error, errorContext);
+    
     throw error;
   }
 }
@@ -513,37 +548,59 @@ async function extractContent(): Promise<any> {
 async function saveReadingProgress(message: any): Promise<void> {
   const { url, scrollPosition, title, readingPercentage } = message;
 
-  try {
-    // 使用统一存储系统保存阅读进度
-    const existingProgress = await documentReadingProgressModel.getByUrl(url);
-    
-    if (existingProgress) {
-      // 更新现有进度
-      await documentReadingProgressModel.updatePosition(
-        existingProgress.documentId,
-        scrollPosition,
-        readingPercentage || 0
-      );
-    } else {
-      // 创建新的阅读进度
-      await documentReadingProgressModel.createProgress(url, title || document.title, scrollPosition);
-    }
-
-    // 同时发送消息到background.js（保持兼容性）
-    await chrome.runtime.sendMessage({
-      action: MESSAGE_TYPES.SAVE_READING_PROGRESS,
-      progress: {
-        url,
-        scrollPosition,
-        lastRead: Date.now(),
-        title
+  // 使用重试机制保存阅读进度
+  const result = await retryManager.executeWithRetry(
+    async () => {
+      // 使用统一存储系统保存阅读进度
+      const existingProgress = await documentReadingProgressModel.getByUrl(url);
+      
+      if (existingProgress) {
+        // 更新现有进度
+        await documentReadingProgressModel.updatePosition(
+          existingProgress.documentId,
+          scrollPosition,
+          readingPercentage || 0
+        );
+      } else {
+        // 创建新的阅读进度
+        await documentReadingProgressModel.createProgress(url, title || document.title, scrollPosition);
       }
-    });
+
+      // 同时发送消息到background.js（保持兼容性）
+      await chrome.runtime.sendMessage({
+        action: MESSAGE_TYPES.SAVE_READING_PROGRESS,
+        progress: {
+          url,
+          scrollPosition,
+          lastRead: Date.now(),
+          title
+        }
+      });
+      
+      console.log('✅ 阅读进度已保存到统一存储');
+    },
+    'storage'
+  );
+
+  if (!result.success) {
+    console.error('❌ 保存阅读进度失败:', result.error);
     
-    console.log('✅ 阅读进度已保存到统一存储');
-  } catch (error) {
-    console.error('❌ 保存阅读进度失败:', error);
-    throw error;
+    // 显示用户友好的错误消息
+    const errorContext = {
+      operation: 'save-reading-progress',
+      component: 'unifiedContentScript',
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+    
+    const errorMessage = errorMessageManager.getErrorMessage(result.error!, errorContext);
+    errorMessageManager.showErrorMessage(errorMessage, errorContext);
+    
+    // 记录错误到监控系统
+    errorMonitor.captureError(result.error!, errorContext);
+    
+    throw result.error;
   }
 }
 
@@ -718,6 +775,9 @@ function cleanup(): void {
   textSelectionToolbar = null;
   loadingStateManager.cleanup();
   keyboardShortcutManager.cleanup();
+  retryManager.cleanup();
+  errorMessageManager.cleanup();
+  errorMonitor.cleanup();
   isInitialized = false;
 }
 
