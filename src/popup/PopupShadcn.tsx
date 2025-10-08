@@ -115,9 +115,9 @@ export const PopupShadcn: React.FC = React.memo(() => {
   // 加载状态
   if (isLoading) {
     return (
-      <div className="w-80 bg-black/5 min-h-[400px] flex items-center justify-center backdrop-blur-sm">
+      <div className="w-full h-full bg-black/5 flex items-center justify-center backdrop-blur-sm">
         <div className="text-center">
-          <div className="relative w-20 h-20 mx-auto mb-4">
+          <div className="relative w-16 h-16 mx-auto mb-3">
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-500 animate-spin"></div>
           </div>
@@ -128,21 +128,20 @@ export const PopupShadcn: React.FC = React.memo(() => {
   }
 
   return (
-    <div className="w-80 min-h-[400px] bg-gradient-to-br from-white/80 to-gray-50/80 backdrop-blur-sm relative overflow-hidden" role="application" aria-label="阅读助手">
+    <div className="w-full h-full bg-gradient-to-br from-white/90 to-gray-50/90 backdrop-blur-sm relative overflow-hidden" role="application" aria-label="阅读助手">
       {/* 背景装饰 */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-xl transform translate-x-8 -translate-y-8"></div>
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-400/10 to-pink-400/10 rounded-full blur-lg transform -translate-x-4 translate-y-4"></div>
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-400/8 to-purple-400/8 rounded-full blur-lg transform translate-x-6 -translate-y-6"></div>
+      <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-purple-400/8 to-pink-400/8 rounded-full blur-md transform -translate-x-4 translate-y-4"></div>
 
-      <div className="relative p-6 h-full flex flex-col">
+      <div className="relative p-5 h-full flex flex-col">
         {/* 极简头部 */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-xl shadow-indigo-500/25 relative">
-              <span className="text-white text-2xl">📚</span>
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 relative">
+              <span className="text-white text-xl">📚</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 tracking-tight">
+              <h1 className="text-base font-bold text-gray-900 tracking-tight">
                 阅读助手
               </h1>
               <p className="text-xs text-gray-500/80 font-medium">专注 · 舒适 · 优雅</p>
@@ -152,7 +151,7 @@ export const PopupShadcn: React.FC = React.memo(() => {
 
         {/* 主控制区域 */}
         <div className="flex-1 flex flex-col justify-center">
-          <div className="bg-white/60 backdrop-blur-md rounded-3xl border border-white/40 shadow-2xl shadow-black/5 p-6 mb-6">
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/40 shadow-xl shadow-black/5 p-5 mb-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
@@ -182,10 +181,10 @@ export const PopupShadcn: React.FC = React.memo(() => {
           </div>
 
           {/* 状态提示 */}
-          <div className={`p-4 rounded-2xl border transition-all duration-300 ${readingMode ? 'bg-emerald-50/50 border-emerald-200/50' : 'bg-blue-50/50 border-blue-200/50'}`}>
-            <div className="flex gap-3">
+          <div className={`p-3 rounded-xl border transition-all duration-300 ${readingMode ? 'bg-emerald-50/50 border-emerald-200/50' : 'bg-blue-50/50 border-blue-200/50'}`}>
+            <div className="flex gap-2">
               <div className="flex-shrink-0 mt-0.5">
-                <span className="text-lg">{readingMode ? '✨' : '💭'}</span>
+                <span className="text-base">{readingMode ? '✨' : '💭'}</span>
               </div>
               <div className="flex-1">
                 <h3 className="text-sm font-semibold text-gray-900 mb-1">
@@ -203,7 +202,7 @@ export const PopupShadcn: React.FC = React.memo(() => {
         </div>
 
         {/* 底部信息 */}
-        <div className="mt-auto pt-6 border-t border-gray-200/40">
+        <div className="mt-auto pt-4 border-t border-gray-200/40">
           <div className="flex items-center justify-center">
             <span className="text-xs text-gray-400 font-medium">v1.8.1 • 让阅读更美好</span>
           </div>
