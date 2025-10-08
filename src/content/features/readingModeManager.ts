@@ -113,6 +113,7 @@ export class ReadingModeManager {
         margin-bottom: ${paragraphSpacing}em !important;
         font-size: ${fontSize}px !important;
         line-height: ${lineHeight} !important;
+        color: ${textColor} !important;
       }
       
       .reading-mode-content div,
@@ -121,6 +122,18 @@ export class ReadingModeManager {
       .reading-mode-body span {
         font-size: inherit !important;
         line-height: inherit !important;
+        color: inherit !important;
+      }
+      
+      .reading-mode-content li,
+      .reading-mode-body li {
+        color: ${textColor} !important;
+      }
+      
+      .reading-mode-content blockquote,
+      .reading-mode-body blockquote {
+        color: ${textColor} !important;
+        opacity: 0.9;
       }
       
       .reading-mode-title,
