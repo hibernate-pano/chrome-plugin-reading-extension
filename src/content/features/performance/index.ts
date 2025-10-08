@@ -104,51 +104,51 @@ export class PerformanceSystem {
    */
   private setupEventListeners(): void {
     // 性能指标更新
-    this.performanceManager.onMetricsUpdate((metrics) => {
+    this.performanceManager.setMetricsUpdateCallback((metrics) => {
       console.debug('[PerformanceSystem] 性能指标更新:', metrics);
     });
 
     // 性能阈值超出
-    this.performanceManager.onThresholdExceeded((threshold, value) => {
+    this.performanceManager.setThresholdExceededCallback((threshold, value) => {
       console.warn(`[PerformanceSystem] 性能阈值超出: ${threshold} = ${value}`);
       this.handlePerformanceIssue(threshold, value);
     });
 
     // 性能优化建议
-    this.performanceManager.onRecommendation((recommendation) => {
+    this.performanceManager.setRecommendationCallback((recommendation) => {
       console.info('[PerformanceSystem] 性能优化建议:', recommendation);
       this.handlePerformanceRecommendation(recommendation);
     });
 
     // 内存更新
-    this.memoryManager.onMemoryUpdate((memoryInfo) => {
+    this.memoryManager.setMemoryUpdateCallback((memoryInfo) => {
       console.debug('[PerformanceSystem] 内存使用更新:', memoryInfo);
     });
 
     // 内存警告
-    this.memoryManager.onMemoryWarning((memoryInfo) => {
+    this.memoryManager.setMemoryWarningCallback((memoryInfo) => {
       console.warn('[PerformanceSystem] 内存使用警告:', memoryInfo);
       this.handleMemoryWarning(memoryInfo);
     });
 
     // 内存严重警告
-    this.memoryManager.onMemoryCritical((memoryInfo) => {
+    this.memoryManager.setMemoryCriticalCallback((memoryInfo) => {
       console.error('[PerformanceSystem] 内存使用严重警告:', memoryInfo);
       this.handleMemoryCritical(memoryInfo);
     });
 
     // 内存优化完成
-    this.memoryManager.onOptimizationComplete((strategy, savings) => {
+    this.memoryManager.setOptimizationCompleteCallback((strategy, savings) => {
       console.info(`[PerformanceSystem] 内存优化完成: ${strategy}, 节省: ${savings}MB`);
     });
 
     // Web Worker任务完成
-    this.webWorkerManager.onTaskComplete((task) => {
+    this.webWorkerManager.setTaskCompleteCallback((task) => {
       console.debug('[PerformanceSystem] Worker任务完成:', task);
     });
 
     // Web Worker错误
-    this.webWorkerManager.onWorkerError((worker, error) => {
+    this.webWorkerManager.setWorkerErrorCallback((worker, error) => {
       console.error('[PerformanceSystem] Worker错误:', error);
     });
   }
@@ -202,7 +202,7 @@ export class PerformanceSystem {
   /**
    * 处理内存警告
    */
-  private handleMemoryWarning(memoryInfo: any): void {
+  private handleMemoryWarning(_memoryInfo: any): void {
     // 执行低风险的内存优化
     this.memoryManager.optimizeMemory(['清理缓存', '清理定时器']);
   }

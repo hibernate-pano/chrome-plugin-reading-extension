@@ -81,9 +81,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     });
 
     // 显示用户友好的错误通知
-    const errorInfo = errorManager.getError(errorId);
-    if (errorInfo) {
-      userFeedbackManager.showErrorNotification(errorInfo);
+    const errorDetail = errorManager.getError(errorId);
+    if (errorDetail) {
+      userFeedbackManager.showErrorNotification(errorDetail);
     }
 
     // 调用自定义错误处理函数
@@ -173,7 +173,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private handleReportError = (): void => {
     if (this.state.error && this.state.errorInfo) {
       // 生成错误报告
-      const errorId = errorManager.handleError(this.state.error, {
+      const _errorId = errorManager.handleError(this.state.error, {
         type: ErrorType.RENDERING,
         severity: ErrorSeverity.HIGH,
         source: this.props.errorBoundaryId || 'react-error-boundary',

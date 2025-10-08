@@ -215,7 +215,7 @@ export class ErrorMessageManager {
   /**
    * 获取错误键
    */
-  private getErrorKey(error: Error, errorType: ErrorType, _context: ErrorContext): string {
+  private getErrorKey(error: Error, errorType: ErrorType, context: ErrorContext): string {
     // 根据错误类型和上下文确定错误键
     switch (errorType) {
       case ErrorType.NETWORK:
