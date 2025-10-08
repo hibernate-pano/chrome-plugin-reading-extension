@@ -43,8 +43,9 @@ export class EnhancedProcessingManager {
     if (this.isInitialized) return;
 
     try {
-      // 初始化WebWorker管理器
-      await webWorkerManager.initialize();
+      // 注意：Content Script 环境无法使用 Worker（跨域限制）
+      // WebWorker 功能已禁用，直接使用同步处理
+      console.log('ℹ️ WebWorker 在 Content Script 中不可用，使用同步处理');
       
       // 初始化缓存策略管理器
       await cacheStrategyManager.initialize();
@@ -53,7 +54,7 @@ export class EnhancedProcessingManager {
       this.setupCacheEventListeners();
       
       this.isInitialized = true;
-      console.log('✅ 增强处理管理器初始化完成');
+      console.log('✅ 增强处理管理器初始化完成（Worker已禁用）');
     } catch (error) {
       console.error('❌ 增强处理管理器初始化失败:', error);
       throw error;
@@ -121,8 +122,8 @@ export class EnhancedProcessingManager {
       }
     }
 
-    // 使用WebWorker处理
-    const result = await webWorkerManager.convertHtmlToMarkdown(html);
+    // 直接同步处理（Worker在Content Script中不可用）
+    const result = this.convertHtmlToMarkdownSync(html);
     
     // 缓存结果
     if (options.useCache !== false) {
@@ -138,6 +139,60 @@ export class EnhancedProcessingManager {
       processingTime: performance.now() - startTime,
       cacheKey
     };
+  }
+
+  /**
+   * 同步转换 HTML 到 Markdown
+   */
+  private convertHtmlToMarkdownSync(html: string): string {
+    if (!html || typeof html !== 'string') return '';
+    
+    let text = html;
+    
+    // 移除 script 和 style
+    text = text.replace(/<script[\s\S]*?<\/script>/gi, '')
+               .replace(/<style[\s\S]*?<\/style>/gi, '');
+    
+    // 标题
+    for (let i = 6; i >= 1; i--) {
+      const re = new RegExp(`<h${i}[^>]*>([\\s\\S]*?)<\\/h${i}>`, 'gi');
+      text = text.replace(re, (_, content) => '\n' + '#'.repeat(i) + ' ' + this.stripTags(content).trim() + '\n\n');
+    }
+    
+    // 粗体和斜体
+    text = text.replace(/<(strong|b)[^>]*>([\\s\\S]*?)<\/(strong|b)>/gi, '**$2**')
+               .replace(/<(em|i)[^>]*>([\\s\\S]*?)<\/(em|i)>/gi, '*$2*');
+    
+    // 链接和图片
+    text = text.replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]+)"[^>]*>/gi, '![$1]($2)')
+               .replace(/<a[^>]*href="([^"]+)"[^>]*>([\\s\\S]*?)<\/a>/gi, '[$2]($1)');
+    
+    // 列表
+    text = text.replace(/<li[^>]*>([\\s\\S]*?)<\/li>/gi, (_, content) => '\n- ' + this.stripTags(content).trim());
+    text = text.replace(/<\/(ul|ol)>/gi, '\n\n');
+    
+    // 段落
+    text = text.replace(/<p[^>]*>([\\s\\S]*?)<\/p>/gi, (_, content) => '\n' + this.stripTags(content).trim() + '\n\n')
+               .replace(/<br\s*\/?>/gi, '\n');
+    
+    // 移除剩余标签
+    text = this.stripTags(text);
+    
+    // 规范空行
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+    
+    return text;
+  }
+
+  /**
+   * 移除 HTML 标签
+   */
+  private stripTags(html: string): string {
+    return html.replace(/<[^>]+>/g, '')
+               .replace(/&nbsp;/g, ' ')
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&amp;/g, '&');
   }
 
   /**
@@ -163,8 +218,8 @@ export class EnhancedProcessingManager {
       }
     }
 
-    // 使用WebWorker处理
-    const result = await webWorkerManager.extractContent(html);
+    // 直接同步处理
+    const result = this.extractContentSync(html);
     
     // 缓存结果
     if (options.useCache !== false) {
@@ -180,6 +235,19 @@ export class EnhancedProcessingManager {
       processingTime: performance.now() - startTime,
       cacheKey
     };
+  }
+
+  /**
+   * 同步提取内容
+   */
+  private extractContentSync(html: string): string {
+    // 简单的文本提取
+    const cleaned = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '');
+    
+    return this.stripTags(cleaned).trim();
   }
 
   /**
@@ -205,8 +273,8 @@ export class EnhancedProcessingManager {
       }
     }
 
-    // 使用WebWorker处理
-    const result = await webWorkerManager.parseMetadata(html);
+    // 直接同步处理
+    const result = this.parseMetadataSync(html);
     
     // 缓存结果
     if (options.useCache !== false) {
@@ -221,6 +289,23 @@ export class EnhancedProcessingManager {
       fromCache: false,
       processingTime: performance.now() - startTime,
       cacheKey
+    };
+  }
+
+  /**
+   * 同步解析元数据
+   */
+  private parseMetadataSync(html: string): any {
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : '';
+    
+    return {
+      title,
+      language: document.documentElement.lang || 'zh-CN',
+      author: null,
+      publishDate: null,
+      tags: [],
+      category: 'uncategorized'
     };
   }
 
@@ -248,8 +333,8 @@ export class EnhancedProcessingManager {
       }
     }
 
-    // 使用WebWorker处理
-    const result = await webWorkerManager.highlightCode(code, language);
+    // 直接同步处理（简化版，不做复杂高亮）
+    const result = code; // 直接返回原代码
     
     // 缓存结果
     if (options.useCache !== false) {
