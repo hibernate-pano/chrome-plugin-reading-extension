@@ -11,6 +11,7 @@ export enum StorageKeys {
   CODE_FONT_SIZE = 'codeFontSize',
   CODE_THEME = 'codeTheme',
   PARAGRAPH_SPACING = 'paragraphSpacing',
+  ENABLE_TEXT_SELECTION_TOOLBAR = 'enableTextSelectionToolbar',
   ACTIVE_PRESET = 'activePreset',
   CUSTOM_PRESETS = 'customPresets',
   READING_PROGRESS = 'readingProgress'
@@ -96,6 +97,7 @@ export async function initializeDefaultSettings(): Promise<void> {
   await setStorage(StorageKeys.FONT_FAMILY, DEFAULT_SETTINGS.fontFamily);
   await setStorage(StorageKeys.BACKGROUND_COLOR, DEFAULT_SETTINGS.backgroundColor);
   await setStorage(StorageKeys.PARAGRAPH_SPACING, DEFAULT_SETTINGS.paragraphSpacing);
+  await setStorage(StorageKeys.ENABLE_TEXT_SELECTION_TOOLBAR, DEFAULT_SETTINGS.enableTextSelectionToolbar);
   // activePreset 和 customPresets 不在 DEFAULT_SETTINGS 中，由 presetManager 初始化
 }
 

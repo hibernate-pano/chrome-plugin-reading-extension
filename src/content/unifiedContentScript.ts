@@ -426,8 +426,14 @@ async function disableReadingMode(): Promise<void> {
  * 更新设置
  */
 function updateSettings(newSettings: Partial<UserSettings>): void {
+  const oldEnableTextSelectionToolbar = currentSettings.enableTextSelectionToolbar;
   currentSettings = { ...currentSettings, ...newSettings };
   readingModeManager?.updateSettings(newSettings);
+
+  // 如果文本选择工具栏的启用状态发生变化，需要重新初始化
+  if (oldEnableTextSelectionToolbar !== currentSettings.enableTextSelectionToolbar) {
+    initializeTextSelectionToolbar();
+  }
 }
 
 /**
@@ -613,11 +619,17 @@ async function saveReadingProgress(message: any): Promise<void> {
 function initializeTextSelectionToolbar(): void {
   if (textSelectionToolbar) {
     textSelectionToolbar.destroy();
+    textSelectionToolbar = null;
+  }
+
+  // 检查是否启用文本选择工具栏
+  if (!currentSettings.enableTextSelectionToolbar) {
+    return;
   }
 
   // 合并默认选项和导出选项
   const allOptions = [...defaultToolbarOptions, ...exportToolbarOptions];
-  
+
   textSelectionToolbar = new TextSelectionToolbar({
     options: allOptions,
     position: 'top',

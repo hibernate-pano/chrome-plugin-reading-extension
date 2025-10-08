@@ -1072,17 +1072,26 @@ function simpleStringHash(input: string): string {
 function initTextSelectionToolbar(): void {
   if (textSelectionToolbar) return;
 
-  ensureHighlightStyles();
+  // 检查是否启用文本选择工具栏
+  getStorage<boolean>(StorageKeys.ENABLE_TEXT_SELECTION_TOOLBAR).then(enableToolbar => {
+    if (!enableToolbar) {
+      return;
+    }
 
-  textSelectionToolbar = new TextSelectionToolbar({
-    options: [
-      { id: 'highlight', icon: '🖍️', label: '高亮', action: () => highlightCurrentSelection() },
-      { id: 'annotate', icon: '📝', label: '批注', action: () => annotateCurrentSelection() },
-      { id: 'export-md', icon: '📤', label: '导出MD', action: async () => exportCurrentAsMarkdown() },
-      { id: 'export-html', icon: '💾', label: '导出HTML', action: () => exportCurrentAsHtml() },
-    ],
-    position: 'top',
-    theme: (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light',
+    ensureHighlightStyles();
+
+    textSelectionToolbar = new TextSelectionToolbar({
+      options: [
+        { id: 'highlight', icon: '🖍️', label: '高亮', action: () => highlightCurrentSelection() },
+        { id: 'annotate', icon: '📝', label: '批注', action: () => annotateCurrentSelection() },
+        { id: 'export-md', icon: '📤', label: '导出MD', action: async () => exportCurrentAsMarkdown() },
+        { id: 'export-html', icon: '💾', label: '导出HTML', action: () => exportCurrentAsHtml() },
+      ],
+      position: 'top',
+      theme: (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light',
+    });
+  }).catch(error => {
+    console.warn('获取文本选择工具栏设置失败:', error);
   });
 }
 

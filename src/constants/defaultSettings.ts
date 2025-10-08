@@ -13,6 +13,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   pageWidth: 900,
   backgroundColor: 'white',
 
+  // 功能开关
+  enableTextSelectionToolbar: false, // 默认关闭文本选择工具栏
+
   // 预设相关
   presets: [],
   activePreset: null,

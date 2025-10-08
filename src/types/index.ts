@@ -29,6 +29,9 @@ export interface UserSettings {
   imageQuality?: number;              // 图片质量（50-100%）
   imageCacheSize?: number;            // 图片缓存大小（MB）
 
+  // 功能开关
+  enableTextSelectionToolbar?: boolean; // 是否启用文本选择工具栏
+
   // 预设相关
   presets: any[];       // 预设列表
   activePreset: string | null; // 当前激活的预设ID
