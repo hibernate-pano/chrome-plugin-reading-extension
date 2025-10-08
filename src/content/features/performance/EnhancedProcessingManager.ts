@@ -45,7 +45,6 @@ export class EnhancedProcessingManager {
     try {
       // 注意：Content Script 环境无法使用 Worker（跨域限制）
       // WebWorker 功能已禁用，直接使用同步处理
-      console.log('ℹ️ WebWorker 在 Content Script 中不可用，使用同步处理');
       
       // 初始化缓存策略管理器
       await cacheStrategyManager.initialize();
@@ -54,9 +53,8 @@ export class EnhancedProcessingManager {
       this.setupCacheEventListeners();
       
       this.isInitialized = true;
-      console.log('✅ 增强处理管理器初始化完成（Worker已禁用）');
     } catch (error) {
-      console.error('❌ 增强处理管理器初始化失败:', error);
+      console.error('增强处理管理器初始化失败:', error);
       throw error;
     }
   }
@@ -65,16 +63,17 @@ export class EnhancedProcessingManager {
    * 设置缓存事件监听
    */
   private setupCacheEventListeners(): void {
+    // 缓存事件监听（生产环境静默）
     cacheStrategyManager.setCacheHitCallback((key) => {
-      console.log(`🎯 缓存命中: ${key}`);
+      // 缓存命中
     });
 
     cacheStrategyManager.setCacheMissCallback((key) => {
-      console.log(`❌ 缓存未命中: ${key}`);
+      // 缓存未命中
     });
 
     cacheStrategyManager.setCacheEvictionCallback((key, reason) => {
-      console.log(`🗑️ 缓存驱逐: ${key} (原因: ${reason})`);
+      // 缓存驱逐
     });
   }
 
