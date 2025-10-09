@@ -181,7 +181,21 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
       case MESSAGE_TYPES.ENABLE_READING_MODE:
         asyncResponse = true;
         ensureInitialized()
-          .then(() => enableReadingMode(message.settings))
+          .then(async () => {
+            // 确保管理器存在
+            if (!readingModeManager) {
+              readingModeManager = await getReadingModeManager();
+            }
+            
+            // 检查当前状态
+            const currentStatus = readingModeManager.getStatus();
+            if (!currentStatus.isActive) {
+              // 如果未激活，则启用
+              await enableReadingMode(message.settings);
+            } else {
+              console.log('⚠️ 阅读模式已经激活，跳过启用');
+            }
+          })
           .then(() => sendResponse({ success: true }))
           .catch((error: Error) => {
             console.error('启用阅读模式失败:', error);
@@ -401,6 +415,9 @@ function setupStorageListeners(): void {
 async function toggleReadingMode(): Promise<void> {
   console.log('🔄 [ToggleReadingMode] 开始切换阅读模式...');
   
+  // 确保已初始化
+  await ensureInitialized();
+  
   if (!readingModeManager) {
     console.log('🔄 [ToggleReadingMode] 获取阅读模式管理器...');
     readingModeManager = await getReadingModeManager();
@@ -428,7 +445,39 @@ async function toggleReadingMode(): Promise<void> {
     });
 
     console.log('🔄 [ToggleReadingMode] 调用管理器切换...');
-    await readingModeManager.toggle();
+    
+    // 记录切换前的状态
+    const beforeStatus = readingModeManager.getStatus();
+    console.log('📊 [ToggleReadingMode] 切换前状态:', beforeStatus);
+    
+    // 执行切换
+    const toggleResult = await readingModeManager.toggle();
+    console.log('🔄 [ToggleReadingMode] 切换返回值:', toggleResult);
+    
+    // 获取切换后的状态
+    const afterStatus = readingModeManager.getStatus();
+    console.log('📊 [ToggleReadingMode] 切换后状态:', afterStatus);
+    
+    // 验证状态是否真的改变了
+    if (beforeStatus.isActive === afterStatus.isActive) {
+      console.error('⚠️ [ToggleReadingMode] 状态未改变，执行强制切换');
+      
+      // 如果状态没有改变，尝试强制切换
+      if (beforeStatus.isActive) {
+        // 强制禁用
+        await readingModeManager.disable();
+      } else {
+        // 强制启用 - 先重置再启用
+        const { resetReadingModeManager } = await import('./services/readingModeService');
+        await resetReadingModeManager();
+        readingModeManager = await getReadingModeManager();
+        await readingModeManager.enable();
+      }
+      
+      // 再次获取状态
+      const finalStatus = readingModeManager.getStatus();
+      console.log('📊 [ToggleReadingMode] 最终状态:', finalStatus);
+    }
     
     const { isActive } = readingModeManager.getStatus();
     console.log(`✅ [ToggleReadingMode] 切换完成, 当前状态: ${isActive ? '已启用' : '已关闭'}`);

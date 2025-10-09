@@ -132,6 +132,22 @@ export async function getReadingModeManager(): Promise<ReadingModeManager> {
   return ensureManager();
 }
 
+/**
+ * 重置管理器实例（用于调试和错误恢复）
+ */
+export async function resetReadingModeManager(): Promise<void> {
+  console.log('🔄 [ReadingModeService] 重置manager实例...');
+  
+  // 先销毁
+  await destroyReadingModeManager();
+  
+  // 清空所有状态
+  manager = null;
+  loadPromise = null;
+  
+  console.log('✅ [ReadingModeService] manager实例已重置');
+}
+
 export async function destroyReadingModeManager(): Promise<void> {
   console.log('🔄 [ReadingModeService] 开始销毁manager...');
   isDestroying = true;

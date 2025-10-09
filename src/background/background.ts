@@ -46,12 +46,16 @@ async function ensureContentScriptInjected(tabId: number): Promise<boolean> {
   try {
     // 尝试发送测试消息，检查是否已注入
     try {
-      await chrome.tabs.sendMessage(tabId, { action: 'PING' });
-      // 如果成功，说明已注入
-      injectedTabs.add(tabId);
-      return true;
-    } catch {
+      const pingResponse = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
+      // 如果成功且收到正确响应，说明已注入
+      if (pingResponse?.pong) {
+        injectedTabs.add(tabId);
+        console.log('✅ Content script 已经存在，无需重新注入:', tabId);
+        return true;
+      }
+    } catch (pingError) {
       // 如果失败，说明未注入，需要注入
+      console.log('📝 Content script 未注入，将进行注入:', tabId);
     }
 
     console.log('🔧 向标签页注入 content script:', tabId);
@@ -74,7 +78,10 @@ async function ensureContentScriptInjected(tabId: number): Promise<boolean> {
 
 // 监听来自内容脚本或弹出窗口的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('后台收到消息:', message);
+  // 只记录重要消息，避免日志泛滥
+  if (message.action !== 'PING' && message.action !== MESSAGE_TYPES.GET_READING_MODE_STATE) {
+    console.log('后台收到消息:', message.action || message.type || 'unknown');
+  }
   
   let asyncResponse = false;
 
