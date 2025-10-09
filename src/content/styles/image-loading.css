@@ -1,17 +1,20 @@
 /**
  * 智能图片加载样式
  * 为图片懒加载、预加载和错误处理提供视觉反馈
+ * 样式限定在阅读模式容器内，避免影响页面原有样式
  */
 
-/* 图片容器样式 */
-.enhanced-image-container {
+/* 图片容器样式 - 只在阅读模式内生效 */
+#reading-mode-container .enhanced-image-container,
+.reading-mode-content .enhanced-image-container {
   position: relative;
   display: inline-block;
   margin: 1rem 0;
 }
 
 /* 图片基础样式 */
-.enhanced-image {
+#reading-mode-container .enhanced-image,
+.reading-mode-content .enhanced-image {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
@@ -19,7 +22,8 @@
 }
 
 /* 加载中状态 */
-.enhanced-image.loading {
+#reading-mode-container .enhanced-image.loading,
+.reading-mode-content .enhanced-image.loading {
   opacity: 0.7;
   filter: blur(2px);
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -37,7 +41,8 @@
 }
 
 /* 加载指示器 */
-.image-loader {
+#reading-mode-container .image-loader,
+.reading-mode-content .image-loader {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -53,7 +58,8 @@
   z-index: 1000;
 }
 
-.image-loader-spinner {
+#reading-mode-container .image-loader-spinner,
+.reading-mode-content .image-loader-spinner {
   width: 24px;
   height: 24px;
   border: 2px solid #e2e8f0;
@@ -67,35 +73,47 @@
   100% { transform: rotate(360deg); }
 }
 
-.image-loader-text {
+#reading-mode-container .image-loader-text,
+.reading-mode-content .image-loader-text {
   font-size: 12px;
   color: #64748b;
   font-weight: 500;
 }
 
-/* 深色主题适配 */
-[data-theme="dark"] .image-loader {
+/* 深色主题适配 - 限定在阅读模式容器内 */
+body.dark-theme #reading-mode-container .image-loader,
+body.dark-theme .reading-mode-content .image-loader,
+[data-theme="dark"] #reading-mode-container .image-loader,
+[data-theme="dark"] .reading-mode-content .image-loader {
   background: rgba(15, 23, 42, 0.9);
   color: #e2e8f0;
 }
 
-[data-theme="dark"] .image-loader-spinner {
+body.dark-theme #reading-mode-container .image-loader-spinner,
+body.dark-theme .reading-mode-content .image-loader-spinner,
+[data-theme="dark"] #reading-mode-container .image-loader-spinner,
+[data-theme="dark"] .reading-mode-content .image-loader-spinner {
   border-color: #334155;
   border-top-color: #60a5fa;
 }
 
-[data-theme="dark"] .image-loader-text {
+body.dark-theme #reading-mode-container .image-loader-text,
+body.dark-theme .reading-mode-content .image-loader-text,
+[data-theme="dark"] #reading-mode-container .image-loader-text,
+[data-theme="dark"] .reading-mode-content .image-loader-text {
   color: #cbd5e1;
 }
 
 /* 加载完成状态 */
-.enhanced-image.loaded {
+#reading-mode-container .enhanced-image.loaded,
+.reading-mode-content .enhanced-image.loaded {
   opacity: 1;
   filter: none;
 }
 
 /* 缓存加载状态 */
-.enhanced-image.loaded-from-cache {
+#reading-mode-container .enhanced-image.loaded-from-cache,
+.reading-mode-content .enhanced-image.loaded-from-cache {
   animation: fade-in-from-cache 0.3s ease-out;
 }
 
@@ -111,7 +129,8 @@
 }
 
 /* 错误状态 */
-.enhanced-image.image-error {
+#reading-mode-container .enhanced-image.image-error,
+.reading-mode-content .enhanced-image.image-error {
   opacity: 0.5;
   border: 1px dashed #cbd5e1;
   background: #f8fafc;
@@ -122,14 +141,16 @@
   position: relative;
 }
 
-.enhanced-image.image-error::before {
+#reading-mode-container .enhanced-image.image-error::before,
+.reading-mode-content .enhanced-image.image-error::before {
   content: "⚠";
   font-size: 24px;
   color: #64748b;
   z-index: 1;
 }
 
-.enhanced-image.image-error::after {
+#reading-mode-container .enhanced-image.image-error::after,
+.reading-mode-content .enhanced-image.image-error::after {
   content: "图片加载失败";
   position: absolute;
   bottom: 8px;
@@ -144,22 +165,32 @@
 }
 
 /* 深色主题错误状态 */
-[data-theme="dark"] .enhanced-image.image-error {
+body.dark-theme #reading-mode-container .enhanced-image.image-error,
+body.dark-theme .reading-mode-content .enhanced-image.image-error,
+[data-theme="dark"] #reading-mode-container .enhanced-image.image-error,
+[data-theme="dark"] .reading-mode-content .enhanced-image.image-error {
   background: #1e293b;
   border-color: #475569;
 }
 
-[data-theme="dark"] .enhanced-image.image-error::before {
+body.dark-theme #reading-mode-container .enhanced-image.image-error::before,
+body.dark-theme .reading-mode-content .enhanced-image.image-error::before,
+[data-theme="dark"] #reading-mode-container .enhanced-image.image-error::before,
+[data-theme="dark"] .reading-mode-content .enhanced-image.image-error::before {
   color: #94a3b8;
 }
 
-[data-theme="dark"] .enhanced-image.image-error::after {
+body.dark-theme #reading-mode-container .enhanced-image.image-error::after,
+body.dark-theme .reading-mode-content .enhanced-image.image-error::after,
+[data-theme="dark"] #reading-mode-container .enhanced-image.image-error::after,
+[data-theme="dark"] .reading-mode-content .enhanced-image.image-error::after {
   color: #94a3b8;
   background: rgba(15, 23, 42, 0.9);
 }
 
 /* 悬停效果 */
-.enhanced-image:not(.loading):not(.image-error):hover {
+#reading-mode-container .enhanced-image:not(.loading):not(.image-error):hover,
+.reading-mode-content .enhanced-image:not(.loading):not(.image-error):hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -167,31 +198,37 @@
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .enhanced-image-container {
+  #reading-mode-container .enhanced-image-container,
+  .reading-mode-content .enhanced-image-container {
     margin: 0.5rem 0;
   }
 
-  .image-loader {
+  #reading-mode-container .image-loader,
+  .reading-mode-content .image-loader {
     padding: 12px;
   }
 
-  .image-loader-spinner {
+  #reading-mode-container .image-loader-spinner,
+  .reading-mode-content .image-loader-spinner {
     width: 20px;
     height: 20px;
   }
 
-  .image-loader-text {
+  #reading-mode-container .image-loader-text,
+  .reading-mode-content .image-loader-text {
     font-size: 11px;
   }
 }
 
 /* 高对比度模式支持 */
 @media (prefers-contrast: high) {
-  .enhanced-image.loading {
+  #reading-mode-container .enhanced-image.loading,
+  .reading-mode-content .enhanced-image.loading {
     background: linear-gradient(90deg, #000000 25%, #333333 50%, #000000 75%);
   }
 
-  .enhanced-image.image-error {
+  #reading-mode-container .enhanced-image.image-error,
+  .reading-mode-content .enhanced-image.image-error {
     border-width: 2px;
     border-color: #000000;
   }
@@ -199,39 +236,46 @@
 
 /* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
-  .enhanced-image.loading {
+  #reading-mode-container .enhanced-image.loading,
+  .reading-mode-content .enhanced-image.loading {
     animation: none;
     background: #e2e8f0;
   }
 
-  .enhanced-image.loaded-from-cache {
+  #reading-mode-container .enhanced-image.loaded-from-cache,
+  .reading-mode-content .enhanced-image.loaded-from-cache {
     animation: none;
   }
 
-  .enhanced-image:not(.loading):not(.image-error):hover {
+  #reading-mode-container .enhanced-image:not(.loading):not(.image-error):hover,
+  .reading-mode-content .enhanced-image:not(.loading):not(.image-error):hover {
     transform: none;
   }
 
-  .image-loader-spinner {
+  #reading-mode-container .image-loader-spinner,
+  .reading-mode-content .image-loader-spinner {
     animation: none;
     border-top-color: #64748b;
   }
 }
 
 /* 阅读模式下的特殊样式调整 */
-.reading-mode-active .enhanced-image {
+#reading-mode-container.reading-mode-active .enhanced-image,
+.reading-mode-active #reading-mode-container .enhanced-image {
   border-radius: 8px;
   margin: 1.5rem auto;
   display: block;
 }
 
-.reading-mode-active .enhanced-image-container {
+#reading-mode-container.reading-mode-active .enhanced-image-container,
+.reading-mode-active #reading-mode-container .enhanced-image-container {
   text-align: center;
   margin: 2rem 0;
 }
 
 /* 图片标题样式 */
-.image-caption {
+#reading-mode-container .image-caption,
+.reading-mode-content .image-caption {
   font-size: 0.9em;
   color: #64748b;
   font-style: italic;
@@ -240,21 +284,27 @@
   padding: 0 1rem;
 }
 
-[data-theme="dark"] .image-caption {
+body.dark-theme #reading-mode-container .image-caption,
+body.dark-theme .reading-mode-content .image-caption,
+[data-theme="dark"] #reading-mode-container .image-caption,
+[data-theme="dark"] .reading-mode-content .image-caption {
   color: #94a3b8;
 }
 
 /* 性能优化 - 避免布局抖动 */
-.enhanced-image {
+#reading-mode-container .enhanced-image,
+.reading-mode-content .enhanced-image {
   aspect-ratio: attr(data-aspect-ratio, auto);
 }
 
 /* 当JavaScript不可用时的降级样式 */
-.no-js .enhanced-image {
+.no-js #reading-mode-container .enhanced-image,
+.no-js .reading-mode-content .enhanced-image {
   opacity: 1;
   filter: none;
 }
 
-.no-js .image-loader {
+.no-js #reading-mode-container .image-loader,
+.no-js .reading-mode-content .image-loader {
   display: none;
 }

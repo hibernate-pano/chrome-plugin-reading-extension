@@ -1,7 +1,13 @@
 /* 阅读模式的基础样式 - 基于 Obsidian Clipper 设计理念 */
+/* 注意：此文件已不再使用，所有样式已迁移到 unifiedContentScript 使用的样式文件中 */
+/* 保留此文件仅为兼容性考虑，实际样式请参考：
+   - src/content/styles/contentTailwind.css
+   - src/content/styles/readingMode.css
+   - src/content/styles/image-loading.css
+*/
 
-/* 响应式断点系统 - 与 readingMode.css 保持一致 */
-:root {
+/* 响应式断点系统 - 限定作用域 */
+#reading-mode-container {
   --breakpoint-sm: 640px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;

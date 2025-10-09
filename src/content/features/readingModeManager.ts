@@ -33,11 +33,14 @@ export class ReadingModeManager {
 
   constructor(settings: UserSettings) {
     this.settings = settings;
-    this.initializeStyles();
+    // 不要在构造函数中初始化样式！
+    // 样式应该只在真正启用阅读模式时才注入
+    // this.initializeStyles();
   }
 
   /**
    * 初始化阅读模式样式
+   * 只在启用阅读模式时调用
    */
   private initializeStyles(): void {
     if (this.styleElement) return;
@@ -82,7 +85,10 @@ export class ReadingModeManager {
     }
 
     const cssVariables = `
-      :root {
+      /* 限定作用域到阅读模式容器，避免污染全局 */
+      .reading-mode-overlay,
+      .reading-mode-container,
+      #reading-mode-container {
         --reading-font-size: ${fontSize}px;
         --reading-line-height: ${lineHeight};
         --reading-paragraph-spacing: ${paragraphSpacing}em;
@@ -163,6 +169,9 @@ export class ReadingModeManager {
     if (this.isActive) return true;
 
     try {
+      // 首先初始化样式（确保样式在启用时才注入）
+      this.initializeStyles();
+
       // 提取内容
       const content = await this.extractContent();
       
@@ -534,6 +543,9 @@ export class ReadingModeManager {
       this.styleElement.remove();
       this.styleElement = null;
     }
+
+    // 清理 body 样式，防止残留
+    this.removeReaderStyles();
 
     document.removeEventListener('keydown', this.handleKeydown);
   }

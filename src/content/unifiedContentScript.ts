@@ -21,10 +21,8 @@ import {
   documentReadingProgressModel
 } from '../storage/models/UnifiedDocumentModel';
 
-// 导入样式
-import './styles/contentTailwind.css';
-import './styles/readingMode.css';
-import './styles/image-loading.css';
+// 注意：样式将在需要时动态加载，而不是在初始化时加载
+// 这样可以避免影响未启用阅读模式的页面
 
 // 全局状态
 let readingModeManager: Awaited<ReturnType<typeof getReadingModeManager>> | null = null;
@@ -32,6 +30,7 @@ let currentSettings: UserSettings;
 let isInitialized = false;
 let initializationPromise: Promise<void> | null = null;
 let textSelectionToolbar: TextSelectionToolbar | null = null;
+let stylesLoaded = false;
 
 /**
  * 确保内容脚本已初始化
@@ -50,6 +49,30 @@ async function ensureInitialized(): Promise<void> {
 }
 
 /**
+ * 动态加载样式文件
+ */
+async function loadStyles(): Promise<void> {
+  if (stylesLoaded) {
+    return;
+  }
+
+  try {
+    // 动态导入样式
+    await Promise.all([
+      import('./styles/contentTailwind.css'),
+      import('./styles/readingMode.css'),
+      import('./styles/image-loading.css')
+    ]);
+    
+    stylesLoaded = true;
+    console.log('✅ 阅读模式样式已加载');
+  } catch (error) {
+    console.error('❌ 加载样式失败:', error);
+    throw error;
+  }
+}
+
+/**
  * 初始化统一内容脚本
  */
 async function initialize(): Promise<void> {
@@ -61,6 +84,9 @@ async function initialize(): Promise<void> {
   (window as any).__UNIFIED_CONTENT_SCRIPT_ACTIVE = true;
 
   try {
+    // 先不加载样式，等到真正需要时再加载
+    // 这样可以避免影响未启用阅读模式的页面
+
     // 初始化增强处理管理器
     await enhancedProcessingManager.initialize();
 
@@ -84,6 +110,7 @@ async function initialize(): Promise<void> {
     registerKeyboardShortcuts();
 
     isInitialized = true;
+    console.log('✅ 内容脚本已初始化（样式将在需要时加载）');
 
   } catch (error) {
     console.error('❌ 统一内容脚本初始化失败:', error);
@@ -344,6 +371,9 @@ async function toggleReadingMode(): Promise<void> {
   const loadingId = 'toggle-reading-mode';
   
   try {
+    // 确保样式已加载
+    await loadStyles();
+    
     // 显示加载状态
     loadingStateManager.showLoading(loadingId, {
       message: '正在切换阅读模式...',
@@ -389,6 +419,9 @@ async function enableReadingMode(settings?: UserSettings): Promise<void> {
   }
 
   try {
+    // 确保样式已加载
+    await loadStyles();
+    
     if (settings) {
       await updateSettings(settings);
     }
@@ -800,18 +833,10 @@ chrome.runtime.onMessage.addListener(handleMessage);
 // 页面卸载时清理资源
 window.addEventListener('beforeunload', cleanup);
 
-// 启动初始化（异步进行，不阻塞消息监听器）
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initialize().catch((error) => {
-      console.error('❌ 延迟初始化失败:', error);
-    });
-  });
-} else {
-  initialize().catch((error) => {
-    console.error('❌ 立即初始化失败:', error);
-  });
-}
+// 延迟初始化，减少对页面性能的影响
+// 只在需要时才初始化完整功能
+// 初始化只会在用户实际使用阅读模式时通过 ensureInitialized() 触发
+console.log('✅ 阅读模式扩展已准备就绪（按需初始化）');
 
 // 导出供其他模块使用
 export { 
