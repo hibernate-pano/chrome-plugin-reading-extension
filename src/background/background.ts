@@ -30,6 +30,12 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 // 标签页更新时清理记录（URL 变化）
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.url) {
+    console.log(`🔄 [Background] Tab ${tabId} URL 变化，清理缓存`);
+    injectedTabs.delete(tabId);
+  }
+  // 页面刷新时也清理缓存
+  if (changeInfo.status === 'loading') {
+    console.log(`🔄 [Background] Tab ${tabId} 正在加载，清理缓存`);
     injectedTabs.delete(tabId);
   }
 });

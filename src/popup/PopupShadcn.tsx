@@ -68,14 +68,16 @@ export const PopupShadcn: React.FC = React.memo(() => {
     }
   }, []);
 
-  // 初始化 popup - 使用 useCallback 优化
-  const initializePopup = useCallback(async () => {
+  // 初始化 popup
+  const initializePopup = async () => {
+    console.log('🚀 [Popup] 开始初始化');
     try {
       const currentTab = await getCurrentTab();
 
       if (currentTab?.id) {
         // 先确保 content script 已注入（动态注入模式）
-        await ensureContentScript();
+        const injected = await ensureContentScript();
+        console.log('💉 [Popup] 注入状态:', injected);
         
         // 等待一小段时间确保脚本初始化完成
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -84,24 +86,29 @@ export const PopupShadcn: React.FC = React.memo(() => {
           const response = await chrome.tabs.sendMessage(currentTab.id, {
             action: MESSAGE_TYPES.GET_READING_MODE_STATE
           });
+          console.log('📊 [Popup] 获取状态响应:', response);
           setReadingMode(response?.readingMode || response?.isReadingMode || false);
         } catch (messageError) {
+          console.warn('⚠️ [Popup] 获取状态失败:', messageError);
           // 内容脚本可能还没加载，设置默认状态
           setReadingMode(false);
         }
       } else {
+        console.warn('⚠️ [Popup] 未找到当前标签页');
         setReadingMode(false);
       }
     } catch (error) {
+      console.error('❌ [Popup] 初始化失败:', error);
       setReadingMode(false);
     } finally {
       setIsLoading(false);
     }
-  }, [getCurrentTab, ensureContentScript]);
+  };
 
   useEffect(() => {
+    console.log('🔄 [Popup] useEffect 触发初始化');
     initializePopup();
-  }, [initializePopup]);
+  }, []); // 移除依赖，只在组件挂载时执行一次
 
   // 切换阅读模式 - 使用 useCallback 优化
   const toggleReadingMode = useCallback(async (checked: boolean) => {
