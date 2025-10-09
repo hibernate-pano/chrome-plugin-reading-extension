@@ -302,6 +302,8 @@ export class ReadingModeManager {
       paragraphSpacing: StorageKeys.PARAGRAPH_SPACING,
       pageWidth: StorageKeys.PAGE_WIDTH,
       enableTextSelectionToolbar: StorageKeys.ENABLE_TEXT_SELECTION_TOOLBAR,
+      presets: StorageKeys.CUSTOM_PRESETS,
+      activePreset: StorageKeys.ACTIVE_PRESET,
     };
 
     const savePromises: Promise<void>[] = [];
