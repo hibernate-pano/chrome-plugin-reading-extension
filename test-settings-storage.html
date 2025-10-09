@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试阅读模式设置存储</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .status {
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+    }
+    .settings-list {
+      list-style: none;
+      padding: 0;
+    }
+    .settings-list li {
+      padding: 10px;
+      margin: 5px 0;
+      background: #f9f9f9;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .settings-list li strong {
+      color: #666;
+    }
+    .settings-list li span {
+      color: #2196f3;
+      font-weight: 600;
+    }
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1976d2;
+    }
+    .controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .info {
+      color: #666;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 阅读模式设置存储测试</h1>
+    <p class="info">这个工具可以帮助你验证阅读模式的设置是否正确保存到 Chrome Storage</p>
+    
+    <div class="controls">
+      <button onclick="readAllSettings()">📖 读取所有设置</button>
+      <button onclick="testSavePageWidth()">💾 测试保存宽度 (950px)</button>
+      <button onclick="clearAllSettings()">🗑️ 清除所有设置</button>
+    </div>
+
+    <div class="status" id="status">
+      点击"读取所有设置"按钮查看当前保存的设置
+    </div>
+
+    <ul class="settings-list" id="settingsList"></ul>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      THEME: 'theme',
+      FONT_SIZE: 'fontSize',
+      LINE_HEIGHT: 'lineHeight',
+      FONT_FAMILY: 'fontFamily',
+      BACKGROUND_COLOR: 'backgroundColor',
+      PARAGRAPH_SPACING: 'paragraphSpacing',
+      PAGE_WIDTH: 'pageWidth',
+      ENABLE_TEXT_SELECTION_TOOLBAR: 'enableTextSelectionToolbar',
+    };
+
+    async function readAllSettings() {
+      try {
+        const status = document.getElementById('status');
+        const list = document.getElementById('settingsList');
+        
+        status.innerHTML = '⏳ 正在读取设置...';
+        list.innerHTML = '';
+
+        const keys = Object.values(STORAGE_KEYS);
+        const result = await chrome.storage.local.get(keys);
+        
+        console.log('📖 从 Chrome Storage 读取的设置:', result);
+
+        if (Object.keys(result).length === 0) {
+          status.innerHTML = '⚠️ 未找到任何保存的设置';
+          return;
+        }
+
+        status.innerHTML = `✅ 成功读取 ${Object.keys(result).length} 个设置项`;
+        
+        for (const [key, value] of Object.entries(result)) {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>${key}:</strong> <span>${JSON.stringify(value)}</span>`;
+          list.appendChild(li);
+          
+          // 高亮显示 pageWidth
+          if (key === 'pageWidth') {
+            li.style.background = '#fff3cd';
+            li.style.borderLeft = '4px solid #ffc107';
+          }
+        }
+      } catch (error) {
+        console.error('读取设置失败:', error);
+        document.getElementById('status').innerHTML = `❌ 读取失败: ${error.message}`;
+      }
+    }
+
+    async function testSavePageWidth() {
+      try {
+        const status = document.getElementById('status');
+        status.innerHTML = '⏳ 正在保存宽度设置...';
+        
+        const testValue = 950;
+        await chrome.storage.local.set({ [STORAGE_KEYS.PAGE_WIDTH]: testValue });
+        
+        // 验证保存
+        const result = await chrome.storage.local.get(STORAGE_KEYS.PAGE_WIDTH);
+        console.log('💾 保存后验证:', result);
+        
+        if (result.pageWidth === testValue) {
+          status.innerHTML = `✅ 成功保存宽度设置: ${testValue}px`;
+          setTimeout(() => readAllSettings(), 500);
+        } else {
+          status.innerHTML = `❌ 保存失败: 期望 ${testValue}, 实际 ${result.pageWidth}`;
+        }
+      } catch (error) {
+        console.error('保存设置失败:', error);
+        document.getElementById('status').innerHTML = `❌ 保存失败: ${error.message}`;
+      }
+    }
+
+    async function clearAllSettings() {
+      if (!confirm('确定要清除所有阅读模式设置吗？')) {
+        return;
+      }
+      
+      try {
+        const status = document.getElementById('status');
+        status.innerHTML = '⏳ 正在清除设置...';
+        
+        const keys = Object.values(STORAGE_KEYS);
+        await chrome.storage.local.remove(keys);
+        
+        status.innerHTML = '✅ 所有设置已清除';
+        document.getElementById('settingsList').innerHTML = '';
+        
+        console.log('🗑️ 已清除所有设置');
+      } catch (error) {
+        console.error('清除设置失败:', error);
+        document.getElementById('status').innerHTML = `❌ 清除失败: ${error.message}`;
+      }
+    }
+
+    // 页面加载时自动读取设置
+    window.addEventListener('load', () => {
+      readAllSettings();
+    });
+
+    // 监听存储变化
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local') {
+        console.log('📢 检测到存储变化:', changes);
+        
+        for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
+          console.log(`  ${key}: ${oldValue} → ${newValue}`);
+        }
+        
+        // 自动刷新显示
+        setTimeout(() => readAllSettings(), 100);
+      }
+    });
+  </script>
+</body>
+</html>
+

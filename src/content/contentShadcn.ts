@@ -222,14 +222,17 @@ function setupMessageListeners(): void {
  */
 function setupStorageListeners(): void {
   chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace !== 'sync') return;
+    // 监听 local 和 sync 存储的变化
+    if (namespace !== 'local' && namespace !== 'sync') return;
 
     const settingsChanged = Object.keys(changes).some(key =>
       Object.values(StorageKeys).includes(key as any)
     );
 
     if (settingsChanged) {
+      console.log('📢 [ContentShadcn] 检测到设置变化:', changes);
       loadSettings().then(newSettings => {
+        console.log('🔄 [ContentShadcn] 已重新加载设置:', newSettings);
         currentSettings = newSettings;
         readingModeManager?.updateSettings(newSettings);
       });

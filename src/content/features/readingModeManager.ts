@@ -291,6 +291,8 @@ export class ReadingModeManager {
    * 保存设置到 Chrome storage
    */
   private async saveSettingsToStorage(settings: Partial<UserSettings>): Promise<void> {
+    console.log('💾 [ReadingModeManager] 开始保存设置到 Chrome storage:', settings);
+    
     const settingsKeyMap: { [K in keyof UserSettings]?: StorageKeys } = {
       theme: StorageKeys.THEME,
       fontSize: StorageKeys.FONT_SIZE,
@@ -307,11 +309,15 @@ export class ReadingModeManager {
     for (const [key, value] of Object.entries(settings)) {
       const storageKey = settingsKeyMap[key as keyof UserSettings];
       if (storageKey !== undefined && value !== undefined) {
+        console.log(`💾 [ReadingModeManager] 保存 ${key} = ${value} 到存储键 ${storageKey}`);
         savePromises.push(setStorage(storageKey, value));
+      } else {
+        console.warn(`⚠️ [ReadingModeManager] 跳过保存 ${key} (storageKey: ${storageKey}, value: ${value})`);
       }
     }
 
     await Promise.all(savePromises);
+    console.log('✅ [ReadingModeManager] 设置已保存到 Chrome storage');
   }
 
   /**

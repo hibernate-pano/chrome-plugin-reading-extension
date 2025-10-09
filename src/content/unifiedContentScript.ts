@@ -131,7 +131,8 @@ async function loadSettings(): Promise<UserSettings> {
     paragraphSpacing,
     fontFamily,
     backgroundColor,
-    theme
+    theme,
+    pageWidth
   ] = await Promise.all([
     getStorage<number>(StorageKeys.FONT_SIZE),
     getStorage<number>(StorageKeys.LINE_HEIGHT),
@@ -139,7 +140,7 @@ async function loadSettings(): Promise<UserSettings> {
     getStorage<string>(StorageKeys.FONT_FAMILY),
     getStorage<string>(StorageKeys.BACKGROUND_COLOR),
     getStorage<string>(StorageKeys.THEME),
-    getStorage<number>(StorageKeys.FONT_SIZE)
+    getStorage<number>(StorageKeys.PAGE_WIDTH)
   ]);
 
   return {
@@ -149,7 +150,7 @@ async function loadSettings(): Promise<UserSettings> {
     fontFamily: fontFamily || 'default',
     backgroundColor: backgroundColor || 'white',
     theme: (theme as 'light' | 'dark' | 'sepia' | 'custom') || 'light',
-    pageWidth: 900,
+    pageWidth: pageWidth || 900,
     presets: [],
     activePreset: null
   };
@@ -376,14 +377,17 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
  */
 function setupStorageListeners(): void {
   chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace !== 'sync') return;
+    // 监听 local 和 sync 存储的变化
+    if (namespace !== 'local' && namespace !== 'sync') return;
 
     const settingsChanged = Object.keys(changes).some(key =>
       Object.values(StorageKeys).includes(key as any)
     );
 
     if (settingsChanged) {
+      console.log('📢 [UnifiedContentScript] 检测到设置变化:', changes);
       loadSettings().then(newSettings => {
+        console.log('🔄 [UnifiedContentScript] 已重新加载设置:', newSettings);
         currentSettings = newSettings;
         readingModeManager?.updateSettings(newSettings);
       });
