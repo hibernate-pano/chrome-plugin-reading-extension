@@ -190,8 +190,12 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
 
       case MESSAGE_TYPES.DISABLE_READING_MODE:
         asyncResponse = true;
-        ensureInitialized()
-          .then(() => disableReadingMode())
+        // 如果还没初始化，说明阅读模式根本没启用过，直接返回成功
+        if (!isInitialized) {
+          sendResponse({ success: true });
+          break;
+        }
+        disableReadingMode()
           .then(() => sendResponse({ success: true }))
           .catch((error: Error) => {
             console.error('禁用阅读模式失败:', error);
@@ -200,132 +204,158 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
         break;
 
       case MESSAGE_TYPES.GET_READING_MODE_STATE:
-        asyncResponse = true;
-        ensureInitialized()
-          .then(() => {
-            const status = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
-            sendResponse({
-              success: true,
-              readingMode: status.isActive,
-              isReadingMode: status.isActive,
-              settings: status.settings
-            });
-          })
-          .catch((error: Error) => {
-            console.error('获取阅读模式状态失败:', error);
-            // 即使初始化失败，也返回默认状态
-            sendResponse({
-              success: true,
-              readingMode: false,
-              isReadingMode: false,
-              settings: currentSettings || {}
-            });
+        // 查询状态不应该触发初始化
+        // 只有在已经初始化的情况下才返回真实状态
+        if (isInitialized && readingModeManager) {
+          const status = readingModeManager.getStatus();
+          sendResponse({
+            success: true,
+            readingMode: status.isActive,
+            isReadingMode: status.isActive,
+            settings: status.settings
           });
+        } else {
+          // 未初始化时返回默认状态（未启用）
+          sendResponse({
+            success: true,
+            readingMode: false,
+            isReadingMode: false,
+            settings: currentSettings || {}
+          });
+        }
         break;
 
       case MESSAGE_TYPES.UPDATE_SETTINGS:
         asyncResponse = true;
-        ensureInitialized()
-          .then(() => {
-            updateSettings(message.settings);
-            sendResponse({ success: true });
-          })
-          .catch((error: Error) => {
-            console.error('更新设置失败:', error);
-            sendResponse({ success: false, error: error.message });
-          });
+        // 更新设置：如果已初始化则实时更新，否则只保存到本地变量
+        if (isInitialized) {
+          updateSettings(message.settings);
+          sendResponse({ success: true });
+        } else {
+          // 未初始化时只更新本地设置，不触发初始化
+          currentSettings = { ...currentSettings, ...message.settings };
+          sendResponse({ success: true });
+        }
         break;
 
       case MESSAGE_TYPES.APPLY_PRESET:
         asyncResponse = true;
-        ensureInitialized()
-          .then(() => applyPreset(message.preset))
-          .then(() => sendResponse({ success: true }))
-          .catch((error: Error) => {
-            console.error('应用预设失败:', error);
-            sendResponse({ success: false, error: error.message });
+        // 应用预设需要已初始化
+        if (!isInitialized) {
+          sendResponse({ 
+            success: false, 
+            error: '请先启用阅读模式后再应用预设' 
           });
+        } else {
+          applyPreset(message.preset)
+            .then(() => sendResponse({ success: true }))
+            .catch((error: Error) => {
+              console.error('应用预设失败:', error);
+              sendResponse({ success: false, error: error.message });
+            });
+        }
         break;
 
       case MESSAGE_TYPES.EXTRACT_CONTENT:
         asyncResponse = true;
-        ensureInitialized()
-          .then(() => extractContent())
-          .then((content: any) => sendResponse({ success: true, content }))
-          .catch((error: Error) => {
-            console.error('提取内容失败:', error);
-            sendResponse({ success: false, error: error.message });
+        // 内容提取需要已初始化
+        if (!isInitialized) {
+          sendResponse({ 
+            success: false, 
+            error: '请先启用阅读模式后再提取内容' 
           });
+        } else {
+          extractContent()
+            .then((content: any) => sendResponse({ success: true, content }))
+            .catch((error: Error) => {
+              console.error('提取内容失败:', error);
+              sendResponse({ success: false, error: error.message });
+            });
+        }
         break;
 
       case MESSAGE_TYPES.SAVE_READING_PROGRESS:
         asyncResponse = true;
-        ensureInitialized()
-          .then(() => saveReadingProgress(message))
-          .then(() => sendResponse({ success: true }))
-          .catch((error: Error) => {
-            console.error('保存阅读进度失败:', error);
-            sendResponse({ success: false, error: error.message });
+        // 保存进度需要已初始化
+        if (!isInitialized) {
+          sendResponse({ 
+            success: false, 
+            error: '请先启用阅读模式后再保存进度' 
           });
+        } else {
+          saveReadingProgress(message)
+            .then(() => sendResponse({ success: true }))
+            .catch((error: Error) => {
+              console.error('保存阅读进度失败:', error);
+              sendResponse({ success: false, error: error.message });
+            });
+        }
         break;
 
       case 'GET_PERFORMANCE_STATS':
-        asyncResponse = true;
-        ensureInitialized()
-          .then(() => {
-            const stats = enhancedProcessingManager.getPerformanceStats();
-            sendResponse({ success: true, stats });
-          })
-          .catch((error) => {
-            console.error('获取性能统计失败:', error);
-            sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-          });
+        // 查询类消息不触发初始化
+        if (!isInitialized) {
+          sendResponse({ success: true, stats: null });
+        } else {
+          const stats = enhancedProcessingManager.getPerformanceStats();
+          sendResponse({ success: true, stats });
+        }
         break;
 
       case 'GENERATE_PERFORMANCE_REPORT':
-        asyncResponse = true;
-        ensureInitialized()
-          .then(() => {
-            const report = enhancedProcessingManager.generatePerformanceReport();
-            sendResponse({ success: true, report });
-          })
-          .catch((error) => {
-            console.error('生成性能报告失败:', error);
-            sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-          });
+        // 查询类消息不触发初始化
+        if (!isInitialized) {
+          sendResponse({ success: true, report: null });
+        } else {
+          const report = enhancedProcessingManager.generatePerformanceReport();
+          sendResponse({ success: true, report });
+        }
         break;
 
       case 'GET_ANNOTATION_STATS':
-        asyncResponse = true;
-        ensureInitialized()
-          .then(() => {
-            const stats = annotationManager.getStats();
-            sendResponse({ success: true, stats });
-          })
-          .catch((error) => {
-            console.error('获取注释统计失败:', error);
-            sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-          });
+        // 查询类消息不触发初始化
+        if (!isInitialized) {
+          sendResponse({ success: true, stats: null });
+        } else {
+          const stats = annotationManager.getStats();
+          sendResponse({ success: true, stats });
+        }
         break;
 
       case 'EXPORT_ANNOTATIONS':
         asyncResponse = true;
-        ensureInitialized()
-          .then(async () => {
-            const { format, options } = message;
-            const content = await annotationManager.exportAnnotations({
-              format: format || 'markdown',
-              includeMetadata: options?.includeMetadata !== false,
-              includeHighlights: options?.includeHighlights !== false,
-              includeNotes: options?.includeNotes !== false,
-              filename: options?.filename
-            });
-            sendResponse({ success: true, content, format });
-          })
-          .catch((error) => {
-            console.error('导出注释失败:', error);
-            sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        // 导出功能需要已初始化
+        if (!isInitialized) {
+          sendResponse({ 
+            success: false, 
+            error: '请先启用阅读模式后再导出注释' 
           });
+        } else {
+          (async () => {
+            try {
+              const { format, options } = message;
+              const content = await annotationManager.exportAnnotations({
+                format: format || 'markdown',
+                includeMetadata: options?.includeMetadata !== false,
+                includeHighlights: options?.includeHighlights !== false,
+                includeNotes: options?.includeNotes !== false,
+                filename: options?.filename
+              });
+              sendResponse({ success: true, content, format });
+            } catch (error) {
+              console.error('导出注释失败:', error);
+              sendResponse({ 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Unknown error' 
+              });
+            }
+          })();
+        }
+        break;
+
+      case 'PING':
+        // 用于检测 content script 是否已注入
+        sendResponse({ success: true, pong: true });
         break;
 
       default:
@@ -833,10 +863,8 @@ chrome.runtime.onMessage.addListener(handleMessage);
 // 页面卸载时清理资源
 window.addEventListener('beforeunload', cleanup);
 
-// 延迟初始化，减少对页面性能的影响
-// 只在需要时才初始化完整功能
-// 初始化只会在用户实际使用阅读模式时通过 ensureInitialized() 触发
-console.log('✅ 阅读模式扩展已准备就绪（按需初始化）');
+// 动态注入模式：content script 只在需要时被注入
+// 不输出任何日志，保持完全静默，确保零污染
 
 // 导出供其他模块使用
 export { 

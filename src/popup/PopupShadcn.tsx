@@ -53,12 +53,31 @@ export const PopupShadcn: React.FC = React.memo(() => {
     }
   }, []);
 
+  // 确保 content script 已注入
+  const ensureContentScript = useCallback(async (): Promise<boolean> => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'ENSURE_CONTENT_SCRIPT'
+      });
+      return response?.injected || false;
+    } catch (error) {
+      console.error('❌ 确保 content script 失败:', error);
+      return false;
+    }
+  }, []);
+
   // 初始化 popup - 使用 useCallback 优化
   const initializePopup = useCallback(async () => {
     try {
       const currentTab = await getCurrentTab();
 
       if (currentTab?.id) {
+        // 先确保 content script 已注入（动态注入模式）
+        await ensureContentScript();
+        
+        // 等待一小段时间确保脚本初始化完成
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         try {
           const response = await chrome.tabs.sendMessage(currentTab.id, {
             action: MESSAGE_TYPES.GET_READING_MODE_STATE
@@ -76,7 +95,7 @@ export const PopupShadcn: React.FC = React.memo(() => {
     } finally {
       setIsLoading(false);
     }
-  }, [getCurrentTab]);
+  }, [getCurrentTab, ensureContentScript]);
 
   useEffect(() => {
     initializePopup();
@@ -91,6 +110,12 @@ export const PopupShadcn: React.FC = React.memo(() => {
       const currentTab = await getCurrentTab();
 
       if (currentTab?.id) {
+        // 确保 content script 已注入（如果用户直接切换而没有先查询状态）
+        if (checked) {
+          await ensureContentScript();
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         const messageType = checked ? MESSAGE_TYPES.ENABLE_READING_MODE : MESSAGE_TYPES.DISABLE_READING_MODE;
 
         try {
@@ -110,7 +135,7 @@ export const PopupShadcn: React.FC = React.memo(() => {
     } catch (error) {
       setReadingMode(!checked);
     }
-  }, [getCurrentTab]);
+  }, [getCurrentTab, ensureContentScript]);
 
   // 加载状态
   if (isLoading) {

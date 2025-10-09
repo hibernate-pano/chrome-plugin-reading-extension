@@ -28,7 +28,7 @@ export class LoadingStateManager {
   private isContainerCreated = false;
 
   private constructor() {
-    this.createLoadingContainer();
+    // 延迟初始化 DOM，避免在未使用时污染页面
   }
 
   public static getInstance(): LoadingStateManager {
@@ -39,10 +39,12 @@ export class LoadingStateManager {
   }
 
   /**
-   * 创建加载指示器容器
+   * 确保加载指示器容器存在
    */
-  private createLoadingContainer(): void {
-    if (this.isContainerCreated) return;
+  private ensureContainer(): void {
+    if (this.isContainerCreated && this.loadingContainer) {
+      return;
+    }
 
     this.loadingContainer = document.createElement('div');
     this.loadingContainer.id = 'reading-extension-loading-container';
@@ -63,9 +65,65 @@ export class LoadingStateManager {
   }
 
   /**
+   * 创建加载指示器容器
+   */
+  private createLoadingContainer(): void {
+    // 保留旧方法以兼容, 但内部只调用 ensureContainer
+    this.ensureContainer();
+  }
+
+  /**
+   * 确保动画样式已注入
+   */
+  private ensureAnimationStyles(): void {
+    if (document.getElementById('loading-animations')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'loading-animations';
+    style.textContent = `
+      @keyframes reading-extension-slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes reading-extension-slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+      @keyframes reading-extension-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes reading-extension-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      .reading-extension-loading-item {
+        animation: reading-extension-slideInRight 0.3s ease-out;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  /**
    * 显示加载状态
    */
   public showLoading(id: string, options: LoadingOptions): void {
+    this.ensureContainer();
+
     const loadingState: LoadingState = {
       id,
       message: options.message,
@@ -153,8 +211,10 @@ export class LoadingStateManager {
    * 创建单个加载项
    */
   private createLoadingItem(id: string, state: LoadingState): HTMLElement {
+    this.ensureAnimationStyles();
+
     const item = document.createElement('div');
-    item.className = 'loading-item';
+    item.className = 'reading-extension-loading-item';
     item.style.cssText = `
       background: rgba(255, 255, 255, 0.95);
       border: 1px solid #e1e5e9;
@@ -163,45 +223,7 @@ export class LoadingStateManager {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       backdrop-filter: blur(10px);
       min-width: 200px;
-      animation: slideInRight 0.3s ease-out;
     `;
-
-    // 添加动画样式
-    if (!document.getElementById('loading-animations')) {
-      const style = document.createElement('style');
-      style.id = 'loading-animations';
-      style.textContent = `
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideOutRight {
-          from {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
 
     // 创建内容
     const content = document.createElement('div');
@@ -379,9 +401,19 @@ export class LoadingStateManager {
    */
   public cleanup(): void {
     this.hideAllLoading();
+    this.destroy();
+  }
+
+  /**
+   * 销毁管理器，释放资源
+   */
+  public destroy(): void {
+    this.hideAllLoading();
+
     if (this.loadingContainer && this.loadingContainer.parentNode) {
       this.loadingContainer.parentNode.removeChild(this.loadingContainer);
     }
+    this.loadingContainer = null;
     this.isContainerCreated = false;
   }
 }

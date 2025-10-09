@@ -17,9 +17,25 @@ class LogManager {
   private dbName = 'reader_logs';
   private dbVersion = 1;
   private storeName = 'error_logs';
+  private dbInitialized = false;
+  private dbInitPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initDatabase();
+    // 延迟初始化数据库，避免在未使用时打开 IndexedDB
+  }
+
+  // Ensure database is initialized
+  private async ensureDatabase(): Promise<void> {
+    if (this.dbInitialized && this.db) {
+      return;
+    }
+
+    if (this.dbInitPromise) {
+      return this.dbInitPromise;
+    }
+
+    this.dbInitPromise = this.initDatabase();
+    return this.dbInitPromise;
   }
 
   // Initialize the IndexedDB database for logs
@@ -37,6 +53,8 @@ class LogManager {
 
       request.onsuccess = (event) => {
         this.db = (event.target as IDBRequest<IDBDatabase>).result;
+        this.dbInitialized = true;
+        this.dbInitPromise = null;
         console.log('日志数据库初始化成功');
         this.pruneOldLogs(); // Prune logs after successful initialization
         resolve();
@@ -51,6 +69,14 @@ class LogManager {
 
   // Record an error
   async logError(error: ReaderError): Promise<void> {
+    try {
+      await this.ensureDatabase();
+    } catch (initError) {
+      console.warn('日志数据库初始化失败，错误将仅输出到控制台');
+      console.error(error);
+      return;
+    }
+
     if (!this.db) {
       console.warn('日志数据库未准备好，错误将仅输出到控制台');
       console.error(error);
@@ -138,6 +164,13 @@ class LogManager {
 
   // Get all logs
   async getLogs(): Promise<ErrorLog[]> {
+    try {
+      await this.ensureDatabase();
+    } catch (error) {
+      console.warn('日志数据库未准备好，无法获取日志');
+      return [];
+    }
+
     if (!this.db) {
       console.warn('日志数据库未准备好，无法获取日志');
       return [];
@@ -161,6 +194,13 @@ class LogManager {
 
   // Clear all logs
   async clearLogs(): Promise<void> {
+      try {
+        await this.ensureDatabase();
+      } catch (error) {
+        console.warn('日志数据库未准备好，无法清除日志');
+        return;
+      }
+
       if (!this.db) {
           console.warn('日志数据库未准备好，无法清除日志');
           return;

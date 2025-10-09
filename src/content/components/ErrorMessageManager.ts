@@ -33,6 +33,8 @@ export class ErrorMessageManager {
   private static instance: ErrorMessageManager;
   private errorMessages = new Map<string, ErrorMessage>();
   private errorHistory: Array<{ error: Error; context: ErrorContext; message: ErrorMessage }> = [];
+  private notificationContainer: HTMLElement | null = null;
+  private stylesInjected = false;
 
   private constructor() {
     this.initializeErrorMessages();
@@ -147,6 +149,62 @@ export class ErrorMessageManager {
       severity: 'error',
       category: 'general'
     });
+  }
+
+  private ensureContainer(): void {
+    if (this.notificationContainer && document.body.contains(this.notificationContainer)) {
+      return;
+    }
+
+    this.notificationContainer = document.createElement('div');
+    this.notificationContainer.id = 'reading-extension-error-container';
+    this.notificationContainer.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2147483647;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 360px;
+      pointer-events: none;
+    `;
+
+    document.body.appendChild(this.notificationContainer);
+  }
+
+  private ensureStyles(): void {
+    if (this.stylesInjected || document.getElementById('error-notification-styles')) {
+      this.stylesInjected = true;
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'error-notification-styles';
+    style.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .error-notification-item {
+        pointer-events: auto;
+      }
+      .error-action-btn:hover {
+        background: #0056b3 !important;
+      }
+      .error-close-btn:hover {
+        color: #333 !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+    this.stylesInjected = true;
   }
 
   /**
@@ -276,30 +334,32 @@ export class ErrorMessageManager {
     });
 
     // 创建错误通知
-    this.createErrorNotification(errorMessage, context);
+    this.showNotification(errorMessage, context);
   }
 
   /**
    * 创建错误通知
    */
-  private createErrorNotification(errorMessage: ErrorMessage, _context: ErrorContext): void {
+  private showNotification(errorMessage: ErrorMessage, context: ErrorContext): void {
+    this.ensureContainer();
+    this.ensureStyles();
+
     const notification = document.createElement('div');
-    notification.className = 'error-notification';
+    notification.className = 'error-notification-item';
     notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 2147483647;
-      max-width: 400px;
       background: ${this.getBackgroundColor(errorMessage.severity)};
       border: 1px solid ${this.getBorderColor(errorMessage.severity)};
-      border-radius: 8px;
-      padding: 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 14px;
-      color: #333;
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+      backdrop-filter: blur(16px);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
       animation: slideInRight 0.3s ease-out;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #333;
+      pointer-events: auto;
     `;
 
     const icon = this.getSeverityIcon(errorMessage.severity);
@@ -350,32 +410,7 @@ export class ErrorMessageManager {
       </div>
     `;
 
-    // 添加样式
-    if (!document.getElementById('error-notification-styles')) {
-      const style = document.createElement('style');
-      style.id = 'error-notification-styles';
-      style.textContent = `
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .error-action-btn:hover {
-          background: #0056b3 !important;
-        }
-        .error-close-btn:hover {
-          color: #333 !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    document.body.appendChild(notification);
+    this.notificationContainer?.appendChild(notification);
 
     // 绑定事件
     const closeBtn = notification.querySelector('.error-close-btn');
@@ -524,8 +559,22 @@ export class ErrorMessageManager {
    * 清理资源
    */
   public cleanup(): void {
+    this.destroy();
+  }
+
+  public destroy(): void {
+    if (this.notificationContainer && this.notificationContainer.parentNode) {
+      this.notificationContainer.parentNode.removeChild(this.notificationContainer);
+    }
+    this.notificationContainer = null;
+
+    const style = document.getElementById('error-notification-styles');
+    if (style && style.parentNode) {
+      style.parentNode.removeChild(style);
+    }
+    this.stylesInjected = false;
+
     this.errorHistory = [];
-    console.log('🧹 错误消息管理器已清理');
   }
 }
 

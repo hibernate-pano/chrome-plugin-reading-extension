@@ -16,6 +16,7 @@ export class ToastManager {
   private containers: Map<NotificationPosition, HTMLElement> = new Map();
   private config: FeedbackConfig;
   private nextId = 1;
+  private stylesInjected = false;
 
   private constructor() {
     this.config = {
@@ -31,37 +32,48 @@ export class ToastManager {
       zIndex: 9999
     };
 
-    this.initializeContainers();
     this.setupThemeDetection();
   }
 
-  public static getInstance(): ToastManager {
-    if (!ToastManager.instance) {
-      ToastManager.instance = new ToastManager();
+  private ensureStyles(): void {
+    if (this.stylesInjected || document.getElementById('chrome-extension-toast-styles')) {
+      this.stylesInjected = true;
+      return;
     }
-    return ToastManager.instance;
+
+    const style = document.createElement('style');
+    style.id = 'chrome-extension-toast-styles';
+    style.textContent = `
+      .chrome-extension-toast-container {
+        pointer-events: none;
+      }
+      .chrome-extension-toast-container > * {
+        pointer-events: auto;
+      }
+    `;
+    document.head.appendChild(style);
+    this.stylesInjected = true;
   }
 
-  /**
-   * 初始化通知容器
-   */
-  private initializeContainers(): void {
-    Object.values(NotificationPosition).forEach(position => {
-      const container = this.createContainer(position);
-      this.containers.set(position, container);
-    });
-  }
+  private getOrCreateContainer(position: NotificationPosition): HTMLElement {
+    const existing = this.containers.get(position);
+    if (existing && document.body.contains(existing)) {
+      return existing;
+    }
 
-  /**
-   * 创建通知容器
-   */
-  private createContainer(position: NotificationPosition): HTMLElement {
+    this.ensureStyles();
+
     const container = document.createElement('div');
     container.className = `chrome-extension-toast-container chrome-extension-toast-container--${position}`;
     container.style.cssText = this.getContainerStyles(position);
-    
+
     document.body.appendChild(container);
+    this.containers.set(position, container);
     return container;
+  }
+
+  private createContainer(position: NotificationPosition): HTMLElement {
+    return this.getOrCreateContainer(position);
   }
 
   /**
@@ -145,10 +157,7 @@ export class ToastManager {
     });
 
     // 获取容器
-    const container = this.containers.get(position);
-    if (!container) {
-      throw new Error(`Toast container not found for position: ${position}`);
-    }
+    const container = this.getOrCreateContainer(position);
 
     // 添加到容器
     container.appendChild(toastElement);
@@ -515,6 +524,22 @@ export class ToastManager {
     if (newConfig.theme) {
       this.applyTheme(newConfig.theme === 'auto' ? 'light' : newConfig.theme);
     }
+  }
+
+  public destroy(): void {
+    this.toasts.clear();
+    this.containers.forEach(container => {
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+    });
+    this.containers.clear();
+
+    const style = document.getElementById('chrome-extension-toast-styles');
+    if (style && style.parentNode) {
+      style.parentNode.removeChild(style);
+    }
+    this.stylesInjected = false;
   }
 }
 

@@ -28,10 +28,9 @@ export class KeyboardShortcutManager {
   private shortcuts = new Map<string, ShortcutConfig>();
   private isEnabled = true;
   private helpDialog: HTMLElement | null = null;
+  private listenersAttached = false;
 
-  private constructor() {
-    this.attachEventListeners();
-  }
+  private constructor() {}
 
   public static getInstance(): KeyboardShortcutManager {
     if (!KeyboardShortcutManager.instance) {
@@ -40,10 +39,20 @@ export class KeyboardShortcutManager {
     return KeyboardShortcutManager.instance;
   }
 
+  private ensureInit(): void {
+    if (this.listenersAttached) {
+      return;
+    }
+
+    document.addEventListener('keydown', this.handleKeydown, true);
+    this.listenersAttached = true;
+  }
+
   /**
    * 注册快捷键
    */
   public registerShortcut(config: ShortcutConfig): void {
+    this.ensureInit();
     const key = this.getKeyString(config);
     this.shortcuts.set(key, config);
     console.log(`⌨️ 注册快捷键: ${key} - ${config.description}`);
@@ -53,6 +62,7 @@ export class KeyboardShortcutManager {
    * 批量注册快捷键
    */
   public registerShortcuts(shortcuts: ShortcutConfig[]): void {
+    this.ensureInit();
     shortcuts.forEach(shortcut => this.registerShortcut(shortcut));
   }
 
@@ -60,6 +70,7 @@ export class KeyboardShortcutManager {
    * 注册快捷键组
    */
   public registerShortcutGroup(group: ShortcutGroup): void {
+    this.ensureInit();
     console.log(`⌨️ 注册快捷键组: ${group.name}`);
     group.shortcuts.forEach(shortcut => this.registerShortcut(shortcut));
   }
@@ -145,20 +156,26 @@ export class KeyboardShortcutManager {
    * 绑定事件监听器
    */
   private attachEventListeners(): void {
-    document.addEventListener('keydown', this.handleKeydown, true);
+    // 已由 ensureInit 控制
   }
 
   /**
    * 解绑事件监听器
    */
   private detachEventListeners(): void {
+    if (!this.listenersAttached) {
+      return;
+    }
+
     document.removeEventListener('keydown', this.handleKeydown, true);
+    this.listenersAttached = false;
   }
 
   /**
    * 显示帮助对话框
    */
   public showHelpDialog(): void {
+    this.ensureInit();
     if (this.helpDialog) {
       this.hideHelpDialog();
       return;
@@ -193,6 +210,10 @@ export class KeyboardShortcutManager {
    * 创建帮助对话框
    */
   private createHelpDialog(): void {
+    if (this.helpDialog) {
+      return;
+    }
+
     this.helpDialog = document.createElement('div');
     this.helpDialog.id = 'keyboard-shortcuts-help';
     this.helpDialog.style.cssText = `
@@ -417,13 +438,14 @@ export class KeyboardShortcutManager {
   /**
    * 清理资源
    */
-  public cleanup(): void {
+  public destroy(): void {
+    this.shortcuts.clear();
     this.detachEventListeners();
-    this.hideHelpDialog();
+
     if (this.helpDialog && this.helpDialog.parentNode) {
       this.helpDialog.parentNode.removeChild(this.helpDialog);
     }
-    this.shortcuts.clear();
+    this.helpDialog = null;
   }
 }
 

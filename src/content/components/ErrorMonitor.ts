@@ -49,14 +49,14 @@ export class ErrorMonitor {
   private static instance: ErrorMonitor;
   private errorEvents: ErrorEvent[] = [];
   private performanceMetrics: PerformanceMetrics[] = [];
-  private isMonitoring = true;
+  private isMonitoring = false;
   private maxEvents = 1000;
   private reportInterval = 300000; // 5分钟
   private reportTimer: number | null = null;
+  private monitoringStarted = false;
 
   private constructor() {
-    this.startMonitoring();
-    this.setupErrorReporting();
+    // 延迟初始化，避免在未使用时污染页面
   }
 
   public static getInstance(): ErrorMonitor {
@@ -64,6 +64,19 @@ export class ErrorMonitor {
       ErrorMonitor.instance = new ErrorMonitor();
     }
     return ErrorMonitor.instance;
+  }
+
+  /**
+   * 确保监控已启动
+   */
+  private ensureMonitoring(): void {
+    if (this.monitoringStarted) {
+      return;
+    }
+    this.startMonitoring();
+    this.setupErrorReporting();
+    this.monitoringStarted = true;
+    this.isMonitoring = true;
   }
 
   /**
@@ -114,6 +127,8 @@ export class ErrorMonitor {
    * 捕获错误
    */
   public captureError(error: Error, context: ErrorContext, retryAttempts: number = 0): string {
+    this.ensureMonitoring();
+    
     if (!this.isMonitoring) return '';
 
     const errorId = this.generateErrorId();
@@ -155,6 +170,8 @@ export class ErrorMonitor {
    * 记录性能指标
    */
   public recordPerformance(metrics: PerformanceMetrics): void {
+    this.ensureMonitoring();
+    
     if (!this.isMonitoring) return;
 
     this.performanceMetrics.push(metrics);

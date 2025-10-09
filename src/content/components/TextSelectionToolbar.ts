@@ -30,6 +30,8 @@ export class TextSelectionToolbar {
   private timeout: number | null = null;
   private isVisible: boolean = false;
   private selectedText: string = '';
+  private stylesInjected = false;
+  private listenersAttached = false;
 
   /**
    * 构造函数
@@ -40,16 +42,30 @@ export class TextSelectionToolbar {
     this.theme = config.theme || 'light';
     this.delay = config.delay || 300;
 
-    this.createToolbar();
-    this.attachEventListeners();
-    this.addAnimationStyles();
+    this.ensureListeners();
+  }
+
+  private ensureListeners(): void {
+    if (this.listenersAttached) {
+      return;
+    }
+
+    document.addEventListener('mouseup', this.handleMouseUp);
+    document.addEventListener('selectionchange', this.handleSelectionChange);
+    document.addEventListener('mousedown', this.handleDocumentMouseDown);
+    document.addEventListener('scroll', this.handleScroll);
+    window.addEventListener('resize', this.handleResize);
+    this.listenersAttached = true;
   }
 
   /**
-   * 添加动画样式
+   * 确保样式已注入
    */
-  private addAnimationStyles(): void {
-    if (document.getElementById('text-selection-toolbar-styles')) return;
+  private ensureStyles(): void {
+    if (this.stylesInjected || document.getElementById('text-selection-toolbar-styles')) {
+      this.stylesInjected = true;
+      return;
+    }
 
     const style = document.createElement('style');
     style.id = 'text-selection-toolbar-styles';
@@ -124,13 +140,17 @@ export class TextSelectionToolbar {
       }
     `;
     document.head.appendChild(style);
+    this.stylesInjected = true;
   }
 
   /**
-   * 创建工具栏
+   * 确保工具栏元素已创建
    */
-  private createToolbar(): void {
-    // 创建工具栏元素
+  private ensureToolbar(): void {
+    if (this.toolbar) return;
+
+    this.ensureStyles();
+
     this.toolbar = document.createElement('div');
     this.toolbar.className = `text-selection-toolbar ${this.theme} ${this.position}`;
     this.toolbar.style.cssText = `
@@ -152,7 +172,6 @@ export class TextSelectionToolbar {
       -webkit-backdrop-filter: blur(10px);
     `;
 
-    // 创建工具栏选项
     const optionsContainer = document.createElement('div');
     optionsContainer.className = 'toolbar-options';
     optionsContainer.style.cssText = `
@@ -234,47 +253,22 @@ export class TextSelectionToolbar {
   }
 
   /**
-   * 附加事件监听器
-   */
-  private attachEventListeners(): void {
-    // 监听选择事件
-    document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-    document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
-
-    // 监听点击事件，隐藏工具栏
-    document.addEventListener('mousedown', (e) => {
-      if (this.toolbar && !this.toolbar.contains(e.target as Node)) {
-        this.hideToolbar();
-      }
-    });
-
-    // 监听滚动事件，隐藏工具栏
-    document.addEventListener('scroll', () => {
-      this.hideToolbar();
-    });
-
-    // 监听窗口大小变化事件，隐藏工具栏
-    window.addEventListener('resize', () => {
-      this.hideToolbar();
-    });
-  }
-
-  /**
    * 处理鼠标抬起事件
    */
-  private handleMouseUp(e: MouseEvent): void {
+  private handleMouseUp = (e: MouseEvent): void => {
     const selection = window.getSelection();
 
     if (selection && !selection.isCollapsed) {
       this.selectedText = selection.toString().trim();
 
       if (this.selectedText) {
-        // 延迟显示工具栏，避免与其他点击事件冲突
         if (this.timeout) {
           clearTimeout(this.timeout);
         }
 
         this.timeout = window.setTimeout(() => {
+          this.ensureToolbar();
+
           const range = selection.getRangeAt(0);
           const rect = range.getBoundingClientRect();
 
@@ -282,23 +276,47 @@ export class TextSelectionToolbar {
         }, this.delay);
       }
     }
-  }
+  };
 
   /**
    * 处理选择变化事件
    */
-  private handleSelectionChange(): void {
+  private handleSelectionChange = (): void => {
     const selection = window.getSelection();
 
     if (selection && selection.isCollapsed && this.isVisible) {
       this.hideToolbar();
     }
-  }
+  };
+
+  /**
+   * 处理文档点击事件，隐藏工具栏
+   */
+  private handleDocumentMouseDown = (e: MouseEvent): void => {
+    if (this.toolbar && !this.toolbar.contains(e.target as Node)) {
+      this.hideToolbar();
+    }
+  };
+
+  /**
+   * 处理滚动事件，隐藏工具栏
+   */
+  private handleScroll = (): void => {
+    this.hideToolbar();
+  };
+
+  /**
+   * 处理窗口大小变化事件，隐藏工具栏
+   */
+  private handleResize = (): void => {
+    this.hideToolbar();
+  };
 
   /**
    * 显示工具栏
    */
   private showToolbar(selectionRect: DOMRect, mouseX: number): void {
+    this.ensureToolbar();
     if (!this.toolbar) return;
 
     // 计算工具栏位置
@@ -395,11 +413,17 @@ export class TextSelectionToolbar {
   public destroy(): void {
     if (this.toolbar && document.body.contains(this.toolbar)) {
       document.body.removeChild(this.toolbar);
-      this.toolbar = null;
     }
+    this.toolbar = null;
 
-    document.removeEventListener('mouseup', this.handleMouseUp.bind(this));
-    document.removeEventListener('selectionchange', this.handleSelectionChange.bind(this));
+    if (this.listenersAttached) {
+      document.removeEventListener('mouseup', this.handleMouseUp);
+      document.removeEventListener('selectionchange', this.handleSelectionChange);
+      document.removeEventListener('mousedown', this.handleDocumentMouseDown);
+      document.removeEventListener('scroll', this.handleScroll);
+      window.removeEventListener('resize', this.handleResize);
+      this.listenersAttached = false;
+    }
   }
 }
 
