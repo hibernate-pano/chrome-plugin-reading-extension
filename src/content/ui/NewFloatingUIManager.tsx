@@ -21,6 +21,7 @@ interface NewFloatingUIManagerProps {
  * - 位置选择集成到设置面板
  * - 添加首次使用引导
  * - 减少不必要的提示
+ * - 修复状态同步问题
  */
 export const NewFloatingUIManager: React.FC<NewFloatingUIManagerProps> = ({
   isReadingModeActive,
@@ -31,6 +32,16 @@ export const NewFloatingUIManager: React.FC<NewFloatingUIManagerProps> = ({
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [buttonPosition, setButtonPosition] = useState<string>('bottom-right');
   const [showWelcome, setShowWelcome] = useState(false);
+  const [localReadingModeActive, setLocalReadingModeActive] = useState(isReadingModeActive);
+
+  // 同步本地状态与外部状态（修复刷新后状态不同步的问题）
+  useEffect(() => {
+    console.log('🔄 [FloatingUI] 同步阅读模式状态:', { 
+      external: isReadingModeActive, 
+      local: localReadingModeActive 
+    });
+    setLocalReadingModeActive(isReadingModeActive);
+  }, [isReadingModeActive]);
 
   // 从本地存储恢复按钮位置
   useEffect(() => {
@@ -69,6 +80,32 @@ export const NewFloatingUIManager: React.FC<NewFloatingUIManagerProps> = ({
   const handleToggleSettings = useCallback(() => {
     setShowSettingsPanel(prev => !prev);
   }, []);
+
+  // 增强版阅读模式切换处理（修复刷新后无法切换的问题）
+  const handleToggleReadingMode = useCallback(async () => {
+    console.log('🔄 [FloatingUI] 处理阅读模式切换请求...', {
+      current: localReadingModeActive,
+      external: isReadingModeActive
+    });
+
+    try {
+      // 立即更新本地状态以提供即时反馈
+      setLocalReadingModeActive(prev => !prev);
+      
+      // 调用外部切换函数
+      await onToggleReadingMode();
+      
+      console.log('✅ [FloatingUI] 阅读模式切换成功');
+    } catch (error) {
+      console.error('❌ [FloatingUI] 阅读模式切换失败:', error);
+      
+      // 恢复本地状态
+      setLocalReadingModeActive(isReadingModeActive);
+      
+      // 可以在这里显示错误提示
+      // 但现在让上层函数处理错误显示
+    }
+  }, [localReadingModeActive, isReadingModeActive, onToggleReadingMode]);
 
   // 处理按钮位置变化
   const handleButtonPositionChange = useCallback((position: string) => {
@@ -117,8 +154,8 @@ export const NewFloatingUIManager: React.FC<NewFloatingUIManagerProps> = ({
         settings={settings}
         onSettingsChange={onSettingsChange}
         onClose={() => setShowSettingsPanel(false)}
-        onToggleReadingMode={onToggleReadingMode}
-        isReadingModeActive={isReadingModeActive}
+        onToggleReadingMode={handleToggleReadingMode}
+        isReadingModeActive={localReadingModeActive}
         currentButtonPosition={buttonPosition}
         onButtonPositionChange={handleButtonPositionChange}
       />

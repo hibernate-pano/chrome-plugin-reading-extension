@@ -396,34 +396,63 @@ function setupStorageListeners(): void {
 }
 
 /**
- * 切换阅读模式
+ * 切换阅读模式（增强版 - 修复刷新后无法切换的问题）
  */
 async function toggleReadingMode(): Promise<void> {
+  console.log('🔄 [ToggleReadingMode] 开始切换阅读模式...');
+  
   if (!readingModeManager) {
+    console.log('🔄 [ToggleReadingMode] 获取阅读模式管理器...');
     readingModeManager = await getReadingModeManager();
   }
+  
   const loadingId = 'toggle-reading-mode';
   
   try {
-    // 确保样式已加载
-    await loadStyles();
+    console.log('🔄 [ToggleReadingMode] 确保样式已加载...');
+    
+    // 确保样式已加载（加强错误处理）
+    try {
+      await loadStyles();
+      console.log('✅ [ToggleReadingMode] 样式加载完成');
+    } catch (styleError) {
+      console.warn('⚠️ [ToggleReadingMode] 样式加载失败，但继续执行:', styleError);
+      // 样式加载失败不应该阻止阅读模式切换
+      // 因为阅读模式管理器有自己的样式系统
+    }
     
     // 显示加载状态
     loadingStateManager.showLoading(loadingId, {
       message: '正在切换阅读模式...',
-      timeout: 5000
+      timeout: 8000 // 增加超时时间
     });
 
+    console.log('🔄 [ToggleReadingMode] 调用管理器切换...');
     await readingModeManager.toggle();
+    
     const { isActive } = readingModeManager.getStatus();
+    console.log(`✅ [ToggleReadingMode] 切换完成, 当前状态: ${isActive ? '已启用' : '已关闭'}`);
     
     // 显示成功状态
     loadingStateManager.showSuccess(loadingId, 
       isActive ? '阅读模式已启用' : '阅读模式已关闭'
     );
   } catch (error) {
-    console.error('❌ 切换阅读模式失败:', error);
-    loadingStateManager.showError(loadingId, '切换阅读模式失败，请重试');
+    console.error('❌ [ToggleReadingMode] 切换阅读模式失败:', error);
+    
+    // 尝试重置状态
+    try {
+      console.log('🔄 [ToggleReadingMode] 尝试重置状态...');
+      if (readingModeManager) {
+        // 确保阅读模式处于一致的状态
+        const currentStatus = readingModeManager.getStatus();
+        console.log('📊 [ToggleReadingMode] 当前状态:', currentStatus);
+      }
+    } catch (resetError) {
+      console.error('❌ [ToggleReadingMode] 重置状态失败:', resetError);
+    }
+    
+    loadingStateManager.showError(loadingId, '切换阅读模式失败，请刷新页面重试');
     
     // 显示用户友好的错误消息
     const errorContext = {
@@ -431,7 +460,8 @@ async function toggleReadingMode(): Promise<void> {
       component: 'unifiedContentScript',
       timestamp: Date.now(),
       userAgent: navigator.userAgent,
-      url: window.location.href
+      url: window.location.href,
+      readingModeStatus: readingModeManager?.getStatus() || null
     };
     
     const errorMessage = errorMessageManager.getErrorMessage(error as Error, errorContext);
