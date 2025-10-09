@@ -33,9 +33,17 @@ export class ReadingModeManager {
 
   constructor(settings: UserSettings) {
     this.settings = settings;
+    
     // 不要在构造函数中初始化样式！
     // 样式应该只在真正启用阅读模式时才注入
     // this.initializeStyles();
+    
+    // 🧹 页面加载时检测和清理残留状态
+    try {
+      this.detectAndCleanupStaleState();
+    } catch (error) {
+      console.warn('⚠️ [ReadingModeManager] 初始清理失败:', error);
+    }
   }
 
   /**
@@ -292,6 +300,9 @@ export class ReadingModeManager {
       console.log('8️⃣ 通知后台脚本...');
       await this.notifyBackground(MESSAGE_TYPES.READING_MODE_DISABLED);
 
+      console.log('9️⃣ 清理localStorage和残留数据...');
+      this.cleanupLocalStorage();
+
       console.log('✅ [ReadingModeManager] 阅读模式禁用完成');
       return false;
     } catch (error) {
@@ -401,11 +412,163 @@ export class ReadingModeManager {
   }
 
   /**
-   * 获取当前状态
+   * 清理localStorage残留数据
+   */
+  private cleanupLocalStorage(): void {
+    try {
+      console.log('🧹 [ReadingModeManager] 清理localStorage残留数据...');
+      
+      // 清理缓存管理器数据
+      const cacheKeys = [
+        'chrome-extension-cache',
+        'reading-extension-cache',
+        'ai-reading-extension-cache'
+      ];
+      
+      cacheKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          // 忽略清理失败
+        }
+      });
+      
+      // 清理性能管理器数据
+      const performanceKeys = [
+        'reading-extension-performance-metrics',
+        'reading-extension-performance-thresholds',
+        'reading-extension-performance-data'
+      ];
+      
+      performanceKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          // 忽略清理失败
+        }
+      });
+      
+      // 清理UI位置数据（可能过期）
+      const uiKeys = [
+        'reading-button-position',
+        'reading-panel-position'
+      ];
+      
+      uiKeys.forEach(key => {
+        try {
+          const data = localStorage.getItem(key);
+          if (data) {
+            // 检查是否过期（超过24小时）
+            const stored = JSON.parse(data);
+            if (stored.timestamp && (Date.now() - stored.timestamp) > 24 * 60 * 60 * 1000) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch (e) {
+          // 清理损坏的数据
+          localStorage.removeItem(key);
+        }
+      });
+      
+      console.log('✅ [ReadingModeManager] localStorage清理完成');
+    } catch (error) {
+      console.warn('⚠️ [ReadingModeManager] localStorage清理失败:', error);
+    }
+  }
+
+  /**
+   * 检测和清理残留状态（页面刷新后初始化时调用）
+   */
+  private detectAndCleanupStaleState(): void {
+    console.log('🔍 [ReadingModeManager] 检测页面残留状态...');
+    
+    try {
+      // 检查是否有残留的阅读模式DOM元素
+      const staleElements = document.querySelectorAll([
+        '#reading-mode-overlay',
+        '#reading-mode-styles', 
+        '.reading-mode-container',
+        '.reading-extension-floating-ui'
+      ].join(','));
+      
+      if (staleElements.length > 0) {
+        console.log(`🧹 [ReadingModeManager] 发现 ${staleElements.length} 个残留DOM元素，开始清理...`);
+        staleElements.forEach((element, index) => {
+          console.log(`  清理元素 ${index + 1}: ${element.tagName}#${element.id || 'no-id'}.${element.className || 'no-class'}`);
+          element.remove();
+        });
+      }
+      
+      // 检查和清理CSS类
+      const staleClasses = ['reading-mode-active', 'reading-mode-locked'];
+      let cleanedClasses = 0;
+      
+      staleClasses.forEach(className => {
+        if (document.documentElement.classList.contains(className)) {
+          document.documentElement.classList.remove(className);
+          cleanedClasses++;
+        }
+        if (document.body.classList.contains(className)) {
+          document.body.classList.remove(className);
+          cleanedClasses++;
+        }
+      });
+      
+      if (cleanedClasses > 0) {
+        console.log(`🧹 [ReadingModeManager] 清理了 ${cleanedClasses} 个残留CSS类`);
+      }
+      
+      // 重置body样式
+      const bodyStylesToReset = ['overflow', 'paddingRight'];
+      bodyStylesToReset.forEach(style => {
+        if (document.body.style.getPropertyValue(style)) {
+          document.body.style.removeProperty(style);
+        }
+      });
+      
+      // 清理localStorage
+      this.cleanupLocalStorage();
+      
+      // 强制重置内存状态
+      this.isActive = false;
+      this.overlayElement = null;
+      this.readerContainer = null;
+      
+      console.log('✅ [ReadingModeManager] 残留状态清理完成');
+    } catch (error) {
+      console.warn('⚠️ [ReadingModeManager] 清理残留状态时出错:', error);
+    }
+  }
+
+  /**
+   * 获取当前状态（增强版 - 检查DOM实际状态）
    */
   getStatus(): { isActive: boolean; settings: UserSettings } {
+    // 检查DOM中是否实际存在阅读模式容器
+    const hasReaderOverlay = !!document.getElementById('reading-mode-overlay');
+    const hasReaderStyles = !!document.getElementById('reading-mode-styles');
+    const hasActiveClass = document.documentElement.classList.contains('reading-mode-active');
+    
+    // DOM状态检查：如果DOM中没有阅读模式元素，则状态应该是false
+    const domIndicatesActive = hasReaderOverlay && hasActiveClass;
+    
+    // 实际状态应该是内存状态和DOM状态的交集
+    const actualIsActive = this.isActive && domIndicatesActive;
+    
+    // 如果检测到状态不一致，修正内存状态
+    if (this.isActive !== actualIsActive) {
+      console.warn('🔧 [ReadingModeManager] 检测到状态不一致，修正中...', {
+        memoryState: this.isActive,
+        domState: domIndicatesActive,
+        hasOverlay: hasReaderOverlay,
+        hasStyles: hasReaderStyles,
+        hasClass: hasActiveClass
+      });
+      this.isActive = actualIsActive;
+    }
+    
     return {
-      isActive: this.isActive,
+      isActive: actualIsActive,
       settings: this.settings
     };
   }
@@ -668,6 +831,9 @@ export class ReadingModeManager {
 
     // 清理 body 样式，防止残留
     this.removeReaderStyles();
+
+    // 🧹 最终清理：确保所有localStorage数据被清理
+    this.cleanupLocalStorage();
 
     document.removeEventListener('keydown', this.handleKeydown);
   }
