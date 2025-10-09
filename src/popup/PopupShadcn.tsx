@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { MESSAGE_TYPES } from '../constants';
 
@@ -150,23 +149,97 @@ export const PopupShadcn: React.FC = React.memo(() => {
   if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-white">
-        <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+        <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-white p-6" role="application" aria-label="阅读模式开关">
-      <div className="flex items-center gap-4">
-        <label htmlFor="reading-mode-switch" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
-          阅读模式
-        </label>
-        <Switch
-          id="reading-mode-switch"
-          checked={readingMode}
-          onCheckedChange={toggleReadingMode}
-          className="data-[state=checked]:bg-blue-500"
-        />
+    <div className="w-full h-full bg-white">
+      <div className="h-full flex flex-col p-8">
+        {/* 头部 */}
+        <div className="mb-12">
+          <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-1">
+            阅读助手
+          </h1>
+          <p className="text-sm text-gray-500">
+            专注内容，享受阅读
+          </p>
+        </div>
+
+        {/* 阅读模式开关 */}
+        <div className="mb-8">
+          <div className={`flex items-center justify-between p-6 rounded-2xl border transition-all ${
+            readingMode 
+              ? 'border-blue-200 bg-blue-50/50 hover:border-blue-300' 
+              : 'border-gray-200 bg-gray-50/50 hover:border-gray-300'
+          }`}>
+            <div className="flex-1">
+              <label htmlFor="reading-mode-switch" className="text-base font-medium text-gray-900 cursor-pointer select-none block mb-1">
+                阅读模式
+              </label>
+              <p className={`text-sm transition-colors ${
+                readingMode ? 'text-blue-600 font-medium' : 'text-gray-500'
+              }`}>
+                {readingMode ? '已开启' : '已关闭'}
+              </p>
+            </div>
+            <Switch
+              id="reading-mode-switch"
+              checked={readingMode}
+              onCheckedChange={toggleReadingMode}
+              className="data-[state=checked]:bg-blue-600"
+            />
+          </div>
+        </div>
+
+        {/* 功能说明 */}
+        <div className="flex-1">
+          <h2 className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-4">
+            功能特性
+          </h2>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 group">
+              <div className="w-5 h-5 flex items-center justify-center mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:scale-150 transition-transform"></div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors">
+                  智能提取页面主要内容
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 group">
+              <div className="w-5 h-5 flex items-center justify-center mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 group-hover:scale-150 transition-transform"></div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors">
+                  自定义阅读样式设置
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 group">
+              <div className="w-5 h-5 flex items-center justify-center mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 group-hover:scale-150 transition-transform"></div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors">
+                  快速切换，即时生效
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 底部 */}
+        <div className="pt-6 border-t border-gray-100">
+          <p className="text-xs text-gray-400 text-center">
+            Version 1.8.12
+          </p>
+        </div>
       </div>
     </div>
   );

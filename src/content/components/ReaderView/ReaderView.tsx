@@ -15,9 +15,6 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   const [content, setContent] = useState<ExtractedContent | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [theme, setTheme] = useState<'light' | 'dark' | 'sepia' | 'yellow'>('light');
-  const [lineHeight, setLineHeight] = useState<'tight' | 'normal' | 'loose'>('normal');
   
   // 浮动UI相关状态
   const [settings, setSettings] = useState<UserSettings>({
@@ -98,28 +95,14 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
     }
   };
 
-  // 处理字体大小变化
-  const _handleFontSizeChange = (size: 'small' | 'medium' | 'large') => {
-    setFontSize(size);
-    applyReadingStyles();
-  };
-
-  // 处理主题变化
-  const _handleThemeChange = (newTheme: 'light' | 'dark' | 'sepia' | 'yellow') => {
-    setTheme(newTheme);
-    applyReadingStyles();
-  };
-
-  // 处理行间距变化
-  const _handleLineHeightChange = (height: 'tight' | 'normal' | 'loose') => {
-    setLineHeight(height);
-    applyReadingStyles();
-  };
 
   // 处理浮动UI设置变更
-  const handleSettingsChange = (key: keyof UserSettings, value: any) => {
+  const handleSettingsChange = (key: keyof UserSettings, value: UserSettings[keyof UserSettings]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
-    applyReadingStyles();
+    // 在下一个渲染周期应用样式，确保状态已更新
+    setTimeout(() => {
+      applyReadingStyles();
+    }, 0);
   };
 
   // 处理阅读模式切换
@@ -133,18 +116,15 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
     const container = contentContainerRef.current;
     if (!container) return;
 
-    // 字体大小映射
-    const fontSizeMap = {
-      small: '14px',
-      medium: '16px',
-      large: '18px'
-    };
-
-    // 行间距映射
-    const lineHeightMap = {
-      tight: '1.4',
-      normal: '1.6',
-      loose: '1.8'
+    // 字体家族映射
+    const fontFamilyMap: Record<string, string> = {
+      default: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      serif: 'Georgia, "Times New Roman", serif',
+      mono: 'Consolas, Monaco, "Courier New", monospace',
+      songti: '"Songti SC", "宋体", serif',
+      heiti: '"Heiti SC", "黑体", sans-serif',
+      kaiti: '"Kaiti SC", "楷体", serif',
+      fangsong: '"Fangsong SC", "仿宋", serif'
     };
 
     // 主题样式映射
@@ -167,22 +147,46 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
       }
     };
 
-    // 应用样式
-    container.style.fontSize = fontSizeMap[fontSize];
-    container.style.lineHeight = lineHeightMap[lineHeight];
-    container.style.background = themeStyles[theme].background;
-    container.style.color = themeStyles[theme].color;
+    // 应用设置中的样式
+    const actualFontSize = `${settings.fontSize}px`;
+    const actualLineHeight = settings.lineHeight.toString();
+    const actualFontFamily = fontFamilyMap[settings.fontFamily] || fontFamilyMap.default;
+    const actualTheme = themeStyles[settings.theme as keyof typeof themeStyles] || themeStyles.light;
+
+    // 应用样式到容器
+    container.style.fontSize = actualFontSize;
+    container.style.lineHeight = actualLineHeight;
+    container.style.fontFamily = actualFontFamily;
+    container.style.background = actualTheme.background;
+    container.style.color = actualTheme.color;
+    container.style.maxWidth = `${settings.pageWidth}px`;
+    container.style.margin = '0 auto';
+    container.style.padding = '2rem';
 
     // 更新CSS变量
-    document.documentElement.style.setProperty('--reading-font-size', fontSizeMap[fontSize]);
-    document.documentElement.style.setProperty('--reading-line-height', lineHeightMap[lineHeight]);
-    document.documentElement.style.setProperty('--reading-background', themeStyles[theme].background);
-    document.documentElement.style.setProperty('--reading-color', themeStyles[theme].color);
+    document.documentElement.style.setProperty('--reading-font-size', actualFontSize);
+    document.documentElement.style.setProperty('--reading-line-height', actualLineHeight);
+    document.documentElement.style.setProperty('--reading-font-family', actualFontFamily);
+    document.documentElement.style.setProperty('--reading-background', actualTheme.background);
+    document.documentElement.style.setProperty('--reading-color', actualTheme.color);
+    document.documentElement.style.setProperty('--reading-page-width', `${settings.pageWidth}px`);
+    document.documentElement.style.setProperty('--reading-paragraph-spacing', `${settings.paragraphSpacing}em`);
+
+    // 应用段落间距
+    const paragraphs = container.querySelectorAll('p');
+    paragraphs.forEach(p => {
+      (p as HTMLElement).style.marginBottom = `${settings.paragraphSpacing}em`;
+    });
   };
 
   // 组件挂载时提取内容
   useEffect(() => {
     extractContent();
+    
+    // 将 handleSettingsChange 暴露到全局，供浮动UI调用
+    (window as Window & { __readerViewInstance?: { handleSettingsChange: typeof handleSettingsChange } }).__readerViewInstance = {
+      handleSettingsChange
+    };
 
     // 组件卸载时保存阅读进度
     return () => {
@@ -190,15 +194,25 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
         window.clearInterval(saveProgressIntervalRef.current);
       }
       saveReadingProgress();
+      // 清理全局引用
+      delete (window as Window & { __readerViewInstance?: unknown }).__readerViewInstance;
     };
-  }, []);
+  }, [handleSettingsChange]);
 
   // 内容加载完成后恢复阅读进度
   useEffect(() => {
     if (content && !isLoading) {
       restoreReadingProgress();
+      applyReadingStyles();
     }
   }, [content, isLoading]);
+  
+  // 监听设置变化并应用样式
+  useEffect(() => {
+    if (!isLoading && content) {
+      applyReadingStyles();
+    }
+  }, [settings, isLoading, content]);
 
   // 设置定期保存阅读进度的定时器
   useEffect(() => {
@@ -304,6 +318,9 @@ const ReaderView: React.FC<ReaderViewProps> = ({ onClose }) => {
   );
 };
 
+// 全局变量，用于存储设置更新函数
+let globalSettingsUpdateFunction: ((key: keyof UserSettings, value: UserSettings[keyof UserSettings]) => void) | null = null;
+
 // 创建阅读视图的函数
 export function createReaderView(): void {
   // 检查是否已经存在阅读视图
@@ -348,23 +365,51 @@ export function createReaderView(): void {
       activePreset: null,
     },
     onSettingsChange: (key, value) => {
-      console.log('Settings changed:', key, value);
+      console.log('Settings changed from floating UI:', key, value);
+      // 调用全局设置更新函数
+      if (globalSettingsUpdateFunction) {
+        globalSettingsUpdateFunction(key, value);
+      }
     },
     onToggleReadingMode: () => {
       console.log('Toggle reading mode');
     },
   });
 
+  // 创建一个增强的 ReaderView 组件
+  const EnhancedReaderView: React.FC = () => {
+    // 监听设置更改的钩子
+    useEffect(() => {
+      // 将 handleSettingsChange 注册为全局函数
+      const readerViewElement = document.querySelector('#reader-view');
+      if (readerViewElement) {
+        // 使用 setTimeout 确保 ReaderView 已经完全加载
+        setTimeout(() => {
+          const readerInstance = (window as Window & { __readerViewInstance?: { handleSettingsChange: typeof globalSettingsUpdateFunction } }).__readerViewInstance;
+          if (readerInstance && readerInstance.handleSettingsChange) {
+            globalSettingsUpdateFunction = readerInstance.handleSettingsChange;
+          }
+        }, 100);
+      }
+
+      return () => {
+        globalSettingsUpdateFunction = null;
+      };
+    }, []);
+
+    return (
+      <ReaderView
+        onClose={() => {
+          cleanupFloatingUI();
+          root.unmount();
+          readerContainer.remove();
+        }}
+      />
+    );
+  };
+
   // 渲染阅读视图组件
-  root.render(
-    <ReaderView
-      onClose={() => {
-        cleanupFloatingUI();
-        root.unmount();
-        readerContainer.remove();
-      }}
-    />
-  );
+  root.render(<EnhancedReaderView />);
 }
 
 // 清理阅读视图的函数
