@@ -14,6 +14,7 @@ const SETTINGS_KEYS = new Set<string>([
   StorageKeys.FONT_FAMILY,
   StorageKeys.BACKGROUND_COLOR,
   StorageKeys.THEME,
+  StorageKeys.PAGE_WIDTH,
 ]);
 
 async function loadSettings(): Promise<UserSettings> {
@@ -24,6 +25,7 @@ async function loadSettings(): Promise<UserSettings> {
     fontFamily,
     backgroundColor,
     theme,
+    pageWidth,
   ] = await Promise.all([
     getStorage<number>(StorageKeys.FONT_SIZE),
     getStorage<number>(StorageKeys.LINE_HEIGHT),
@@ -31,6 +33,7 @@ async function loadSettings(): Promise<UserSettings> {
     getStorage<string>(StorageKeys.FONT_FAMILY),
     getStorage<string>(StorageKeys.BACKGROUND_COLOR),
     getStorage<string>(StorageKeys.THEME),
+    getStorage<number>(StorageKeys.PAGE_WIDTH),
   ]);
 
   return {
@@ -40,7 +43,7 @@ async function loadSettings(): Promise<UserSettings> {
     fontFamily: fontFamily ?? DEFAULT_SETTINGS.fontFamily,
     backgroundColor: backgroundColor ?? DEFAULT_SETTINGS.backgroundColor,
     theme: (theme as UserSettings['theme']) ?? DEFAULT_SETTINGS.theme,
-    pageWidth: DEFAULT_SETTINGS.pageWidth,
+    pageWidth: pageWidth ?? DEFAULT_SETTINGS.pageWidth,
     presets: DEFAULT_SETTINGS.presets,
     activePreset: DEFAULT_SETTINGS.activePreset,
   };

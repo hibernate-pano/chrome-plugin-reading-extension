@@ -4,12 +4,12 @@
  */
 
 import { UserSettings } from '../../types';
-import { getStorage, StorageKeys } from '../../storage/storage';
+import { StorageKeys, setStorage } from '../../storage/storage';
 import { MESSAGE_TYPES } from '../../constants';
 import { mountNewFloatingUI } from '../ui/NewFloatingUIManager';
 import { cacheStrategyManager } from '../dynamic/CacheStrategyManager';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
-import { mountReadingSettingsPanel, unmountReadingSettingsPanel, updateReadingSettingsPanelSettings } from '../ui/ReadingSettingsPanelManager';
+import { mountReadingSettingsPanel, updateReadingSettingsPanelSettings } from '../ui/ReadingSettingsPanelManager';
 import { imageLoadingManager } from '../components/ImageLoadingManager';
 
 export class ReadingModeManager {
@@ -280,6 +280,38 @@ export class ReadingModeManager {
 
     // 更新图片加载管理器设置
     imageLoadingManager.updateSettings(newSettings);
+
+    // 保存设置到 Chrome storage
+    this.saveSettingsToStorage(newSettings).catch(error => {
+      console.error('保存设置到 Chrome storage 失败:', error);
+    });
+  }
+
+  /**
+   * 保存设置到 Chrome storage
+   */
+  private async saveSettingsToStorage(settings: Partial<UserSettings>): Promise<void> {
+    const settingsKeyMap: { [K in keyof UserSettings]?: StorageKeys } = {
+      theme: StorageKeys.THEME,
+      fontSize: StorageKeys.FONT_SIZE,
+      lineHeight: StorageKeys.LINE_HEIGHT,
+      fontFamily: StorageKeys.FONT_FAMILY,
+      backgroundColor: StorageKeys.BACKGROUND_COLOR,
+      paragraphSpacing: StorageKeys.PARAGRAPH_SPACING,
+      pageWidth: StorageKeys.PAGE_WIDTH,
+      enableTextSelectionToolbar: StorageKeys.ENABLE_TEXT_SELECTION_TOOLBAR,
+    };
+
+    const savePromises: Promise<void>[] = [];
+
+    for (const [key, value] of Object.entries(settings)) {
+      const storageKey = settingsKeyMap[key as keyof UserSettings];
+      if (storageKey !== undefined && value !== undefined) {
+        savePromises.push(setStorage(storageKey, value));
+      }
+    }
+
+    await Promise.all(savePromises);
   }
 
   /**
@@ -300,16 +332,25 @@ export class ReadingModeManager {
       await cacheStrategyManager.initialize();
       const url = window.location.href;
       const cacheKey = `extract:${url}`;
-      const cached = cacheStrategyManager.get<any>(cacheKey);
+      
+      interface CachedContent {
+        title?: string | null;
+        byline?: string | null;
+        content: string;
+      }
+      
+      const cached = cacheStrategyManager.get<CachedContent>(cacheKey);
       if (cached && cached.content) {
-        return this.wrapArticleHtml(cached.title || document.title, cached.byline, cached.content);
+        return this.wrapArticleHtml(cached.title || document.title, cached.byline || undefined, cached.content);
       }
 
       const extractor = await ExtractorFactory.createExtractor(url);
       const result = await extractor.extract(document, url);
       cacheStrategyManager.set(cacheKey, result, { type: 'extract', url });
       if (result && result.content) {
-        return this.wrapArticleHtml(result.title || document.title, (result as any).byline, result.content);
+        // ExtractedContent may have a byline field
+        const resultWithByline = result as CachedContent;
+        return this.wrapArticleHtml(result.title || document.title, resultWithByline.byline || undefined, result.content);
       }
       return null;
     } catch (error) {
@@ -474,17 +515,12 @@ export class ReadingModeManager {
     this.floatingUICleanup = mountNewFloatingUI({
       isReadingModeActive: this.isActive,
       settings: this.settings,
-      onSettingsChange: (key: keyof UserSettings, value: any) => {
+      onSettingsChange: (key: keyof UserSettings, value: unknown) => {
         this.updateSettings({ [key]: value });
       },
       onToggleReadingMode: () => {
         this.toggle().catch((error) => {
           console.error('切换阅读模式失败:', error);
-        });
-      },
-      onClose: () => {
-        this.disable().catch((error) => {
-          console.error('退出阅读模式失败:', error);
         });
       },
     });
@@ -510,7 +546,7 @@ export class ReadingModeManager {
 
     this.settingsPanelCleanup = mountReadingSettingsPanel({
       settings: this.settings,
-      onSettingsChange: (key: keyof UserSettings, value: any) => {
+      onSettingsChange: (key: keyof UserSettings, value: unknown) => {
         this.updateSettings({ [key]: value });
       },
     });

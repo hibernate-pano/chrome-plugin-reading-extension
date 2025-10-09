@@ -51,13 +51,14 @@ async function initialize(): Promise<void> {
  * 加载用户设置
  */
 async function loadSettings(): Promise<UserSettings> {
-  const [fontSize, lineHeight, paragraphSpacing, fontFamily, backgroundColor, theme] = await Promise.all([
+  const [fontSize, lineHeight, paragraphSpacing, fontFamily, backgroundColor, theme, pageWidth] = await Promise.all([
     getStorage<number>(StorageKeys.FONT_SIZE),
     getStorage<number>(StorageKeys.LINE_HEIGHT),
     getStorage<number>(StorageKeys.PARAGRAPH_SPACING),
     getStorage<string>(StorageKeys.FONT_FAMILY),
     getStorage<string>(StorageKeys.BACKGROUND_COLOR),
-    getStorage<string>(StorageKeys.THEME)
+    getStorage<string>(StorageKeys.THEME),
+    getStorage<number>(StorageKeys.PAGE_WIDTH)
   ]);
 
   return {
@@ -67,7 +68,7 @@ async function loadSettings(): Promise<UserSettings> {
     fontFamily: fontFamily || 'default',
     backgroundColor: backgroundColor || 'white',
     theme: (theme as 'light' | 'dark' | 'sepia' | 'custom') || 'light',
-    pageWidth: 900,
+    pageWidth: pageWidth || 900,
     presets: [],
     activePreset: null
   };
@@ -147,7 +148,7 @@ async function disableReadingMode(): Promise<void> {
  * 设置消息监听器
  */
 function setupMessageListeners(): void {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     console.log('📥 内容脚本收到消息:', message);
 
     // 支持 action 和 type 两种字段格式
@@ -155,7 +156,6 @@ function setupMessageListeners(): void {
 
     switch (messageType) {
       case MESSAGE_TYPES.TOGGLE_READING_MODE:
-      case MESSAGE_TYPES.TOGGLE_READER_MODE:
         console.log('🔄 处理切换阅读模式消息');
         toggleReadingMode();
         sendResponse({ success: true });
@@ -198,10 +198,14 @@ function setupMessageListeners(): void {
         sendResponse({ success: true });
         break;
 
-      case MESSAGE_TYPES.GET_READING_STATUS: {
-        console.log('📊 处理获取阅读状态消息（旧版）');
-        const oldStatus = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
-        sendResponse(oldStatus);
+      case MESSAGE_TYPES.GET_PAGE_STATUS: {
+        console.log('📊 处理获取页面状态消息');
+        const pageStatus = readingModeManager?.getStatus() || { isActive: false, settings: currentSettings };
+        sendResponse({
+          success: true,
+          isActive: pageStatus.isActive,
+          settings: pageStatus.settings
+        });
         break;
       }
 

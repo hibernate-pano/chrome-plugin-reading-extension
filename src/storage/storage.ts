@@ -11,6 +11,7 @@ export enum StorageKeys {
   CODE_FONT_SIZE = 'codeFontSize',
   CODE_THEME = 'codeTheme',
   PARAGRAPH_SPACING = 'paragraphSpacing',
+  PAGE_WIDTH = 'pageWidth',
   ENABLE_TEXT_SELECTION_TOOLBAR = 'enableTextSelectionToolbar',
   ACTIVE_PRESET = 'activePreset',
   CUSTOM_PRESETS = 'customPresets',
@@ -87,18 +88,23 @@ import { DEFAULT_SETTINGS } from '../constants/defaultSettings';
 
 export async function initializeDefaultSettings(): Promise<void> {
   // 使用统一的默认设置对象
+  // 只初始化 UserSettings 中实际存在的字段
   await setStorage(StorageKeys.THEME, DEFAULT_SETTINGS.theme);
   await setStorage(StorageKeys.FONT_SIZE, DEFAULT_SETTINGS.fontSize);
-  await setStorage(StorageKeys.CODE_FONT_SIZE, DEFAULT_SETTINGS.codeFontSize);
-  await setStorage(StorageKeys.CODE_THEME, DEFAULT_SETTINGS.codeTheme);
   await setStorage(StorageKeys.LINE_HEIGHT, DEFAULT_SETTINGS.lineHeight);
-  await setStorage(StorageKeys.TEXT_ALIGN, DEFAULT_SETTINGS.textAlign);
-  await setStorage(StorageKeys.SHOW_IMAGES, DEFAULT_SETTINGS.showImages);
   await setStorage(StorageKeys.FONT_FAMILY, DEFAULT_SETTINGS.fontFamily);
   await setStorage(StorageKeys.BACKGROUND_COLOR, DEFAULT_SETTINGS.backgroundColor);
   await setStorage(StorageKeys.PARAGRAPH_SPACING, DEFAULT_SETTINGS.paragraphSpacing);
+  await setStorage(StorageKeys.PAGE_WIDTH, DEFAULT_SETTINGS.pageWidth);
   await setStorage(StorageKeys.ENABLE_TEXT_SELECTION_TOOLBAR, DEFAULT_SETTINGS.enableTextSelectionToolbar);
-  // activePreset 和 customPresets 不在 DEFAULT_SETTINGS 中，由 presetManager 初始化
+  
+  // 这些字段用于其他类型的设置（ReadingModeSettings），需要单独的默认值
+  await setStorage(StorageKeys.CODE_FONT_SIZE, 14);
+  await setStorage(StorageKeys.CODE_THEME, 'github');
+  await setStorage(StorageKeys.TEXT_ALIGN, 'left');
+  await setStorage(StorageKeys.SHOW_IMAGES, true);
+  
+  // activePreset 和 customPresets 由 presetManager 初始化
 }
 
 export interface ReadingPreset {
