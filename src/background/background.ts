@@ -38,27 +38,36 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
  * 确保 content script 已注入
  */
 async function ensureContentScriptInjected(tabId: number): Promise<boolean> {
+  console.log(`🔍 [Background] 检查 tab ${tabId} 是否已注入...`);
+  
   // 如果已注入，直接返回
   if (injectedTabs.has(tabId)) {
+    console.log(`✅ [Background] Tab ${tabId} 在缓存中，跳过注入`);
     return true;
   }
 
   try {
     // 尝试发送测试消息，检查是否已注入
+    console.log(`📡 [Background] 发送 PING 到 tab ${tabId}...`);
     try {
       const pingResponse = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
+      console.log(`📨 [Background] PING 响应:`, pingResponse);
+      
       // 如果成功且收到正确响应，说明已注入
       if (pingResponse?.pong) {
         injectedTabs.add(tabId);
-        console.log('✅ Content script 已经存在，无需重新注入:', tabId);
+        console.log(`✅ [Background] Content script 已经存在，无需重新注入: ${tabId}`);
         return true;
+      } else {
+        console.log(`⚠️ [Background] PING 响应格式不正确:`, pingResponse);
       }
     } catch (pingError) {
       // 如果失败，说明未注入，需要注入
-      console.log('📝 Content script 未注入，将进行注入:', tabId);
+      console.log(`📝 [Background] PING 失败，Content script 未注入: ${tabId}`);
+      console.log(`   错误详情:`, pingError);
     }
 
-    console.log('🔧 向标签页注入 content script:', tabId);
+    console.log(`🔧 [Background] 向标签页注入 content script: ${tabId}`);
     
     // 注入 content script
     await chrome.scripting.executeScript({
@@ -66,12 +75,31 @@ async function ensureContentScriptInjected(tabId: number): Promise<boolean> {
       files: ['unifiedContentScript.js']
     });
 
-    // 标记为已注入
-    injectedTabs.add(tabId);
-    console.log('✅ Content script 注入成功:', tabId);
-    return true;
+    // 等待脚本初始化
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // 再次验证注入是否成功
+    try {
+      const verifyResponse = await chrome.tabs.sendMessage(tabId, { action: 'PING' });
+      console.log(`🔍 [Background] 注入后验证响应:`, verifyResponse);
+      
+      if (verifyResponse?.pong) {
+        // 标记为已注入
+        injectedTabs.add(tabId);
+        console.log(`✅ [Background] Content script 注入成功: ${tabId}`);
+        return true;
+      } else {
+        console.error(`❌ [Background] 注入后验证失败: ${tabId}`);
+        return false;
+      }
+    } catch (verifyError) {
+      console.error(`❌ [Background] 注入后验证出错:`, verifyError);
+      return false;
+    }
   } catch (error) {
-    console.error('❌ Content script 注入失败:', error);
+    console.error(`❌ [Background] Content script 注入失败 (tab ${tabId}):`, error);
+    // 清理缓存
+    injectedTabs.delete(tabId);
     return false;
   }
 }
@@ -101,19 +129,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.action === 'ENSURE_CONTENT_SCRIPT') {
     // 来自 popup 的请求，确保 content script 已注入
     asyncResponse = true;
+    console.log('📥 [Background] 处理 ENSURE_CONTENT_SCRIPT 请求');
     
     chrome.tabs.query({ active: true, currentWindow: true })
       .then(tabs => {
         if (tabs[0]?.id) {
+          console.log(`📋 [Background] 找到活动标签页: ${tabs[0].id}`);
           return ensureContentScriptInjected(tabs[0].id);
         }
+        console.error('❌ [Background] 未找到活动标签页');
         return false;
       })
       .then(injected => {
+        console.log(`📤 [Background] 返回注入状态: ${injected}`);
         sendResponse({ success: true, injected });
       })
       .catch(error => {
-        console.error('确保注入失败:', error);
+        console.error('❌ [Background] 确保注入失败:', error);
         sendResponse({ success: false, error: error.message });
       });
   }

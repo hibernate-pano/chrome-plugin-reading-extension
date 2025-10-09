@@ -55,13 +55,15 @@ export const PopupShadcn: React.FC = React.memo(() => {
 
   // 确保 content script 已注入
   const ensureContentScript = useCallback(async (): Promise<boolean> => {
+    console.log('🔧 [Popup] 调用 ensureContentScript');
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'ENSURE_CONTENT_SCRIPT'
       });
+      console.log('📨 [Popup] ensureContentScript 响应:', response);
       return response?.injected || false;
     } catch (error) {
-      console.error('❌ 确保 content script 失败:', error);
+      console.error('❌ [Popup] 确保 content script 失败:', error);
       return false;
     }
   }, []);

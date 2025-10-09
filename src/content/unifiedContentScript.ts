@@ -82,6 +82,10 @@ async function initialize(): Promise<void> {
 
   // 设置全局标记，防止其他内容脚本重复初始化
   (window as any).__UNIFIED_CONTENT_SCRIPT_ACTIVE = true;
+  
+  console.log('🚀 [UnifiedContentScript] 开始初始化...');
+  console.log('   URL:', window.location.href);
+  console.log('   时间戳:', new Date().toISOString());
 
   try {
     // 先不加载样式，等到真正需要时再加载
@@ -370,6 +374,7 @@ function handleMessage(message: any, _sender: chrome.runtime.MessageSender, send
 
       case 'PING':
         // 用于检测 content script 是否已注入
+        console.log('🏓 [Content] 收到 PING，返回 PONG');
         sendResponse({ success: true, pong: true });
         break;
 
@@ -939,9 +944,15 @@ function cleanup(): void {
   isInitialized = false;
 }
 
+// 内容脚本加载时立即输出日志（用于调试）
+console.log('📦 [UnifiedContentScript] 内容脚本已加载');
+console.log('   URL:', window.location.href);
+console.log('   时间:', new Date().toISOString());
+
 // 立即注册消息监听器（在初始化之前）
 // 这样可以确保即使初始化还在进行中，popup 的消息也能被接收到
 chrome.runtime.onMessage.addListener(handleMessage);
+console.log('👂 [UnifiedContentScript] 消息监听器已设置');
 
 // 页面卸载时清理资源
 window.addEventListener('beforeunload', cleanup);
