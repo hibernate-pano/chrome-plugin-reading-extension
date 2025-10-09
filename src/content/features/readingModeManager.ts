@@ -163,54 +163,94 @@ export class ReadingModeManager {
   }
 
   /**
-   * 启用阅读模式
+   * 启用阅读模式（增强版 - 带详细日志和错误恢复）
    */
   async enable(): Promise<boolean> {
-    if (this.isActive) return true;
+    console.log('🚀 [ReadingModeManager] 开始启用阅读模式...');
+    console.log('   当前状态:', { isActive: this.isActive });
+    
+    if (this.isActive) {
+      console.log('⚠️ [ReadingModeManager] 阅读模式已启用，跳过');
+      return true;
+    }
 
     try {
-      // 首先初始化样式（确保样式在启用时才注入）
+      // 步骤 1: 初始化样式
+      console.log('1️⃣ 初始化样式...');
       this.initializeStyles();
+      console.log('✅ 样式初始化完成');
 
-      // 提取内容
+      // 步骤 2: 提取内容
+      console.log('2️⃣ 提取页面内容...');
       const content = await this.extractContent();
       
       if (!content) {
         throw new Error('无法提取页面内容');
       }
+      console.log('✅ 内容提取完成');
 
-      // 创建阅读容器
+      // 步骤 3: 创建阅读容器
+      console.log('3️⃣ 创建阅读容器...');
       this.createReaderContainer(content);
+      console.log('✅ 阅读容器创建完成');
 
-      // 应用阅读模式样式
+      // 步骤 4: 应用样式
+      console.log('4️⃣ 应用阅读模式样式...');
       this.applyReaderStyles();
+      console.log('✅ 样式应用完成');
 
+      // 标记为激活（在挂载 UI 之前，以便 UI 可以访问正确的状态）
       this.isActive = true;
+      console.log('✅ 阅读模式状态已设置为激活');
 
-      // 挂载浮动UI
+      // 步骤 5: 挂载 UI 组件
+      console.log('5️⃣ 挂载浮动 UI...');
       this.mountFloatingUI();
+      console.log('✅ 浮动 UI 挂载完成');
 
-      // 挂载设置面板
+      console.log('6️⃣ 挂载设置面板...');
       this.mountSettingsPanel();
+      console.log('✅ 设置面板挂载完成');
 
-      // 初始化图片加载管理器
+      // 步骤 6: 初始化图片加载（非关键，失败不影响阅读模式）
+      console.log('7️⃣ 初始化图片加载管理器...');
       await this.initializeImageLoading();
+      console.log('✅ 图片加载管理器处理完成');
 
+      // 步骤 7: 设置键盘事件监听
+      console.log('8️⃣ 设置键盘事件监听...');
       document.removeEventListener('keydown', this.handleKeydown);
       document.addEventListener('keydown', this.handleKeydown);
+      console.log('✅ 键盘事件监听已设置');
 
+      // 步骤 8: 通知后台
+      console.log('9️⃣ 通知后台脚本...');
       await this.notifyBackground(MESSAGE_TYPES.READING_MODE_ENABLED);
+      console.log('✅ 后台通知完成');
 
+      // 步骤 9: 设置焦点
       if (this.overlayElement) {
-        // 聚焦覆盖层，便于辅助功能
         this.overlayElement.focus({ preventScroll: true });
       }
 
+      console.log('🎉 [ReadingModeManager] 阅读模式启用成功！');
       return true;
+      
     } catch (error) {
-      console.error('启用阅读模式失败:', error);
-      this.teardownReaderContainer();
-      this.removeReaderStyles();
+      console.error('❌ [ReadingModeManager] 启用阅读模式失败:', error);
+      console.error('   错误堆栈:', (error as Error).stack);
+      
+      // 尝试清理
+      console.log('🧹 尝试清理失败的状态...');
+      try {
+        this.teardownReaderContainer();
+        this.removeReaderStyles();
+        this.isActive = false;
+        console.log('✅ 清理完成');
+      } catch (cleanupError) {
+        console.error('⚠️ 清理过程中出错:', cleanupError);
+      }
+      
       throw error;
     }
   }
@@ -627,11 +667,23 @@ export class ReadingModeManager {
   }
 
   /**
-   * 初始化图片加载管理器
+   * 初始化图片加载管理器（防御性实现）
    */
   private async initializeImageLoading(): Promise<void> {
     try {
+      console.log('🔄 开始初始化图片加载管理器...');
+      
+      // 防御性清理：确保从干净的状态开始
+      try {
+        imageLoadingManager.cleanup();
+        console.log('✅ 已清理旧的图片加载管理器状态');
+      } catch (cleanupError) {
+        console.warn('清理旧状态时出错（可能是首次加载）:', cleanupError);
+      }
+
+      // 重新初始化
       await imageLoadingManager.initialize();
+      console.log('✅ 图片加载管理器初始化完成');
 
       // 等待DOM完全渲染
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -641,24 +693,32 @@ export class ReadingModeManager {
         const images = this.readerContainer.querySelectorAll('img');
         console.log(`📸 发现 ${images.length} 张图片，开始注册到图片加载管理器`);
         
+        let registeredCount = 0;
         images.forEach((img, index) => {
-          // 设置优先级，越靠前的图片优先级越高
-          const priority = Math.max(1, 10 - Math.floor(index / 3));
-          
-          // 确保图片有src属性
-          if (!img.src && !img.dataset.src) {
-            console.warn('图片缺少src属性，跳过:', img);
-            return;
-          }
+          try {
+            // 设置优先级，越靠前的图片优先级越高
+            const priority = Math.max(1, 10 - Math.floor(index / 3));
+            
+            // 确保图片有src属性
+            if (!img.src && !img.dataset.src) {
+              console.warn('图片缺少src属性，跳过:', img);
+              return;
+            }
 
-          // 注册图片
-          imageLoadingManager.registerImage(img, priority);
+            // 注册图片
+            imageLoadingManager.registerImage(img, priority);
+            registeredCount++;
+          } catch (registerError) {
+            console.warn(`注册图片 ${index} 失败:`, registerError);
+          }
         });
 
-        console.log(`✅ 图片注册完成，共注册 ${images.length} 张图片`);
+        console.log(`✅ 图片注册完成，成功注册 ${registeredCount}/${images.length} 张图片`);
       }
     } catch (error) {
-      console.error('初始化图片加载失败:', error);
+      console.error('❌ 初始化图片加载失败:', error);
+      // 不抛出错误，允许阅读模式继续（图片加载失败不应该阻止阅读模式启用）
+      console.warn('⚠️ 图片加载功能可能不可用，但阅读模式将继续');
     }
   }
 

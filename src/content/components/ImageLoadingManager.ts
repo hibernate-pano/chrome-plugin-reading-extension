@@ -224,6 +224,13 @@ export class ImageLoadingManager {
   }
 
   /**
+   * 获取初始化状态
+   */
+  getInitializedStatus(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
    * 获取加载统计信息
    */
   getLoadingStats(): {
