@@ -57,6 +57,16 @@ export class ImageLoadingManager {
   private isInitialized = false;
   private networkType: string = 'unknown';
   private deviceMemory: number = 4; // 默认4GB
+  
+  // 新增：并发控制
+  private loadingQueue: Array<() => Promise<void>> = [];
+  private activeLoads = 0;
+  private maxConcurrentLoads = 6; // 最大并发加载数
+  
+  // 缓存DOM查询结果
+  private allImagesCache: HTMLImageElement[] | null = null;
+  private cacheTimestamp = 0;
+  private readonly CACHE_DURATION = 5000; // 缓存5秒
 
   constructor(options: Partial<ImageLoadingOptions> = {}) {
     // 默认配置
@@ -143,6 +153,9 @@ export class ImageLoadingManager {
     };
 
     this.loadingStates.set(src, loadingState);
+    
+    // DOM 结构已变化，清除图片查询缓存
+    this.clearImagesCache();
 
     // 添加加载指示器
     if (this.options.showLoadingIndicator) {
@@ -162,15 +175,17 @@ export class ImageLoadingManager {
    * 注销图片元素
    */
   unregisterImage(src: string): void {
-    this.loadingStates.delete(src);
-
+    const state = this.loadingStates.get(src);
+    
     // 从Intersection Observer中移除
-    if (this.intersectionObserver) {
-      const state = this.loadingStates.get(src);
-      if (state?.element) {
-        this.intersectionObserver.unobserve(state.element);
-      }
+    if (this.intersectionObserver && state?.element) {
+      this.intersectionObserver.unobserve(state.element);
     }
+    
+    this.loadingStates.delete(src);
+    
+    // DOM 结构已变化，清除图片查询缓存
+    this.clearImagesCache();
   }
 
   /**
@@ -243,6 +258,15 @@ export class ImageLoadingManager {
 
     // 清空状态
     this.loadingStates.clear();
+    this.loadingQueue = [];
+    this.activeLoads = 0;
+    
+    // 清理 DOM 缓存
+    this.clearImagesCache();
+    
+    // 清理图片缓存
+    this.imageCache.clear();
+    
     this.isInitialized = false;
   }
 
@@ -291,13 +315,35 @@ export class ImageLoadingManager {
   }
 
   /**
-   * 加载图片
+   * 加载图片（带并发控制）
    */
   private async loadImage(loadingState: ImageLoadingState): Promise<void> {
     if (loadingState.status === 'loading' || loadingState.status === 'loaded') {
       return;
     }
 
+    // 并发控制：如果超过最大并发数，加入队列
+    if (this.activeLoads >= this.maxConcurrentLoads) {
+      return new Promise<void>((resolve) => {
+        this.loadingQueue.push(async () => {
+          await this.loadImageInternal(loadingState);
+          resolve();
+        });
+      });
+    }
+
+    await this.loadImageInternal(loadingState);
+  }
+
+  /**
+   * 内部图片加载实现（优化版）
+   */
+  private async loadImageInternal(loadingState: ImageLoadingState): Promise<void> {
+    if (loadingState.status === 'loading' || loadingState.status === 'loaded') {
+      return;
+    }
+
+    this.activeLoads++;
     loadingState.status = 'loading';
     const startTime = performance.now();
 
@@ -323,11 +369,21 @@ export class ImageLoadingManager {
         return;
       }
 
-      // 创建图片加载器
+      // 步骤1: 先显示模糊占位符（如果有）
+      if (loadingState.element) {
+        this.showBlurPlaceholder(loadingState.element);
+      }
+
+      // 步骤2: 创建图片加载器
       const img = new Image();
 
       // 设置跨域属性（如果需要）
       img.crossOrigin = 'anonymous';
+      
+      // 设置图片解码优化
+      if ('decoding' in img) {
+        img.decoding = 'async'; // 异步解码，不阻塞主线程
+      }
 
       // 设置加载选项
       if (this.options.enableResponsiveImages) {
@@ -340,12 +396,17 @@ export class ImageLoadingManager {
       await new Promise<void>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           reject(new Error('图片加载超时'));
-        }, 15000); // 增加超时时间到15秒
+        }, 15000);
 
         img.onload = async () => {
           clearTimeout(timeoutId);
 
           try {
+            // 步骤3: 图片加载完成后，先解码再显示（避免卡顿）
+            if ('decode' in img) {
+              await img.decode();
+            }
+
             // 更新状态
             loadingState.status = 'loaded';
             loadingState.loadTime = performance.now() - startTime;
@@ -355,9 +416,9 @@ export class ImageLoadingManager {
               await this.cacheImage(loadingState.src, img.src);
             }
 
-            // 更新DOM元素
+            // 步骤4: 更新DOM元素（带淡入动画）
             if (loadingState.element) {
-              this.updateImageElement(loadingState.element, img);
+              this.updateImageElementProgressive(loadingState.element, img);
             }
 
             resolve();
@@ -393,6 +454,22 @@ export class ImageLoadingManager {
         // 显示错误状态
         this.showImageError(loadingState);
       }
+    } finally {
+      // 并发控制：加载完成，处理队列中的下一个
+      this.activeLoads--;
+      this.processLoadingQueue();
+    }
+  }
+
+  /**
+   * 处理加载队列
+   */
+  private processLoadingQueue(): void {
+    if (this.loadingQueue.length > 0 && this.activeLoads < this.maxConcurrentLoads) {
+      const nextLoad = this.loadingQueue.shift();
+      if (nextLoad) {
+        nextLoad();
+      }
     }
   }
 
@@ -426,8 +503,9 @@ export class ImageLoadingManager {
    * 从缓存加载图片
    */
   private async loadImageFromCache(loadingState: ImageLoadingState, cachedData: string): Promise<void> {
+    const startTime = performance.now();
     loadingState.status = 'loaded';
-    loadingState.loadTime = performance.now() - performance.now(); // 模拟极快的加载时间
+    loadingState.loadTime = performance.now() - startTime; // 修复：正确计算加载时间
 
     if (loadingState.element) {
       loadingState.element.src = cachedData;
@@ -444,10 +522,18 @@ export class ImageLoadingManager {
     const maxWidth = this.calculateMaxWidth();
 
     if (quality < 100) {
-      // 添加质量参数
-      const url = new URL(src, window.location.origin);
-      url.searchParams.set('q', quality.toString());
-      img.src = url.toString();
+      try {
+        // 添加质量参数 - 增加异常处理
+        const url = new URL(src, window.location.origin);
+        url.searchParams.set('q', quality.toString());
+        img.src = url.toString();
+      } catch (error) {
+        // URL构造失败时使用原始src
+        console.warn('无法构造响应式URL，使用原始地址:', src, error);
+        img.src = src;
+      }
+    } else {
+      img.src = src;
     }
 
     if (maxWidth > 0) {
@@ -456,7 +542,40 @@ export class ImageLoadingManager {
   }
 
   /**
-   * 更新图片元素
+   * 更新图片元素（渐进式，带淡入动画）
+   */
+  private updateImageElementProgressive(element: HTMLImageElement, loadedImg: HTMLImageElement): void {
+    // 先隐藏元素，准备淡入
+    element.style.opacity = '0';
+    element.src = loadedImg.src;
+    
+    // 移除加载类，添加加载完成类
+    element.classList.remove('loading', 'blur-placeholder');
+    element.classList.add('loaded');
+
+    // 使用 requestAnimationFrame 确保平滑动画
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // 渐进式淡入
+        element.style.transition = 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        element.style.opacity = '1';
+        element.style.filter = 'none';
+        
+        // 动画完成后清理
+        setTimeout(() => {
+          element.style.transition = '';
+        }, 400);
+      });
+    });
+
+    // 隐藏加载指示器
+    if (this.options.showLoadingIndicator) {
+      this.hideLoadingIndicator(element);
+    }
+  }
+
+  /**
+   * 更新图片元素（向后兼容）
    */
   private updateImageElement(element: HTMLImageElement, loadedImg: HTMLImageElement): void {
     element.src = loadedImg.src;
@@ -470,28 +589,114 @@ export class ImageLoadingManager {
   }
 
   /**
-   * 预加载附近图片
+   * 显示模糊占位符（LQIP - Low Quality Image Placeholder）
+   */
+  private showBlurPlaceholder(element: HTMLImageElement): void {
+    // 创建低质量占位符（模糊效果）
+    element.classList.add('blur-placeholder');
+    
+    // 生成一个简单的渐变背景作为占位符
+    const bgColor = this.generatePlaceholderColor(element);
+    element.style.background = `linear-gradient(135deg, ${bgColor} 0%, ${this.adjustBrightness(bgColor, 20)} 100%)`;
+    element.style.filter = 'blur(10px)';
+    element.style.transform = 'scale(1.1)'; // 稍微放大以隐藏模糊边缘
+  }
+
+  /**
+   * 生成占位符颜色（基于图片属性）
+   */
+  private generatePlaceholderColor(img: HTMLImageElement): string {
+    // 尝试从 data-placeholder-color 属性获取
+    const customColor = img.dataset.placeholderColor;
+    if (customColor) {
+      return customColor;
+    }
+
+    // 默认使用柔和的灰色渐变
+    const colors = [
+      '#f0f4f8', // 浅灰蓝
+      '#e2e8f0', // 灰色
+      '#f8fafc', // 几乎白色
+      '#f1f5f9', // 浅灰
+    ];
+    
+    // 基于 src 生成确定性的颜色索引
+    const hash = img.src.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  }
+
+  /**
+   * 调整颜色亮度
+   */
+  private adjustBrightness(color: string, amount: number): string {
+    const hex = color.replace('#', '');
+    const r = Math.max(0, Math.min(255, parseInt(hex.substring(0, 2), 16) + amount));
+    const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) + amount));
+    const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) + amount));
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+
+  /**
+   * 预加载附近图片（优化版 - 使用 requestIdleCallback）
    */
   private preloadNearbyImages(currentImg: HTMLImageElement): void {
-    const allImages = Array.from(document.querySelectorAll('img[data-src], img[src]'));
+    const allImages = this.getAllImagesWithCache();
     const currentIndex = allImages.indexOf(currentImg);
 
     if (currentIndex === -1) return;
 
     // 预加载后续图片
     const preloadCount = Math.min(this.options.maxPreloadCount, allImages.length - currentIndex - 1);
+    
     for (let i = 1; i <= preloadCount; i++) {
       const nextImg = allImages[currentIndex + i] as HTMLImageElement;
-      if (nextImg) {
-        const src = nextImg.src || nextImg.dataset.src;
-        if (src) {
-          const loadingState = this.loadingStates.get(src);
-          if (loadingState && loadingState.status === 'pending') {
-            // 降低优先级预加载
-            setTimeout(() => this.loadImage(loadingState), i * 200);
-          }
-        }
+      if (!nextImg) continue;
+
+      const src = nextImg.src || nextImg.dataset.src;
+      if (!src) continue;
+
+      const loadingState = this.loadingStates.get(src);
+      if (loadingState && loadingState.status === 'pending') {
+        // 使用 requestIdleCallback 在浏览器空闲时预加载（优先级更低，不影响主任务）
+        this.scheduleIdlePreload(loadingState, i * 100);
       }
+    }
+  }
+
+  /**
+   * 在浏览器空闲时调度预加载
+   */
+  private scheduleIdlePreload(loadingState: ImageLoadingState, delay: number = 0): void {
+    const scheduleLoad = () => {
+      // 检查浏览器是否支持 requestIdleCallback
+      if ('requestIdleCallback' in window) {
+        (window as Window & { 
+          requestIdleCallback: (callback: () => void, options?: { timeout: number }) => void 
+        }).requestIdleCallback(
+          () => {
+            // 只在图片仍处于待加载状态时才加载
+            if (loadingState.status === 'pending') {
+              this.loadImage(loadingState);
+            }
+          },
+          { timeout: 2000 } // 最多等待2秒
+        );
+      } else {
+        // 降级到 setTimeout
+        setTimeout(() => {
+          if (loadingState.status === 'pending') {
+            this.loadImage(loadingState);
+          }
+        }, delay);
+      }
+    };
+
+    // 如果有延迟，先等待
+    if (delay > 0) {
+      setTimeout(scheduleLoad, delay);
+    } else {
+      scheduleLoad();
     }
   }
 
@@ -514,13 +719,21 @@ export class ImageLoadingManager {
   private showLoadingIndicator(element: HTMLImageElement): void {
     element.classList.add('loading');
 
-    // 创建加载动画元素
+    // 创建加载动画元素 - 修复XSS漏洞，使用安全的DOM操作
     const loader = document.createElement('div');
     loader.className = 'image-loader';
-    loader.innerHTML = `
-      <div class="image-loader-spinner"></div>
-      <div class="image-loader-text">加载中...</div>
-    `;
+    
+    // 创建旋转器
+    const spinner = document.createElement('div');
+    spinner.className = 'image-loader-spinner';
+    
+    // 创建文本元素
+    const text = document.createElement('div');
+    text.className = 'image-loader-text';
+    text.textContent = '加载中...'; // 使用textContent避免XSS
+    
+    loader.appendChild(spinner);
+    loader.appendChild(text);
 
     element.parentNode?.appendChild(loader);
   }
@@ -611,7 +824,7 @@ export class ImageLoadingManager {
   private detectDeviceCapabilities(): void {
     // 检测设备内存
     if ('deviceMemory' in navigator) {
-      this.deviceMemory = (navigator as any).deviceMemory || 4;
+      this.deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4;
     }
 
     // 根据设备内存调整默认选项
@@ -633,8 +846,8 @@ export class ImageLoadingManager {
    */
   private async detectNetworkConditions(): Promise<void> {
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
-      this.networkType = connection.effectiveType || 'unknown';
+      const connection = (navigator as Navigator & { connection?: { effectiveType?: string } }).connection;
+      this.networkType = connection?.effectiveType || 'unknown';
 
       // 根据网络状况调整加载策略
       switch (this.networkType) {
@@ -713,6 +926,32 @@ export class ImageLoadingManager {
     }
 
     return maxWidth;
+  }
+
+  /**
+   * 获取所有图片并缓存结果（优化DOM查询性能）
+   */
+  private getAllImagesWithCache(): HTMLImageElement[] {
+    const now = performance.now();
+    
+    // 如果缓存还有效，直接返回缓存结果
+    if (this.allImagesCache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
+      return this.allImagesCache;
+    }
+    
+    // 重新查询并更新缓存
+    this.allImagesCache = Array.from(document.querySelectorAll('img[data-src], img[src]'));
+    this.cacheTimestamp = now;
+    
+    return this.allImagesCache;
+  }
+
+  /**
+   * 清空图片缓存（在DOM结构发生变化时调用）
+   */
+  public clearImagesCache(): void {
+    this.allImagesCache = null;
+    this.cacheTimestamp = 0;
   }
 }
 

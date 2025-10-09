@@ -14,11 +14,16 @@
 
 /* 图片基础样式 */
 #reading-mode-container .enhanced-image,
-.reading-mode-content .enhanced-image {
+.reading-mode-content .enhanced-image,
+#reading-mode-container img,
+.reading-mode-content img {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
-  transition: opacity 0.3s ease, filter 0.3s ease;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              filter 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, filter, transform;
 }
 
 /* 加载中状态 */
@@ -104,11 +109,49 @@ body.dark-theme .reading-mode-content .image-loader-text,
   color: #cbd5e1;
 }
 
+/* 模糊占位符状态（LQIP - Low Quality Image Placeholder） */
+#reading-mode-container .enhanced-image.blur-placeholder,
+.reading-mode-content .enhanced-image.blur-placeholder,
+#reading-mode-container img.blur-placeholder,
+.reading-mode-content img.blur-placeholder {
+  opacity: 0.8;
+  filter: blur(10px);
+  transform: scale(1.05);
+  background-size: cover;
+  background-position: center;
+  animation: blur-pulse 2s ease-in-out infinite;
+}
+
+@keyframes blur-pulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* 加载完成状态 */
 #reading-mode-container .enhanced-image.loaded,
-.reading-mode-content .enhanced-image.loaded {
+.reading-mode-content .enhanced-image.loaded,
+#reading-mode-container img.loaded,
+.reading-mode-content img.loaded {
   opacity: 1;
   filter: none;
+  transform: scale(1);
+  background: none;
+  animation: fade-in-smooth 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fade-in-smooth {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* 缓存加载状态 */
@@ -189,11 +232,15 @@ body.dark-theme .reading-mode-content .enhanced-image.image-error::after,
 }
 
 /* 悬停效果 */
-#reading-mode-container .enhanced-image:not(.loading):not(.image-error):hover,
-.reading-mode-content .enhanced-image:not(.loading):not(.image-error):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+#reading-mode-container .enhanced-image:not(.loading):not(.image-error):not(.blur-placeholder):hover,
+.reading-mode-content .enhanced-image:not(.loading):not(.image-error):not(.blur-placeholder):hover,
+#reading-mode-container img.loaded:hover,
+.reading-mode-content img.loaded:hover {
+  transform: translateY(-2px) scale(1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: zoom-in;
 }
 
 /* 响应式设计 */
@@ -236,10 +283,33 @@ body.dark-theme .reading-mode-content .enhanced-image.image-error::after,
 
 /* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
+  #reading-mode-container .enhanced-image,
+  .reading-mode-content .enhanced-image,
+  #reading-mode-container img,
+  .reading-mode-content img {
+    transition: none;
+    will-change: auto;
+  }
+
   #reading-mode-container .enhanced-image.loading,
   .reading-mode-content .enhanced-image.loading {
     animation: none;
     background: #e2e8f0;
+  }
+
+  #reading-mode-container .enhanced-image.blur-placeholder,
+  .reading-mode-content .enhanced-image.blur-placeholder,
+  #reading-mode-container img.blur-placeholder,
+  .reading-mode-content img.blur-placeholder {
+    animation: none;
+    filter: blur(5px);
+  }
+
+  #reading-mode-container .enhanced-image.loaded,
+  .reading-mode-content .enhanced-image.loaded,
+  #reading-mode-container img.loaded,
+  .reading-mode-content img.loaded {
+    animation: none;
   }
 
   #reading-mode-container .enhanced-image.loaded-from-cache,
@@ -248,7 +318,9 @@ body.dark-theme .reading-mode-content .enhanced-image.image-error::after,
   }
 
   #reading-mode-container .enhanced-image:not(.loading):not(.image-error):hover,
-  .reading-mode-content .enhanced-image:not(.loading):not(.image-error):hover {
+  .reading-mode-content .enhanced-image:not(.loading):not(.image-error):hover,
+  #reading-mode-container img.loaded:hover,
+  .reading-mode-content img.loaded:hover {
     transform: none;
   }
 
