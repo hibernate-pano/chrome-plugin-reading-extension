@@ -177,9 +177,21 @@ export class ReadingModeManager {
     console.log('🚀 [ReadingModeManager] 开始启用阅读模式...');
     console.log('   当前状态:', { isActive: this.isActive });
     
-    if (this.isActive) {
-      console.log('⚠️ [ReadingModeManager] 阅读模式已启用，跳过');
+    // 增强的状态检查：同时检查内存和DOM状态
+    const currentStatus = this.getStatus();
+    if (currentStatus.isActive) {
+      console.log('⚠️ [ReadingModeManager] 阅读模式已启用（基于完整状态检查），跳过');
       return true;
+    }
+    
+    // 防御性清理：即使状态显示未激活，也要确保DOM是干净的
+    if (!this.isActive) {
+      console.log('🧹 [ReadingModeManager] 执行防御性清理...');
+      try {
+        this.detectAndCleanupStaleState();
+      } catch (error) {
+        console.warn('⚠️ 防御性清理出错:', error);
+      }
     }
 
     try {
@@ -239,6 +251,14 @@ export class ReadingModeManager {
       // 步骤 9: 设置焦点
       if (this.overlayElement) {
         this.overlayElement.focus({ preventScroll: true });
+      }
+
+      // 步骤 10: 最终状态验证
+      const finalStatus = this.getStatus();
+      console.log('📊 [ReadingModeManager] 最终状态验证:', finalStatus);
+      
+      if (!finalStatus.isActive) {
+        throw new Error('状态验证失败：阅读模式未正确激活');
       }
 
       console.log('🎉 [ReadingModeManager] 阅读模式启用成功！');
@@ -318,9 +338,12 @@ export class ReadingModeManager {
    */
   async toggle(): Promise<boolean> {
     console.log('🔄 [ReadingModeManager] 开始切换阅读模式...');
-    console.log('   当前状态:', { isActive: this.isActive });
     
-    const wasActive = this.isActive;
+    // 使用 getStatus 获取准确的当前状态
+    const currentStatus = this.getStatus();
+    console.log('   当前实际状态:', currentStatus);
+    
+    const wasActive = currentStatus.isActive;
     
     try {
       if (wasActive) {
@@ -330,24 +353,48 @@ export class ReadingModeManager {
         // 确认状态
         const newStatus = this.getStatus();
         console.log('✅ 切换完成，新状态:', newStatus);
+        
+        // 确保状态确实改变了
+        if (newStatus.isActive === wasActive) {
+          console.error('⚠️ 状态未改变，强制清理');
+          this.isActive = false;
+          this.teardownReaderContainer();
+          this.removeReaderStyles();
+        }
+        
         return newStatus.isActive;
       } else {
         console.log('📄 → 📖 切换为阅读模式');
-        await this.enable();
+        const result = await this.enable();
         
         // 确认状态
         const newStatus = this.getStatus();
         console.log('✅ 切换完成，新状态:', newStatus);
+        
+        // 如果启用失败，返回实际状态
+        if (!result && !newStatus.isActive) {
+          console.warn('⚠️ 阅读模式启用失败');
+          return false;
+        }
+        
         return newStatus.isActive;
       }
     } catch (error) {
       console.error('❌ [ReadingModeManager] 切换失败:', error);
       
-      // 发生错误时，确保状态是一致的
-      const currentStatus = this.getStatus();
-      console.log('📊 错误后状态检查:', currentStatus);
+      // 发生错误时，执行清理
+      console.log('🧹 执行错误恢复清理...');
+      try {
+        this.detectAndCleanupStaleState();
+      } catch (cleanupError) {
+        console.warn('清理失败:', cleanupError);
+      }
       
-      throw error;
+      // 返回当前实际状态
+      const finalStatus = this.getStatus();
+      console.log('📊 错误后最终状态:', finalStatus);
+      
+      return finalStatus.isActive;
     }
   }
 

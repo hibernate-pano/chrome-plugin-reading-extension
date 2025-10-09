@@ -7,6 +7,9 @@ let manager: ReadingModeManager | null = null;
 let loadPromise: Promise<ReadingModeManager> | null = null;
 let storageListenerRegistered = false;
 
+// 添加一个标志来跟踪是否正在销毁
+let isDestroying = false;
+
 const SETTINGS_KEYS = new Set<string>([
   StorageKeys.FONT_SIZE,
   StorageKeys.LINE_HEIGHT,
@@ -50,30 +53,64 @@ async function loadSettings(): Promise<UserSettings> {
 }
 
 async function ensureManager(): Promise<ReadingModeManager> {
+  // 如果正在销毁，等待销毁完成
+  if (isDestroying) {
+    console.log('⏳ [ReadingModeService] 等待销毁完成...');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return ensureManager(); // 递归重试
+  }
+
   if (manager) {
+    console.log('✅ [ReadingModeService] 返回已存在的manager实例');
     return manager;
   }
 
   if (loadPromise) {
+    console.log('⏳ [ReadingModeService] 等待正在进行的初始化...');
     return loadPromise;
   }
 
+  console.log('🔄 [ReadingModeService] 开始创建新的manager实例...');
+  
   loadPromise = (async () => {
-    const settings = await loadSettings();
-    manager = new ReadingModeManager(settings);
+    try {
+      const settings = await loadSettings();
+      console.log('📋 [ReadingModeService] 加载的设置:', settings);
+      
+      // 创建新实例前，确保旧实例被完全清理
+      if (manager) {
+        console.log('🧹 [ReadingModeService] 清理旧实例...');
+        manager.destroy();
+        manager = null;
+      }
+      
+      manager = new ReadingModeManager(settings);
+      console.log('✅ [ReadingModeService] 新manager实例创建成功');
 
-    if (!storageListenerRegistered) {
-      chrome.storage.onChanged.addListener(handleStorageChange);
-      storageListenerRegistered = true;
+      if (!storageListenerRegistered) {
+        chrome.storage.onChanged.addListener(handleStorageChange);
+        storageListenerRegistered = true;
+        console.log('✅ [ReadingModeService] Storage监听器已注册');
+      }
+
+      return manager;
+    } catch (error) {
+      console.error('❌ [ReadingModeService] 创建manager失败:', error);
+      manager = null;
+      throw error;
     }
-
-    return manager;
   })();
 
   try {
-    return await loadPromise;
-  } finally {
+    const result = await loadPromise;
+    // 不要立即清空 loadPromise，保持一段时间以避免并发问题
+    setTimeout(() => {
+      loadPromise = null;
+    }, 100);
+    return result;
+  } catch (error) {
     loadPromise = null;
+    throw error;
   }
 }
 
@@ -96,14 +133,36 @@ export async function getReadingModeManager(): Promise<ReadingModeManager> {
 }
 
 export async function destroyReadingModeManager(): Promise<void> {
-  if (manager) {
-    manager.destroy();
-    manager = null;
-  }
+  console.log('🔄 [ReadingModeService] 开始销毁manager...');
+  isDestroying = true;
+  
+  try {
+    // 等待任何进行中的初始化完成
+    if (loadPromise) {
+      console.log('⏳ [ReadingModeService] 等待初始化完成后再销毁...');
+      try {
+        await loadPromise;
+      } catch {
+        // 忽略初始化错误
+      }
+    }
 
-  if (storageListenerRegistered) {
-    chrome.storage.onChanged.removeListener(handleStorageChange);
-    storageListenerRegistered = false;
+    if (manager) {
+      console.log('🧹 [ReadingModeService] 销毁manager实例...');
+      manager.destroy();
+      manager = null;
+    }
+
+    if (storageListenerRegistered) {
+      console.log('🧹 [ReadingModeService] 移除storage监听器...');
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+      storageListenerRegistered = false;
+    }
+
+    loadPromise = null;
+    console.log('✅ [ReadingModeService] manager销毁完成');
+  } finally {
+    isDestroying = false;
   }
 }
 
