@@ -1,36 +1,76 @@
-# Chrome 阅读插件
+# 📚 Chrome 阅读助手
 
-一款专注于"简洁易用、本地优先"的Chrome阅读插件，旨在提供极简、优雅的网页阅读体验，同时保护用户隐私。
+> 版本 v1.8.1 | 极简 · 优雅 · 专注
 
-## 功能特点
+一款专注于"极简设计、本地优先"的 Chrome 阅读扩展，提供纯净、沉浸的网页阅读体验。
 
-- **内容提取**：智能提取网页主要内容，过滤广告、导航等干扰元素
-- **排版优化**：提供多种阅读主题和排版选项，优化阅读体验
-- **本地优先**：所有数据本地存储，不依赖云服务，保护用户隐私
-- **性能优化**：采用按需加载机制，减少对页面性能的影响
-- **代码高亮**：支持代码块语法高亮，提升技术文章阅读体验
+## ✨ 功能特点
 
-## 技术栈
+### 🎯 核心功能
 
-- **React** 18.2.0 - UI 框架
-- **TypeScript** 5.2.2 - 类型安全
-- **Vite** 5.1.6 - 构建工具（多配置构建）
-- **Tailwind CSS** 4.x - 现代CSS框架（使用@theme指令）
-- **Shadcn/UI** - 高质量React组件库
-- **Zustand** 4.5.2 - 轻量级状态管理
-- **@mozilla/readability** 0.5.0 - 智能内容提取
-- **Radix UI** - 无障碍UI基础组件
+- **一键开启**：极简 popup 界面，点击即可切换阅读模式
+- **智能提取**：基于 Mozilla Readability，精准提取网页主要内容
+- **沉浸阅读**：过滤广告、导航等干扰元素，专注内容本身
+- **悬浮设置**：极简悬浮面板，快速调整阅读参数
+
+### 🎨 阅读体验
+
+- **多主题支持**：浅色、深色、护眼三种主题
+- **字体定制**：7 种字体选择（宋体、黑体、楷体等）
+- **灵活排版**：自定义字号、行高、页面宽度
+- **代码高亮**：支持技术文章中的代码块语法高亮
+
+### 🔒 隐私保护
+
+- **本地优先**：所有数据本地存储，不依赖云服务
+- **无跟踪**：不收集任何用户数据
+- **离线可用**：无需网络连接即可使用
+
+### ⚡ 性能优化
+
+- **按需加载**：内容脚本采用最小化注入
+- **动态注入**：仅在需要时才加载完整功能
+- **Web Workers**：内容提取和处理在后台线程执行
+
+## 🛠️ 技术栈
+
+### 核心框架
+
+- **React** 18.2.0 - 声明式 UI 框架
+- **TypeScript** 5.2.2 - 类型安全开发
+- **Vite** 5.1.6 - 快速构建工具
+
+### UI & 样式
+
+- **Tailwind CSS** 3.4.0 - 原子化 CSS 框架
+- **Shadcn/UI** - 高质量 React 组件库
+- **Radix UI** - 无障碍 UI 基础组件
 - **Lucide React** - 现代图标库
-- **pnpm** - 首选包管理工具
 
-## 开发环境设置
+### 状态 & 存储
+
+- **Zustand** 4.5.2 - 轻量级状态管理
+- **Chrome Storage API** - 本地数据持久化
+
+### 内容处理
+
+- **@mozilla/readability** 0.5.0 - 智能内容提取
+- **Turndown** 7.2.0 - HTML 转 Markdown
+- **Web Workers** - 后台内容处理
+
+### 开发工具
+
+- **pnpm** - 快速、节省空间的包管理器
+- **ESLint** - 代码质量检查
+
+## 🚀 快速开始
 
 ### 前提条件
 
-- Node.js 18+
-- pnpm (必须使用pnpm作为包管理工具)
+- **Node.js** 18+
+- **pnpm** 8+ (推荐使用 pnpm)
 
-### 安装
+### 安装依赖
 
 ```bash
 # 克隆仓库
@@ -41,126 +81,190 @@ cd chrome-plugin-reading-extension
 pnpm install
 ```
 
-### 开发
+### 开发构建
 
 ```bash
-# 启动开发服务器
+# 开发模式（带调试信息）
 pnpm run dev
 
-# 构建扩展
+# 生产构建
 pnpm run build
 
-# 构建特定部分
-pnpm run build:content   # 仅构建内容脚本
-pnpm run build:background # 仅构建后台脚本
-pnpm run build:popup     # 仅构建弹出页面
+# 监听模式（自动重新构建）
+pnpm run watch
+
+# 代码检查
+pnpm run lint
 ```
 
-### 安装到Chrome
+### 加载到 Chrome
 
-1. 构建项目：`pnpm run build`
-2. 打开Chrome，进入扩展管理页面 `chrome://extensions/`
-3. 开启"开发者模式"
-4. 点击"加载已解压的扩展程序"
-5. 选择项目的`dist`目录
+1. 运行构建命令：
 
-## 项目结构
+   ```bash
+   pnpm run build
+   ```
+
+2. 打开 Chrome 扩展管理页面：
+
+   ```
+   chrome://extensions/
+   ```
+
+3. 启用**开发者模式**（右上角开关）
+
+4. 点击**加载已解压的扩展程序**
+
+5. 选择项目的 `dist` 目录
+
+6. 完成！扩展图标会出现在工具栏
+
+### 使用方法
+
+1. 打开任意网页
+2. 点击工具栏中的扩展图标
+3. 切换**阅读模式**开关
+4. 享受沉浸式阅读体验！
+
+在阅读模式下，点击左侧悬浮按钮 ⚙️ 可调整阅读设置。
+
+## 📁 项目结构
 
 ```
 chrome-plugin-reading-extension/
-├── src/                  # 源代码
-│   ├── components/       # UI组件系统 (Shadcn/UI)
-│   │   └── ui/          # 统一UI组件库
-│   ├── content/          # 内容脚本
-│   │   ├── features/     # 功能模块
-│   │   ├── ui/           # 内容相关UI组件
-│   │   ├── extractors/   # 内容提取器
-│   │   ├── workers/      # Web Workers
-│   │   └── contentLoader.ts  # 内容脚本入口（最小化注入）
-│   ├── background/       # 后台脚本
-│   ├── popup/            # 弹出页面
-│   ├── store/            # 状态管理
-│   ├── types/            # 类型定义
-│   └── utils/            # 工具函数
-├── public/               # 静态资源
-│   └── manifest.json     # 扩展清单
-├── dist/                 # 构建输出目录
-├── vite.config.ts        # Vite配置文件
-├── package.json          # 项目依赖
-└── README.md             # 项目文档
+├── src/
+│   ├── components/          # Shadcn/UI 组件库
+│   │   └── ui/             # 统一 UI 组件（Button, Dialog, Switch 等）
+│   ├── content/            # 内容脚本
+│   │   ├── components/     # 阅读模式组件
+│   │   │   ├── ReadingSettingsPanel.tsx  # 悬浮设置面板
+│   │   │   └── ReaderView/               # 阅读视图组件
+│   │   ├── extractors/     # 内容提取器
+│   │   ├── features/       # 功能模块
+│   │   ├── workers/        # Web Workers
+│   │   └── unifiedContentScript.ts  # 内容脚本入口
+│   ├── popup/              # 弹出界面
+│   │   └── PopupShadcn.tsx # 极简 Popup 组件
+│   ├── background/         # 后台脚本
+│   ├── storage/            # 数据存储
+│   ├── store/              # 状态管理 (Zustand)
+│   ├── types/              # TypeScript 类型
+│   └── utils/              # 工具函数
+├── public/
+│   ├── manifest.json       # Chrome 扩展清单
+│   └── icon*.png           # 扩展图标
+├── dist/                   # 构建输出（加载此目录）
+├── vite.config.ts          # Vite 主配置
+├── vite.content.config.ts  # 内容脚本配置
+├── vite.worker.config.ts   # Worker 配置
+└── package.json
 ```
 
-## 架构设计
+## 🏗️ 架构设计
 
 ### 内容脚本架构
 
-内容脚本采用最小化注入、按需加载的架构：
+采用**动态注入**和**按需加载**策略，最小化性能影响：
 
-1. **contentLoader.ts**：最小化入口脚本，只包含基本的消息监听和浮动按钮
-2. **按需加载**：用户激活阅读模式时，才加载完整功能模块
-3. **代码分割**：将功能模块拆分为独立的块，减少初始加载大小
+```
+页面加载 → 注入最小化脚本 → 用户点击开关 → 动态加载完整功能
+```
 
-### 🎨 UI 设计架构
+**核心特点**：
 
-采用现代化的设计系统架构：
+- ✅ 初始注入体积小（< 500KB gzipped）
+- ✅ 不影响页面加载速度
+- ✅ 按需加载功能模块
+- ✅ 智能资源管理
 
-1. **Tailwind CSS 4**：使用@theme指令定义设计令牌
-2. **Shadcn/UI组件**：基于Radix UI的高质量组件库
-3. **设计令牌系统**：统一的颜色、间距、字体规范
-4. **响应式设计**：移动优先的自适应布局
-5. **无障碍支持**：完整的a11y实现
+### UI 设计系统
 
-### 内容提取架构
+采用 **Shadcn/UI** + **Tailwind CSS** 构建现代化界面：
 
-采用基于Readability.js的提取引擎：
+**Popup 界面**（200×80px）
 
-1. **BaseExtractor**：提取器基类，定义通用接口
-2. **ReadabilityExtractor**：基于Mozilla Readability的提取器
-3. **ContentExtractor**：自定义提取器，作为备选
-4. **ExtractorFactory**：工厂类，根据网页类型选择最合适的提取器
-5. **处理器系统**：对提取的内容进行后处理（代码块、图片等）
+- 极简设计，仅包含阅读模式开关
+- 纯白背景，简洁优雅
 
-### 状态管理架构
+**悬浮设置面板**（220×500px）
 
-使用Zustand进行状态管理：
+- 浮动在页面左侧的设置面板
+- 5 个核心设置项：主题、字号、行高、字体、宽度
+- 蓝色系配色，现代简约
 
-1. **settingsStore**：管理用户设置
-2. **readingProgressStore**：管理阅读进度
-3. **chromeStorageMiddleware**：同步状态到Chrome存储
+### 内容提取引擎
 
-## 📚 文档
+基于 **Mozilla Readability** 的智能提取系统：
 
-### 🚀 快速开始
-- [快速开始指南](./docs/QUICK_START.md) - 5分钟快速上手开发
+```
+网页内容 → Readability 分析 → 提取主要内容 → 后处理 → 渲染展示
+```
 
-### 📖 开发文档
-- [📚 文档中心](./docs/README.md) - 完整的文档导航和索引
-- [🚀 快速开始](./docs/QUICK_START.md) - 5分钟快速上手指南
-- [📖 开发指南](./docs/DEVELOPMENT_GUIDE.md) - 完整的开发指导文档
-- [📋 API 参考](./docs/API_REFERENCE.md) - 完整的 API 参考文档
-- [🎨 设计系统规范](./docs/design-system-spec.md) - Shadcn/UI 设计系统规范
-- [🔄 迁移指南](./docs/MIGRATION_GUIDE.md) - 从 MD3 到 Shadcn/UI 的迁移指南
-- [🛠️ 测试指南](./docs/TESTING.md) - 完整的测试策略
-- [⚡ 性能优化](./docs/PERFORMANCE.md) - 性能优化最佳实践
-- [🔧 故障排除](./docs/TROUBLESHOOTING.md) - 常见问题解决方案
+**处理流程**：
 
-### 🔧 运维文档
-- [故障排除指南](./docs/TROUBLESHOOTING.md) - 常见问题诊断和解决
-- [性能优化指南](./docs/PERFORMANCE.md) - 性能优化最佳实践
-- [测试指南](./docs/TESTING.md) - 完整的测试策略和实践
+1. **内容提取**：识别文章主体内容
+2. **清理过滤**：移除广告、导航等干扰
+3. **代码高亮**：处理代码块语法高亮
+4. **图片优化**：懒加载和预加载策略
+5. **样式应用**：根据用户设置渲染
 
-### 📝 项目文档
-- [Popup 重设计文档](./docs/popup-redesign-spec.md) - Popup 界面设计规范
-- [文档更新日志](./docs/CHANGELOG_DOCS.md) - 文档版本变更记录
+### 数据存储架构
 
-## 贡献指南
+**状态管理**：Zustand + Chrome Storage API
 
-1. Fork项目
+```typescript
+用户操作 → Zustand Store → Chrome Storage Middleware → 本地持久化
+```
+
+**存储内容**：
+
+- 用户阅读设置（主题、字号等）
+- 阅读进度记录
+- 自定义配置
+
+## 📚 更多文档
+
+- [📖 项目分析文档](./docs/PROJECT_ANALYSIS.md) - 完整的项目架构分析
+
+## 🎯 开发计划
+
+- [ ] 键盘快捷键支持
+- [ ] 多语言国际化
+- [ ] 更多主题选项
+- [ ] PDF 导出功能
+- [ ] 阅读统计分析
+
+## 🤝 贡献指南
+
+欢迎贡献代码、提交问题或建议！
+
+1. Fork 本仓库
 2. 创建特性分支：`git checkout -b feature/amazing-feature`
-3. 提交更改：`git commit -m 'Add amazing feature'`
+3. 提交更改：`git commit -m 'feat: add amazing feature'`
 4. 推送分支：`git push origin feature/amazing-feature`
-5. 提交Pull Request
+5. 提交 Pull Request
 
-## 许可证
+### 提交规范
 
-[MIT](LICENSE) 
+采用 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+
+- `feat:` 新功能
+- `fix:` 修复 bug
+- `docs:` 文档更新
+- `style:` 代码格式调整
+- `refactor:` 代码重构
+- `perf:` 性能优化
+- `test:` 测试相关
+- `chore:` 构建/工具相关
+
+## 📄 许可证
+
+[MIT License](LICENSE)
+
+## 💬 联系方式
+
+如有问题或建议，欢迎提交 [Issue](../../issues)。
+
+---
+
+**Made with ❤️ for better reading experience**
