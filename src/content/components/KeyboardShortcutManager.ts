@@ -447,6 +447,13 @@ export class KeyboardShortcutManager {
     }
     this.helpDialog = null;
   }
+
+  /**
+   * 清理资源（与 destroy 相同，为了保持接口一致性）
+   */
+  public cleanup(): void {
+    this.destroy();
+  }
 }
 
 // 导出单例实例

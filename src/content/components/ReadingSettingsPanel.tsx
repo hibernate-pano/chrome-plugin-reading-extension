@@ -77,7 +77,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
 
   return (
     <>
-      {/* 悬浮按钮 */}
+      {/* 悬浮按钮 - 极简设计 */}
       <button
         ref={buttonRef}
         onClick={togglePanel}
@@ -85,137 +85,104 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
         aria-label="打开阅读设置"
         style={{
           position: 'fixed',
-          left: isOpen ? '320px' : '20px',
+          left: isOpen ? '260px' : '16px',
           top: '50%',
           transform: 'translateY(-50%)',
-          width: '48px',
-          height: '48px',
-          borderRadius: '24px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          border: 'none',
-          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: 'white',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
           cursor: 'pointer',
           zIndex: 2147483646,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'white',
-          fontSize: '24px',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          color: '#6b7280',
+          fontSize: '18px',
+          transition: 'all 0.2s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 6px 30px rgba(102, 126, 234, 0.6)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.color = '#374151';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(-50%)';
-          e.currentTarget.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.4)';
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.color = '#6b7280';
         }}
       >
-        {isOpen ? '✕' : '⚙️'}
+        {isOpen ? '✕' : '⚙'}
       </button>
 
-      {/* 设置面板 */}
+      {/* 设置面板 - 精简版 */}
       {isOpen && (
         <div
           ref={panelRef}
           className="reading-settings-panel"
           style={{
             position: 'fixed',
-            left: '20px',
+            left: '16px',
             top: '50%',
             transform: 'translateY(-50%)',
-            width: '280px',
-            maxHeight: '80vh',
+            width: '220px',
+            maxHeight: '500px',
             background: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+            border: '1px solid #e5e7eb',
             zIndex: 2147483645,
             overflow: 'hidden',
-            animation: 'slideInLeft 0.3s ease-out',
+            animation: 'slideInLeft 0.2s ease-out',
           }}
         >
-          {/* 头部 */}
+          {/* 简洁头部 */}
           <div
             style={{
-              padding: '20px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              position: 'relative',
+              padding: '16px',
+              borderBottom: '1px solid #f3f4f6',
             }}
           >
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>
               阅读设置
             </h3>
-            <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.9 }}>
-              自定义您的阅读体验
-            </p>
-            {/* 关闭按钮 */}
-            <button
-              onClick={closePanel}
-              style={{
-                position: 'absolute',
-                top: '15px',
-                right: '15px',
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: 'none',
-                color: 'white',
-                fontSize: '18px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-              }}
-              aria-label="关闭设置面板"
-            >
-              ✕
-            </button>
           </div>
 
           {/* 设置内容 */}
           <div
             style={{
-              padding: '20px',
-              maxHeight: 'calc(80vh - 80px)',
+              padding: '16px',
+              maxHeight: '420px',
               overflowY: 'auto',
             }}
           >
             {/* 主题 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontSize: '13px', fontWeight: '500', color: '#4b5563' }}>
                 主题
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                 {THEMES.map((theme) => (
                   <button
                     key={theme.value}
                     onClick={() => handleChange('theme', theme.value)}
                     style={{
-                      padding: '12px 8px',
-                      borderRadius: '8px',
-                      border: settings.theme === theme.value ? '2px solid #667eea' : '2px solid #e5e7eb',
-                      background: settings.theme === theme.value ? '#f3f4f6' : 'white',
+                      padding: '8px 6px',
+                      borderRadius: '6px',
+                      border: settings.theme === theme.value ? '1.5px solid #3b82f6' : '1.5px solid #e5e7eb',
+                      background: settings.theme === theme.value ? '#eff6ff' : 'white',
                       cursor: 'pointer',
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: '500',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.15s',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '3px',
+                      color: '#374151',
                     }}
                   >
-                    <span style={{ fontSize: '20px' }}>{theme.icon}</span>
+                    <span style={{ fontSize: '16px' }}>{theme.icon}</span>
                     <span>{theme.label}</span>
                   </button>
                 ))}
@@ -223,9 +190,10 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
             </div>
 
             {/* 字号 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                字号：{settings.fontSize}px
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px', fontWeight: '500', color: '#4b5563' }}>
+                <span>字号</span>
+                <span style={{ color: '#3b82f6', fontWeight: '600' }}>{settings.fontSize}px</span>
               </label>
               <input
                 type="range"
@@ -235,23 +203,20 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
                 onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
                 style={{
                   width: '100%',
-                  height: '6px',
-                  borderRadius: '3px',
+                  height: '4px',
+                  borderRadius: '2px',
                   background: '#e5e7eb',
                   outline: 'none',
                   cursor: 'pointer',
                 }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '12px', color: '#9ca3af' }}>
-                <span>小</span>
-                <span>大</span>
-              </div>
             </div>
 
             {/* 行高 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                行高：{settings.lineHeight}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px', fontWeight: '500', color: '#4b5563' }}>
+                <span>行高</span>
+                <span style={{ color: '#3b82f6', fontWeight: '600' }}>{settings.lineHeight}</span>
               </label>
               <input
                 type="range"
@@ -262,49 +227,18 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
                 onChange={(e) => handleChange('lineHeight', parseFloat(e.target.value))}
                 style={{
                   width: '100%',
-                  height: '6px',
-                  borderRadius: '3px',
+                  height: '4px',
+                  borderRadius: '2px',
                   background: '#e5e7eb',
                   outline: 'none',
                   cursor: 'pointer',
                 }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '12px', color: '#9ca3af' }}>
-                <span>紧凑</span>
-                <span>宽松</span>
-              </div>
-            </div>
-
-            {/* 段落间距 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                段落间距：{settings.paragraphSpacing}em
-              </label>
-              <input
-                type="range"
-                min="0.5"
-                max="3"
-                step="0.1"
-                value={settings.paragraphSpacing}
-                onChange={(e) => handleChange('paragraphSpacing', parseFloat(e.target.value))}
-                style={{
-                  width: '100%',
-                  height: '6px',
-                  borderRadius: '3px',
-                  background: '#e5e7eb',
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '12px', color: '#9ca3af' }}>
-                <span>紧凑</span>
-                <span>宽松</span>
-              </div>
             </div>
 
             {/* 字体 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontSize: '13px', fontWeight: '500', color: '#4b5563' }}>
                 字体
               </label>
               <select
@@ -312,12 +246,13 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
                 onChange={(e) => handleChange('fontFamily', e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: '2px solid #e5e7eb',
-                  fontSize: '14px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1.5px solid #e5e7eb',
+                  fontSize: '13px',
                   cursor: 'pointer',
                   background: 'white',
+                  color: '#374151',
                 }}
               >
                 {Object.entries(FONT_FAMILIES).map(([key, font]) => (
@@ -329,9 +264,10 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
             </div>
 
             {/* 页面宽度 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                页面宽度：{settings.pageWidth}px
+            <div>
+              <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px', fontWeight: '500', color: '#4b5563' }}>
+                <span>宽度</span>
+                <span style={{ color: '#3b82f6', fontWeight: '600' }}>{settings.pageWidth}px</span>
               </label>
               <input
                 type="range"
@@ -342,110 +278,13 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
                 onChange={(e) => handleChange('pageWidth', parseInt(e.target.value))}
                 style={{
                   width: '100%',
-                  height: '6px',
-                  borderRadius: '3px',
+                  height: '4px',
+                  borderRadius: '2px',
                   background: '#e5e7eb',
                   outline: 'none',
                   cursor: 'pointer',
                 }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '12px', color: '#9ca3af' }}>
-                <span>窄</span>
-                <span>宽</span>
-              </div>
-            </div>
-
-            {/* 图片加载设置 */}
-            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🖼️ 图片加载设置
-              </h3>
-
-              {/* 启用懒加载 */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.enableImageLazyLoading !== false}
-                    onChange={(e) => handleChange('enableImageLazyLoading', e.target.checked)}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
-                  <span>启用图片懒加载</span>
-                </label>
-                <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6b7280' }}>
-                  仅在图片进入视口时才加载，提升页面性能
-                </p>
-              </div>
-
-              {/* 启用预加载 */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.enableImagePreloading !== false}
-                    onChange={(e) => handleChange('enableImagePreloading', e.target.checked)}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
-                  <span>启用智能预加载</span>
-                </label>
-                <p style={{ margin: '4px 0 0 24px', fontSize: '12px', color: '#6b7280' }}>
-                  预加载视口下方即将可见的图片，提升浏览体验
-                </p>
-              </div>
-
-              {/* 图片质量 */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
-                  图片质量：{settings.imageQuality || 85}%
-                </label>
-                <input
-                  type="range"
-                  min="50"
-                  max="100"
-                  step="5"
-                  value={settings.imageQuality || 85}
-                  onChange={(e) => handleChange('imageQuality', parseInt(e.target.value))}
-                  style={{
-                    width: '100%',
-                    height: '5px',
-                    borderRadius: '3px',
-                    background: '#e5e7eb',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
-                  <span>低质量</span>
-                  <span>高质量</span>
-                </div>
-              </div>
-
-              {/* 缓存大小 */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
-                  图片缓存大小：{settings.imageCacheSize || 50}MB
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="200"
-                  step="10"
-                  value={settings.imageCacheSize || 50}
-                  onChange={(e) => handleChange('imageCacheSize', parseInt(e.target.value))}
-                  style={{
-                    width: '100%',
-                    height: '5px',
-                    borderRadius: '3px',
-                    background: '#e5e7eb',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
-                  <span>小缓存</span>
-                  <span>大缓存</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -455,7 +294,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
       <style>{`
         @keyframes slideInLeft {
           from {
-            transform: translateY(-50%) translateX(-100%);
+            transform: translateY(-50%) translateX(-20px);
             opacity: 0;
           }
           to {
@@ -465,66 +304,51 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
         }
 
         .reading-settings-panel::-webkit-scrollbar {
-          width: 6px;
+          width: 4px;
         }
 
         .reading-settings-panel::-webkit-scrollbar-track {
-          background: #f1f5f9;
-          border-radius: 3px;
+          background: transparent;
         }
 
         .reading-settings-panel::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 3px;
+          background: #d1d5db;
+          border-radius: 2px;
         }
 
         .reading-settings-panel::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
+          background: #9ca3af;
         }
 
         input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 18px;
-          height: 18px;
+          width: 14px;
+          height: 14px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #3b82f6;
           cursor: pointer;
-          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+          box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
         }
 
         input[type="range"]::-moz-range-thumb {
-          width: 18px;
-          height: 18px;
+          width: 14px;
+          height: 14px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #3b82f6;
           cursor: pointer;
           border: none;
-          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+          box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
         }
 
-        input[type="range"]::-webkit-slider-track {
-          transition: background 0.2s ease;
+        input[type="range"]::-webkit-slider-thumb:hover {
+          background: #2563eb;
+          box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
         }
 
-        input[type="range"]::-moz-range-track {
-          transition: background 0.2s ease;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:active {
-          transform: scale(1.2);
-        }
-
-        input[type="range"]::-moz-range-thumb:active {
-          transform: scale(1.2);
-        }
-
-        input[type="range"]:hover::-webkit-slider-thumb {
-          box-shadow: 0 2px 12px rgba(102, 126, 234, 0.6);
-        }
-
-        input[type="range"]:hover::-moz-range-thumb {
-          box-shadow: 0 2px 12px rgba(102, 126, 234, 0.6);
+        input[type="range"]::-moz-range-thumb:hover {
+          background: #2563eb;
+          box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
         }
       `}</style>
     </>
