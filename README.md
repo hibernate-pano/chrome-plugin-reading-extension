@@ -1,15 +1,21 @@
 # 📚 Chrome 阅读助手
 
-> 版本 v1.8.12 | 极简 · 优雅 · 专注
+> 版本 v2.0.0 | 极简 · 优雅 · 专注
 
 一款专注于"极简设计、本地优先"的 Chrome 阅读扩展，提供纯净、沉浸的网页阅读体验。
 
-## 📖 项目文档
+## ✨ v2.0.0 重大更新
 
-- **[📋 文档中心](./docs/README.md)** - 查看所有文档
-- **[🚀 发版记录](./docs/releases/)** - 版本更新历史
-- **[🔧 技术文档](./docs/technical/)** - 技术实现细节
-- **[🐛 调试指南](./docs/debug/)** - 问题排查工具
+🎉 **完全重构** - 从 100+ 文件简化为 ~15 个核心文件，代码更简洁、更易维护。
+
+### 新架构亮点
+
+| 方面 | 旧架构 | 新架构 |
+|------|--------|--------|
+| 文件数量 | 100+ | ~15 |
+| 状态管理 | Zustand + 多层中间件 | 直接使用 Chrome Storage API |
+| 错误处理 | 5个管理器类 | 1个简单的错误处理函数 |
+| 代码高亮 | 动态加载 highlight.js | 轻量级内置高亮 |
 
 ## ✨ 功能特点
 
@@ -23,7 +29,7 @@
 ### 🎨 阅读体验
 
 - **多主题支持**：浅色、深色、护眼三种主题
-- **字体定制**：7 种字体选择（宋体、黑体、楷体等）
+- **字体定制**：自定义字体选择
 - **灵活排版**：自定义字号、行高、页面宽度
 - **代码高亮**：支持技术文章中的代码块语法高亮
 
@@ -36,8 +42,8 @@
 ### ⚡ 性能优化
 
 - **按需加载**：内容脚本采用最小化注入
-- **动态注入**：仅在需要时才加载完整功能
-- **Web Workers**：内容提取和处理在后台线程执行
+- **轻量级**：Bundle 大小 < 500KB
+- **快速启动**：阅读模式 2 秒内启动
 
 ## 🛠️ 技术栈
 
@@ -50,25 +56,15 @@
 ### UI & 样式
 
 - **Tailwind CSS** 3.4.0 - 原子化 CSS 框架
-- **Shadcn/UI** - 高质量 React 组件库
-- **Radix UI** - 无障碍 UI 基础组件
-- **Lucide React** - 现代图标库
+- **CSS Modules** - 组件级样式隔离
 
-### 状态 & 存储
+### 存储
 
-- **Zustand** 4.5.2 - 轻量级状态管理
 - **Chrome Storage API** - 本地数据持久化
 
 ### 内容处理
 
 - **@mozilla/readability** 0.5.0 - 智能内容提取
-- **Turndown** 7.2.0 - HTML 转 Markdown
-- **Web Workers** - 后台内容处理
-
-### 开发工具
-
-- **pnpm** - 快速、节省空间的包管理器
-- **ESLint** - 代码质量检查
 
 ## 🚀 快速开始
 
@@ -92,16 +88,16 @@ pnpm install
 
 ```bash
 # 开发模式（带调试信息）
-pnpm run dev
+pnpm run build:new:debug
 
 # 生产构建
-pnpm run build
-
-# 监听模式（自动重新构建）
-pnpm run watch
+pnpm run build:new
 
 # 代码检查
 pnpm run lint
+
+# 运行测试
+pnpm run test
 ```
 
 ### 加载到 Chrome
@@ -109,7 +105,7 @@ pnpm run lint
 1. 运行构建命令：
 
    ```bash
-   pnpm run build
+   pnpm run build:new
    ```
 
 2. 打开 Chrome 扩展管理页面：
@@ -140,106 +136,87 @@ pnpm run lint
 ```
 chrome-plugin-reading-extension/
 ├── src/
-│   ├── components/          # Shadcn/UI 组件库
-│   │   └── ui/             # 统一 UI 组件（Button, Dialog, Switch 等）
-│   ├── content/            # 内容脚本
-│   │   ├── components/     # 阅读模式组件
-│   │   │   ├── ReadingSettingsPanel.tsx  # 悬浮设置面板
-│   │   │   └── ReaderView/               # 阅读视图组件
-│   │   ├── extractors/     # 内容提取器
-│   │   ├── features/       # 功能模块
-│   │   ├── workers/        # Web Workers
-│   │   └── unifiedContentScript.ts  # 内容脚本入口
-│   ├── popup/              # 弹出界面
-│   │   └── PopupShadcn.tsx # 极简 Popup 组件
-│   ├── background/         # 后台脚本
-│   ├── storage/            # 数据存储
-│   ├── store/              # 状态管理 (Zustand)
-│   ├── types/              # TypeScript 类型
-│   └── utils/              # 工具函数
+│   ├── background/
+│   │   └── index.ts          # Service Worker 入口
+│   ├── content/
+│   │   ├── index.ts          # 内容脚本入口
+│   │   ├── extractor.ts      # 内容提取器
+│   │   ├── ReaderView.tsx    # 阅读视图组件
+│   │   ├── SettingsPanel.tsx # 设置面板组件
+│   │   ├── CodeBlock.tsx     # 代码块组件
+│   │   ├── errorHandling.ts  # 错误处理
+│   │   └── styles.css        # 阅读模式样式
+│   ├── popup/
+│   │   ├── index.tsx         # Popup 入口
+│   │   ├── Popup.tsx         # Popup 组件
+│   │   └── styles.css        # Popup 样式
+│   └── shared/
+│       ├── storage.ts        # 存储工具
+│       ├── types.ts          # TypeScript 类型
+│       ├── constants.ts      # 常量和默认值
+│       └── index.ts          # 导出入口
 ├── public/
-│   ├── manifest.json       # Chrome 扩展清单
-│   └── icon*.png           # 扩展图标
-├── dist/                   # 构建输出（加载此目录）
-├── vite.config.ts          # Vite 主配置
-├── vite.content.config.ts  # 内容脚本配置
-├── vite.worker.config.ts   # Worker 配置
+│   ├── manifest.json         # Chrome 扩展清单
+│   └── icon*.png             # 扩展图标
+├── tests/
+│   ├── setup.ts              # 测试设置
+│   └── extractor.test.ts     # 提取器测试
+├── dist/                     # 构建输出（加载此目录）
 └── package.json
+
+总计: ~15 个核心文件（相比旧架构的 100+ 文件）
 ```
 
 ## 🏗️ 架构设计
 
-### 内容脚本架构
-
-采用**动态注入**和**按需加载**策略，最小化性能影响：
+### 简化的架构
 
 ```
-页面加载 → 注入最小化脚本 → 用户点击开关 → 动态加载完整功能
+┌─────────────────────────────────────────────────────────────┐
+│                     Chrome Extension                         │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   Popup     │  │  Background │  │   Content Script    │  │
+│  │  (React)    │  │  (Service   │  │                     │  │
+│  │             │  │   Worker)   │  │  ┌───────────────┐  │  │
+│  │ ┌─────────┐ │  │             │  │  │ ReaderView    │  │  │
+│  │ │ Toggle  │ │  │ ┌─────────┐ │  │  │ (React)       │  │  │
+│  │ │ Switch  │ │  │ │ Message │ │  │  └───────────────┘  │  │
+│  │ └─────────┘ │  │ │ Router  │ │  │  ┌───────────────┐  │  │
+│  └─────────────┘  │ └─────────┘ │  │  │ Settings      │  │  │
+│                   └─────────────┘  │  │ Panel         │  │  │
+│                                    │  └───────────────┘  │  │
+│                                    │  ┌───────────────┐  │  │
+│                                    │  │ Extractor     │  │  │
+│                                    │  └───────────────┘  │  │
+│                                    └─────────────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                    Shared Modules                            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │  Storage    │  │   Types     │  │   Constants         │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**核心特点**：
+### 设计原则
 
-- ✅ 初始注入体积小（< 500KB gzipped）
-- ✅ 不影响页面加载速度
-- ✅ 按需加载功能模块
-- ✅ 智能资源管理
+1. **简单优先**：每个模块只做一件事，做好一件事
+2. **最小依赖**：减少第三方库，只保留必要的（Readability、React）
+3. **直接实现**：避免过度抽象，代码应该直接表达意图
+4. **渐进增强**：核心功能必须可靠，高级功能可选
 
-### UI 设计系统
+## 🧪 测试
 
-采用 **Shadcn/UI** + **Tailwind CSS** 构建现代化界面：
+```bash
+# 运行所有测试
+pnpm run test
 
-**Popup 界面**（200×80px）
+# 监听模式
+pnpm run test:watch
 
-- 极简设计，仅包含阅读模式开关
-- 纯白背景，简洁优雅
-
-**悬浮设置面板**（220×500px）
-
-- 浮动在页面左侧的设置面板
-- 5 个核心设置项：主题、字号、行高、字体、宽度
-- 蓝色系配色，现代简约
-
-### 内容提取引擎
-
-基于 **Mozilla Readability** 的智能提取系统：
-
+# 覆盖率报告
+pnpm run test:coverage
 ```
-网页内容 → Readability 分析 → 提取主要内容 → 后处理 → 渲染展示
-```
-
-**处理流程**：
-
-1. **内容提取**：识别文章主体内容
-2. **清理过滤**：移除广告、导航等干扰
-3. **代码高亮**：处理代码块语法高亮
-4. **图片优化**：懒加载和预加载策略
-5. **样式应用**：根据用户设置渲染
-
-### 数据存储架构
-
-**状态管理**：Zustand + Chrome Storage API
-
-```typescript
-用户操作 → Zustand Store → Chrome Storage Middleware → 本地持久化
-```
-
-**存储内容**：
-
-- 用户阅读设置（主题、字号等）
-- 阅读进度记录
-- 自定义配置
-
-## 📚 更多文档
-
-- [📖 项目分析文档](./docs/PROJECT_ANALYSIS.md) - 完整的项目架构分析
-
-## 🎯 开发计划
-
-- [ ] 键盘快捷键支持
-- [ ] 多语言国际化
-- [ ] 更多主题选项
-- [ ] PDF 导出功能
-- [ ] 阅读统计分析
 
 ## 🤝 贡献指南
 

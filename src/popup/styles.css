@@ -1,0 +1,236 @@
+/**
+ * Popup Styles for AI Reading Extension
+ * Minimal, clean design following Requirements 6.1
+ */
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Popup container */
+.popup-container {
+  width: 320px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.popup-loading {
+  justify-content: center;
+  align-items: center;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e5e5;
+  border-top-color: #1a1a1a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Header */
+.popup-header {
+  margin-bottom: 32px;
+}
+
+.popup-title {
+  font-size: 24px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+
+.popup-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Main content */
+.popup-main {
+  margin-bottom: 24px;
+}
+
+/* Toggle card */
+.toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 1px solid #e5e5e5;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.toggle-card:hover {
+  border-color: #d1d5db;
+}
+
+.toggle-card.active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.toggle-card.active:hover {
+  border-color: #93c5fd;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+.toggle-status {
+  font-size: 13px;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.toggle-status.active {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+/* Error and warning messages */
+.error-message,
+.warning-message {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.error-message {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.warning-message {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+/* Features section */
+.popup-features {
+  flex: 1;
+}
+
+.features-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.features-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #4b5563;
+  transition: color 0.2s ease;
+}
+
+.feature-item:hover {
+  color: #1a1a1a;
+}
+
+.feature-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.feature-item:hover .feature-dot {
+  transform: scale(1.5);
+}
+
+.feature-dot.green {
+  background: #10b981;
+}
+
+.feature-dot.purple {
+  background: #8b5cf6;
+}
+
+.feature-dot.amber {
+  background: #f59e0b;
+}
+
+/* Footer */
+.popup-footer {
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+  text-align: center;
+}
+
+.version {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation-duration: 1.5s;
+  }
+  
+  .toggle-card,
+  .toggle-status,
+  .feature-item,
+  .feature-dot {
+    transition: none;
+  }
+}

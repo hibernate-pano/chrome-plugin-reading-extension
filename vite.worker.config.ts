@@ -34,8 +34,11 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false,
-        drop_debugger: false
+        drop_console: process.env.NODE_ENV === 'production', // 生产环境移除console
+        drop_debugger: true, // 生产环境移除debugger
+        pure_funcs: process.env.NODE_ENV === 'production' 
+          ? ['console.debug', 'console.log'] // 生产环境移除调试日志
+          : []
       }
     }
   }

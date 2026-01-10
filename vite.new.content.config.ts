@@ -1,3 +1,9 @@
+/**
+ * Vite Configuration for Refactored Content Script
+ * Builds content script as IIFE from src directory
+ * Requirements: 7.3 - Bundle size < 500KB
+ */
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
@@ -15,7 +21,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      'turndown': resolve(__dirname, 'node_modules/turndown/lib/turndown.browser.cjs')
+      '@shared': resolve(__dirname, 'src/shared'),
+      '@content': resolve(__dirname, 'src/content'),
     }
   },
   css: {
@@ -23,7 +30,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: false,
+    emptyOutDir: false, // Don't empty - popup/background already built
     rollupOptions: {
       external: ['chrome'],
       input: {
@@ -33,16 +40,25 @@ export default defineConfig({
         globals: {
           chrome: 'chrome'
         },
-        format: 'iife',
+        format: 'iife', // Content scripts must be IIFE
         dir: 'dist',
-        entryFileNames: () => 'content.js',
-        chunkFileNames: 'assets/content-chunks/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        entryFileNames: 'content.js',
+        // Inline all chunks for IIFE format
+        inlineDynamicImports: true,
+        assetFileNames: (assetInfo) => {
+          // CSS for content script
+          if (assetInfo.name?.endsWith('.css')) {
+            return 'content.css';
+          }
+          return 'assets/[name]-[hash].[ext]';
+        }
       }
     },
-    minify: 'terser',
-    target: 'es2020',
+    
+    // Build optimizations
     sourcemap: process.env.NODE_ENV !== 'production',
+    target: 'es2020',
+    minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: process.env.NODE_ENV === 'production',
@@ -54,5 +70,3 @@ export default defineConfig({
     }
   }
 });
-
-

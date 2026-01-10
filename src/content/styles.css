@@ -1,0 +1,929 @@
+/**
+ * Reading Mode Styles
+ * Simplified styles for the refactored AI Reading Extension
+ * Requirements: 3.1, 4.2, 6.5
+ */
+
+/* ============================================
+   CSS Variables & Theme System
+   ============================================ */
+
+:root {
+  /* Default (Light) Theme */
+  --reader-bg: #ffffff;
+  --reader-text: #1a1a1a;
+  --reader-text-muted: #666666;
+  --reader-accent: #0066cc;
+  --reader-border: #e5e5e5;
+  --reader-code-bg: #f5f5f5;
+  --reader-selection: rgba(0, 102, 204, 0.2);
+  --reader-focus-ring: #0066cc;
+  --reader-focus-ring-offset: 2px;
+}
+
+/* ============================================
+   Keyboard Navigation & Focus Styles
+   ============================================ */
+
+/* Skip to content link - visible only on focus */
+.reader-skip-link {
+  position: fixed;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483010;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--reader-accent);
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: top 0.2s ease;
+}
+
+.reader-skip-link:focus {
+  top: 0;
+  outline: none;
+}
+
+/* Global focus styles for keyboard navigation */
+.reader-overlay *:focus {
+  outline: 2px solid var(--reader-focus-ring);
+  outline-offset: var(--reader-focus-ring-offset);
+}
+
+/* Remove focus outline for mouse users */
+.reader-overlay *:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Enhanced focus-visible styles */
+.reader-overlay *:focus-visible {
+  outline: 2px solid var(--reader-focus-ring);
+  outline-offset: var(--reader-focus-ring-offset);
+}
+
+/* Focus styles for content area when skipped to */
+.reader-content:focus {
+  outline: none;
+}
+
+.reader-content:focus-visible {
+  outline: 2px dashed var(--reader-accent);
+  outline-offset: 4px;
+}
+
+/* ============================================
+   Theme Variants
+   ============================================ */
+
+/* Light Theme (default) */
+.reader-theme-light {
+  --reader-bg: #ffffff;
+  --reader-text: #1a1a1a;
+  --reader-text-muted: #666666;
+  --reader-accent: #0066cc;
+  --reader-border: #e5e5e5;
+  --reader-code-bg: #f5f5f5;
+  --reader-selection: rgba(0, 102, 204, 0.2);
+}
+
+/* Dark Theme */
+.reader-theme-dark {
+  --reader-bg: #1a1a1a;
+  --reader-text: #e5e5e5;
+  --reader-text-muted: #999999;
+  --reader-accent: #66b3ff;
+  --reader-border: #333333;
+  --reader-code-bg: #2d2d2d;
+  --reader-selection: rgba(102, 179, 255, 0.3);
+}
+
+/* Sepia Theme */
+.reader-theme-sepia {
+  --reader-bg: #f4ecd8;
+  --reader-text: #5c4b37;
+  --reader-text-muted: #8b7355;
+  --reader-accent: #8b6914;
+  --reader-border: #d4c4a8;
+  --reader-code-bg: #ebe3d0;
+  --reader-selection: rgba(139, 105, 20, 0.2);
+}
+
+/* ============================================
+   Reader Overlay & Container
+   ============================================ */
+
+.reader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem;
+  overflow-y: auto;
+  background-color: var(--reader-bg);
+  transition: background-color 0.3s ease;
+}
+
+.reader-container {
+  width: 100%;
+  max-width: var(--reader-page-width, 800px);
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: var(--reader-bg);
+  color: var(--reader-text);
+  font-family: var(--reader-font-family, system-ui, -apple-system, sans-serif);
+  font-size: var(--reader-font-size, 18px);
+  line-height: var(--reader-line-height, 1.6);
+  transition: all 0.3s ease;
+}
+
+/* Body lock when reader is active */
+body.reader-mode-active {
+  overflow: hidden;
+}
+
+/* ============================================
+   Typography
+   ============================================ */
+
+.reader-content h1,
+.reader-content h2,
+.reader-content h3,
+.reader-content h4,
+.reader-content h5,
+.reader-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--reader-text);
+}
+
+.reader-content h1 { font-size: 2em; }
+.reader-content h2 { font-size: 1.5em; }
+.reader-content h3 { font-size: 1.25em; }
+.reader-content h4 { font-size: 1.1em; }
+.reader-content h5 { font-size: 1em; }
+.reader-content h6 { font-size: 0.9em; }
+
+.reader-content p {
+  margin-bottom: 1em;
+}
+
+.reader-content a {
+  color: var(--reader-accent);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.reader-content a:hover {
+  text-decoration-color: var(--reader-accent);
+}
+
+/* ============================================
+   Lists
+   ============================================ */
+
+.reader-content ul,
+.reader-content ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.reader-content li {
+  margin-bottom: 0.5em;
+}
+
+.reader-content ul ul,
+.reader-content ol ol,
+.reader-content ul ol,
+.reader-content ol ul {
+  margin: 0.5em 0;
+}
+
+/* ============================================
+   Blockquotes
+   ============================================ */
+
+.reader-content blockquote {
+  margin: 1.5em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--reader-accent);
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text-muted);
+  font-style: italic;
+}
+
+.reader-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   Images
+   ============================================ */
+
+.reader-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 1em 0;
+  border-radius: 4px;
+}
+
+.reader-content figure {
+  margin: 1.5em 0;
+  text-align: center;
+}
+
+.reader-content figcaption {
+  margin-top: 0.5em;
+  font-size: 0.9em;
+  color: var(--reader-text-muted);
+}
+
+/* ============================================
+   Tables
+   ============================================ */
+
+.reader-content table {
+  width: 100%;
+  margin: 1em 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.reader-content th,
+.reader-content td {
+  padding: 0.75em;
+  text-align: left;
+  border: 1px solid var(--reader-border);
+}
+
+.reader-content th {
+  background-color: var(--reader-code-bg);
+  font-weight: 600;
+}
+
+.reader-content tr:nth-child(even) {
+  background-color: var(--reader-code-bg);
+}
+
+/* ============================================
+   Inline Code
+   ============================================ */
+
+.reader-content code:not(pre code) {
+  padding: 0.2em 0.4em;
+  background-color: var(--reader-code-bg);
+  border-radius: 3px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+/* ============================================
+   Code Blocks
+   ============================================ */
+
+.reader-code-block {
+  position: relative;
+  margin: 1.5em 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--reader-code-bg);
+  border: 1px solid var(--reader-border);
+}
+
+.reader-code-block__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em 1em;
+  background-color: var(--reader-border);
+  font-size: 0.85em;
+  color: var(--reader-text-muted);
+}
+
+.reader-code-block__language {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.reader-code-block__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.25em 0.5em;
+  background: transparent;
+  border: 1px solid var(--reader-border);
+  border-radius: 4px;
+  color: var(--reader-text-muted);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reader-code-block__copy:hover {
+  background-color: var(--reader-bg);
+  color: var(--reader-text);
+}
+
+.reader-code-block__copy:focus {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+}
+
+.reader-code-block__copy--copied {
+  color: #22c55e;
+  border-color: #22c55e;
+}
+
+.reader-code-block pre {
+  margin: 0;
+  padding: 1em;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+.reader-code-block code {
+  display: block;
+  background: none;
+  padding: 0;
+  color: var(--reader-text);
+}
+
+/* ============================================
+   Syntax Highlighting (Basic)
+   ============================================ */
+
+/* Keywords */
+.reader-code-block .token-keyword {
+  color: #d73a49;
+}
+.reader-theme-dark .reader-code-block .token-keyword {
+  color: #ff7b72;
+}
+.reader-theme-sepia .reader-code-block .token-keyword {
+  color: #a0522d;
+}
+
+/* Strings */
+.reader-code-block .token-string {
+  color: #032f62;
+}
+.reader-theme-dark .reader-code-block .token-string {
+  color: #a5d6ff;
+}
+.reader-theme-sepia .reader-code-block .token-string {
+  color: #6b4423;
+}
+
+/* Comments */
+.reader-code-block .token-comment {
+  color: #6a737d;
+  font-style: italic;
+}
+.reader-theme-dark .reader-code-block .token-comment {
+  color: #8b949e;
+}
+.reader-theme-sepia .reader-code-block .token-comment {
+  color: #8b7355;
+}
+
+/* Numbers */
+.reader-code-block .token-number {
+  color: #005cc5;
+}
+.reader-theme-dark .reader-code-block .token-number {
+  color: #79c0ff;
+}
+.reader-theme-sepia .reader-code-block .token-number {
+  color: #8b4513;
+}
+
+/* Functions */
+.reader-code-block .token-function {
+  color: #6f42c1;
+}
+.reader-theme-dark .reader-code-block .token-function {
+  color: #d2a8ff;
+}
+.reader-theme-sepia .reader-code-block .token-function {
+  color: #704214;
+}
+
+/* Operators */
+.reader-code-block .token-operator {
+  color: #d73a49;
+}
+.reader-theme-dark .reader-code-block .token-operator {
+  color: #ff7b72;
+}
+.reader-theme-sepia .reader-code-block .token-operator {
+  color: #a0522d;
+}
+
+/* Punctuation */
+.reader-code-block .token-punctuation {
+  color: var(--reader-text);
+}
+
+/* ============================================
+   Header
+   ============================================ */
+
+.reader-header {
+  margin-bottom: 2em;
+  padding-bottom: 1em;
+  border-bottom: 1px solid var(--reader-border);
+}
+
+.reader-title {
+  margin: 0 0 0.5em;
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--reader-text);
+}
+
+.reader-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  font-size: 0.9em;
+  color: var(--reader-text-muted);
+}
+
+.reader-meta__item {
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
+/* ============================================
+   Floating Button
+   ============================================ */
+
+.reader-floating-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 2147483001;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--reader-accent);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reader-floating-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.reader-floating-btn:focus {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+}
+
+.reader-floating-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ============================================
+   Settings Panel
+   ============================================ */
+
+.reader-settings-panel {
+  position: fixed;
+  bottom: 5rem;
+  right: 2rem;
+  z-index: 2147483002;
+  width: 280px;
+  padding: 1rem;
+  background-color: var(--reader-bg);
+  border: 1px solid var(--reader-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.reader-settings-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--reader-border);
+}
+
+.reader-settings-panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--reader-text);
+}
+
+.reader-settings-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.reader-settings-panel__close:hover {
+  background-color: var(--reader-code-bg);
+}
+
+.reader-settings-panel__close:focus {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+}
+
+/* Settings Group */
+.reader-settings-group {
+  margin-bottom: 1rem;
+}
+
+.reader-settings-group:last-child {
+  margin-bottom: 0;
+}
+
+.reader-settings-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--reader-text-muted);
+}
+
+/* Theme Selector */
+.reader-theme-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.reader-theme-btn {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: var(--reader-code-bg);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--reader-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reader-theme-btn:hover {
+  border-color: var(--reader-border);
+}
+
+.reader-theme-btn:focus {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+}
+
+.reader-theme-btn--active {
+  border-color: var(--reader-accent);
+  background-color: var(--reader-bg);
+}
+
+/* Slider */
+.reader-slider {
+  width: 100%;
+  height: 6px;
+  background-color: var(--reader-code-bg);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.reader-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background-color: var(--reader-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.reader-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.reader-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background-color: var(--reader-accent);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.reader-slider:focus {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+}
+
+.reader-slider-value {
+  display: inline-block;
+  min-width: 3em;
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--reader-text-muted);
+}
+
+.reader-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.reader-slider-row .reader-slider {
+  flex: 1;
+}
+
+/* ============================================
+   Close Button
+   ============================================ */
+
+.reader-close-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2147483001;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--reader-code-bg);
+  border: 1px solid var(--reader-border);
+  border-radius: 50%;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reader-close-btn:hover {
+  background-color: var(--reader-bg);
+  color: var(--reader-text);
+}
+
+.reader-close-btn:focus {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+}
+
+.reader-close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+
+.reader-container ::selection {
+  background-color: var(--reader-selection);
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+
+.reader-overlay::-webkit-scrollbar {
+  width: 8px;
+}
+
+.reader-overlay::-webkit-scrollbar-track {
+  background: var(--reader-code-bg);
+}
+
+.reader-overlay::-webkit-scrollbar-thumb {
+  background: var(--reader-border);
+  border-radius: 4px;
+}
+
+.reader-overlay::-webkit-scrollbar-thumb:hover {
+  background: var(--reader-text-muted);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes reader-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reader-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reader-overlay {
+  animation: reader-fade-in 0.3s ease;
+}
+
+.reader-settings-panel {
+  animation: reader-slide-up 0.2s ease;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+
+@media (max-width: 768px) {
+  .reader-overlay {
+    padding: 1rem;
+  }
+
+  .reader-container {
+    padding: 1rem;
+  }
+
+  .reader-title {
+    font-size: 1.5em;
+  }
+
+  .reader-floating-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+  }
+
+  .reader-settings-panel {
+    bottom: 4rem;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+  }
+
+  .reader-close-btn {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .reader-container {
+    padding: 0.75rem;
+  }
+
+  .reader-title {
+    font-size: 1.25em;
+  }
+
+  .reader-meta {
+    flex-direction: column;
+    gap: 0.5em;
+  }
+
+  .reader-code-block pre {
+    font-size: 0.8em;
+  }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  .reader-overlay {
+    position: static;
+    padding: 0;
+    background: white;
+  }
+
+  .reader-floating-btn,
+  .reader-settings-panel,
+  .reader-close-btn,
+  .reader-skip-link {
+    display: none;
+  }
+
+  .reader-container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .reader-code-block__copy {
+    display: none;
+  }
+}
+
+/* ============================================
+   Enhanced Keyboard Navigation Styles
+   ============================================ */
+
+/* Button focus states */
+.reader-close-btn:focus-visible,
+.reader-floating-btn:focus-visible,
+.reader-settings-panel__close:focus-visible,
+.reader-code-block__copy:focus-visible,
+.reader-theme-btn:focus-visible {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.2);
+}
+
+/* Slider focus states */
+.reader-slider:focus-visible {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+}
+
+.reader-slider:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.3);
+}
+
+/* Theme button keyboard navigation */
+.reader-theme-btn:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+/* Code block focus for scrolling */
+.reader-code-block code:focus-visible {
+  outline: 2px dashed var(--reader-accent);
+  outline-offset: 2px;
+}
+
+/* Link focus within content */
+.reader-content a:focus-visible {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --reader-focus-ring: #000000;
+  }
+  
+  .reader-theme-dark {
+    --reader-focus-ring: #ffffff;
+  }
+  
+  .reader-skip-link:focus {
+    background-color: #000000;
+    color: #ffffff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .reader-skip-link {
+    transition: none;
+  }
+  
+  .reader-slider::-webkit-slider-thumb {
+    transition: none;
+  }
+  
+  .reader-overlay,
+  .reader-settings-panel {
+    animation: none;
+  }
+}

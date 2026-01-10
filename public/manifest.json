@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Reading Extension",
-  "version": "1.8.13",
+  "version": "2.0.0",
   "description": "An AI-powered reading extension for Chrome",
   "action": {
     "default_icon": {
@@ -9,7 +9,7 @@
       "48": "icon48.png",
       "128": "icon128.png"
     },
-    "default_popup": "index.html"
+    "default_popup": "popup.html"
   },
   "permissions": [
     "storage",
@@ -17,11 +17,18 @@
     "tabs",
     "scripting"
   ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "web_accessible_resources": [
     {
       "resources": [
         "assets/*",
-        "workers/*"
+        "content.css"
       ],
       "matches": [
         "<all_urls>"

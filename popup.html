@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>阅读助手</title>
+  <style>
+    /* Critical CSS for initial render */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      width: 320px;
+      min-height: 400px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+    /* Loading state */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loading">加载中...</div>
+  </div>
+  <script type="module" src="./src/popup/index.tsx"></script>
+</body>
+</html>
