@@ -43,11 +43,25 @@ export default defineConfig({
     minify: 'terser',
     target: 'es2020',
     sourcemap: process.env.NODE_ENV !== 'production',
+    cssCodeSplit: true,
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 600,
     terserOptions: {
       compress: {
-        drop_console: false, // 暂时禁用以便调试
-        drop_debugger: false,
-        pure_funcs: []
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info'],
+        passes: 2,
+        ecma: 2020,
+        unsafe_arrows: true,
+        unsafe_methods: true
+      },
+      mangle: {
+        safari10: true,
+        toplevel: true
+      },
+      format: {
+        comments: false
       }
     }
   }
