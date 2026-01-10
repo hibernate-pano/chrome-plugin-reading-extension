@@ -3,7 +3,7 @@ import { UserSettings } from '../../types';
 
 interface ReadingSettingsPanelProps {
   settings: UserSettings;
-  onSettingsChange: (key: keyof UserSettings, value: any) => void;
+  onSettingsChange: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;
   onClose?: () => void;
 }
 
@@ -40,7 +40,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
     setIsOpen(false);
   };
 
-  const handleChange = (key: keyof UserSettings, value: any) => {
+  const handleChange = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     onSettingsChange(key, value);
     // 注意：不要关闭面板，让用户可以连续调整多个设置
   };

@@ -237,8 +237,32 @@ export const PopupShadcn: React.FC = React.memo(() => {
         {/* 底部 */}
         <div className="pt-6 border-t border-gray-100">
           <p className="text-xs text-gray-400 text-center">
-            Version 1.8.12
+            Version 1.9.0
           </p>
+        </div>
+
+        {/* 快捷键提示 */}
+        <div className="pt-4 px-6 pb-2 border-t border-gray-100">
+          <details className="group">
+            <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 transition-colors flex items-center justify-between">
+              <span>⌨️ 键盘快捷键</span>
+              <span className="group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="mt-3 space-y-2 text-xs text-gray-600">
+              <div className="flex justify-between">
+                <span>切换阅读模式</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-gray-700">Ctrl+Shift+R</kbd>
+              </div>
+              <div className="flex justify-between">
+                <span>打开设置</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-gray-700">Ctrl+Shift+S</kbd>
+              </div>
+              <div className="flex justify-between">
+                <span>增大字号</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-gray-700">Ctrl+Shift++</kbd>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </div>
