@@ -8,6 +8,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef, type JSX } fr
 import type { Settings, ExtractedContent } from '../shared/types';
 import { SettingsPanel } from './SettingsPanel';
 import { CodeBlock } from './CodeBlock';
+import { ttsReader } from '../shared/tts';
 
 interface ReaderViewProps {
   /** Extracted content to display */
@@ -36,6 +37,7 @@ export function ReaderView({
   isFavorited = false,
 }: ReaderViewProps): JSX.Element {
   const [showSettings, setShowSettings] = useState(false);
+  const [isTTSPlaying, setIsTTSPlaying] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLElement>(null);
@@ -75,6 +77,27 @@ export function ReaderView({
   // Focus close button on mount for keyboard accessibility
   useEffect(() => {
     closeButtonRef.current?.focus();
+  }, []);
+
+  // TTS controls
+  const toggleTTS = useCallback(() => {
+    if (isTTSPlaying) {
+      ttsReader.stop();
+      setIsTTSPlaying(false);
+    } else {
+      // Extract text content from the article
+      const text = content.content.replace(/<[^>]*>/g, ' ').substring(0, 5000);
+      ttsReader.onStart(() => setIsTTSPlaying(true));
+      ttsReader.onEnd(() => setIsTTSPlaying(false));
+      ttsReader.speak(text);
+    }
+  }, [isTTSPlaying, content]);
+
+  // Cleanup TTS on unmount
+  useEffect(() => {
+    return () => {
+      ttsReader.stop();
+    };
   }, []);
 
   // Handle keyboard activation for buttons
@@ -173,6 +196,14 @@ export function ReaderView({
                 {isFavorited ? '❤️' : '🤍'}
               </button>
             )}
+            <button 
+              className="reader-tts-btn"
+              onClick={toggleTTS}
+              aria-label={isTTSPlaying ? '停止朗读' : '朗读文章'}
+              title={isTTSPlaying ? '停止' : '朗读'}
+            >
+              {isTTSPlaying ? '🔊' : '🔈'}
+            </button>
           </div>
         </header>
 

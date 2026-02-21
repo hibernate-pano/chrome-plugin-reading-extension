@@ -3,14 +3,7 @@
  * 使用 Web Speech API 朗读文章
  */
 
-export interface TTSOptions {
-  rate: number;      // 0.1 - 10
-  pitch: number;    // 0 - 2
-  voice: string;    // voice URI
-  volume: number;   // 0 - 1
-}
-
-const DEFAULT_TTS_OPTIONS: TTSOptions = {
+const DEFAULT_TTS_OPTIONS = {
   rate: 1.0,
   pitch: 1.0,
   voice: '',
@@ -20,29 +13,27 @@ const DEFAULT_TTS_OPTIONS: TTSOptions = {
 class TTSReader {
   constructor() {
     this.synth = window.speechSynthesis;
-    this.utterance: SpeechSynthesisUtterance | null = null;
+    this.utterance = null;
     this.isPlaying = false;
     this.isPaused = false;
-    this.onEndCallback: (() => void) | null = null;
-    this.onStartCallback: (() => void) | null = null;
+    this.onEndCallback = null;
+    this.onStartCallback = null;
   }
 
   /**
    * 获取可用语音列表
    */
-  getVoices(): SpeechSynthesisVoice[] {
+  getVoices() {
     return this.synth.getVoices();
   }
 
   /**
    * 获取默认语音（优先中文）
    */
-  getDefaultVoice(): SpeechSynthesisVoice | null {
+  getDefaultVoice() {
     const voices = this.getVoices();
-    // 优先中文语音
     const cnVoice = voices.find(v => v.lang.startsWith('zh'));
     if (cnVoice) return cnVoice;
-    // 其次英文
     const enVoice = voices.find(v => v.lang.startsWith('en'));
     return enVoice || voices[0] || null;
   }
@@ -50,7 +41,7 @@ class TTSReader {
   /**
    * 朗读文本
    */
-  speak(text: string, options: Partial<TTSOptions> = {}): void {
+  speak(text, options = {}) {
     this.stop();
 
     const opts = { ...DEFAULT_TTS_OPTIONS, ...options };
@@ -60,7 +51,6 @@ class TTSReader {
     this.utterance.pitch = opts.pitch;
     this.utterance.volume = opts.volume;
 
-    // 设置语音
     if (opts.voice) {
       const voice = this.getVoices().find(v => v.voiceURI === opts.voice);
       if (voice) this.utterance.voice = voice;
@@ -72,13 +62,13 @@ class TTSReader {
     this.utterance.onstart = () => {
       this.isPlaying = true;
       this.isPaused = false;
-      this.onStartCallback?.();
+      if (this.onStartCallback) this.onStartCallback();
     };
 
     this.utterance.onend = () => {
       this.isPlaying = false;
       this.isPaused = false;
-      this.onEndCallback?.();
+      if (this.onEndCallback) this.onEndCallback();
     };
 
     this.utterance.onerror = () => {
@@ -92,7 +82,7 @@ class TTSReader {
   /**
    * 暂停
    */
-  pause(): void {
+  pause() {
     if (this.isPlaying && !this.isPaused) {
       this.synth.pause();
       this.isPaused = true;
@@ -102,7 +92,7 @@ class TTSReader {
   /**
    * 继续
    */
-  resume(): void {
+  resume() {
     if (this.isPaused) {
       this.synth.resume();
       this.isPaused = false;
@@ -112,7 +102,7 @@ class TTSReader {
   /**
    * 停止
    */
-  stop(): void {
+  stop() {
     this.synth.cancel();
     this.isPlaying = false;
     this.isPaused = false;
@@ -121,7 +111,7 @@ class TTSReader {
   /**
    * 切换播放/暂停
    */
-  toggle(): void {
+  toggle() {
     if (this.isPlaying && !this.isPaused) {
       this.pause();
     } else if (this.isPaused) {
@@ -132,25 +122,18 @@ class TTSReader {
   /**
    * 是否正在播放
    */
-  getIsPlaying(): boolean {
+  getIsPlaying() {
     return this.isPlaying;
-  }
-
-  /**
-   * 是否暂停
-   */
-  getIsPaused(): boolean {
-    return this.isPaused;
   }
 
   /**
    * 设置回调
    */
-  onStart(callback: () => void): void {
+  onStart(callback) {
     this.onStartCallback = callback;
   }
 
-  onEnd(callback: () => void): void {
+  onEnd(callback) {
     this.onEndCallback = callback;
   }
 }
