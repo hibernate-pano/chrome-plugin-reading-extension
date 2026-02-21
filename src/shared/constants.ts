@@ -75,6 +75,9 @@ export const THEME_COLORS: Record<Theme, {
  */
 export const STORAGE_KEYS = {
   SETTINGS: 'reader_settings',
+  READING_HISTORY: 'reading_history',
+  FAVORITES: 'reading_favorites',
+  LAST_SYNC: 'last_sync_time',
 } as const;
 
 /**

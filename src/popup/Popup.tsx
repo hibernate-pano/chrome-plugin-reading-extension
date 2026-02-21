@@ -7,6 +7,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import type { StateResponse } from '../shared/types';
 import { MESSAGE_TYPES } from '../shared/constants';
+import { getReadingHistory, type ReadingRecord } from '../shared/history';
 
 /**
  * Simple toggle switch component
@@ -249,11 +250,53 @@ export const Popup: React.FC = () => {
         </ul>
       </section>
 
+      {/* Reading History - Pro Feature */}
+      <ReadingHistorySection />
+
       {/* Footer */}
       <footer className="popup-footer">
         <span className="version">Version 1.9.0</span>
       </footer>
     </div>
+  );
+};
+
+const ReadingHistorySection: React.FC = () => {
+  const [history, setHistory] = useState<ReadingRecord[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    getReadingHistory().then(h => setHistory(h.slice(0, 5)));
+  }, []);
+
+  if (history.length === 0) return null;
+
+  return (
+    <section className="popup-history">
+      <button 
+        className="history-toggle"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span>📚 阅读历史</span>
+        <span className="history-count">{history.length}</span>
+        <span className="history-arrow">{isExpanded ? '▼' : '▶'}</span>
+      </button>
+      
+      {isExpanded && (
+        <ul className="history-list">
+          {history.map(record => (
+            <li key={record.id} className="history-item">
+              <a href={record.url} target="_blank" rel="noopener noreferrer">
+                <span className="history-title">{record.title}</span>
+                <span className="history-meta">
+                  {record.siteName} · {record.readingTime}分钟
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 };
 

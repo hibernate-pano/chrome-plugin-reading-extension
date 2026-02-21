@@ -18,6 +18,7 @@ import { getSettings, saveSettings } from '../shared/storage';
 import { extractContent, clearCache } from './extractor';
 import { ReaderView } from './ReaderView';
 import { ErrorBoundary, handleError } from './errorHandling';
+import { addToHistory } from '../shared/history';
 
 // Reader container ID
 const READER_CONTAINER_ID = 'ai-reader-root';
@@ -146,6 +147,24 @@ async function enableReadingMode(): Promise<void> {
     }
 
     currentContent = result.data;
+
+    // Record reading history
+    if (result.data) {
+      addToHistory(
+        window.location.href,
+        result.data.title,
+        {
+          excerpt: result.data.excerpt,
+          byline: result.data.byline,
+          siteName: result.data.siteName,
+          length: result.data.length,
+        },
+        {
+          theme: state.settings.theme,
+          fontSize: state.settings.fontSize,
+        }
+      );
+    }
 
     // Load latest settings
     state.settings = await getSettings();
