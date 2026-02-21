@@ -16,12 +16,58 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 /**
- * Settings constraints
+ * Default settings constraints
  */
 export const SETTINGS_CONSTRAINTS = {
   fontSize: { min: 12, max: 32 },
   lineHeight: { min: 1.2, max: 2.0 },
   pageWidth: { min: 600, max: 1200 },
+} as const;
+
+/**
+ * Custom themes (Pro feature)
+ */
+export const CUSTOM_THEMES = {
+  ocean: {
+    name: '海洋',
+    name_en: 'Ocean',
+    colors: {
+      background: '#e8f4f8',
+      text: '#1a3a4a',
+      accent: '#0077b6',
+      border: '#90e0ef',
+    }
+  },
+  forest: {
+    name: '森林',
+    name_en: 'Forest',
+    colors: {
+      background: '#f0f7f4',
+      text: '#1d3a2a',
+      accent: '#2d6a4f',
+      border: '#95d5b2',
+    }
+  },
+  sunset: {
+    name: '日落',
+    name_en: 'Sunset',
+    colors: {
+      background: '#fff5f0',
+      text: '#4a2c2a',
+      accent: '#e85d04',
+      border: '#ffccbc',
+    }
+  },
+  galaxy: {
+    name: '星河',
+    name_en: 'Galaxy',
+    colors: {
+      background: '#1a1a2e',
+      text: '#e8e8e8',
+      accent: '#7b2cbf',
+      border: '#3c096c',
+    }
+  },
 } as const;
 
 /**
