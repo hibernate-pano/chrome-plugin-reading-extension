@@ -18,6 +18,10 @@ interface ReaderViewProps {
   onClose: () => void;
   /** Callback when settings change */
   onSettingsChange: (settings: Partial<Settings>) => void;
+  /** Callback to add to favorites */
+  onAddToFavorites?: () => void;
+  /** Whether current article is favorited */
+  isFavorited?: boolean;
 }
 
 /**
@@ -28,6 +32,8 @@ export function ReaderView({
   settings,
   onClose,
   onSettingsChange,
+  onAddToFavorites,
+  isFavorited = false,
 }: ReaderViewProps): JSX.Element {
   const [showSettings, setShowSettings] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -157,6 +163,16 @@ export function ReaderView({
               <TextIcon aria-hidden="true" />
               <span>{content.wordCount.toLocaleString()} words</span>
             </span>
+            {onAddToFavorites && (
+              <button 
+                className="reader-favorite-btn"
+                onClick={onAddToFavorites}
+                aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                title={isFavorited ? '已收藏' : '收藏文章'}
+              >
+                {isFavorited ? '❤️' : '🤍'}
+              </button>
+            )}
           </div>
         </header>
 

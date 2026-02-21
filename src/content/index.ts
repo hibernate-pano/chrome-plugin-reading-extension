@@ -19,6 +19,7 @@ import { extractContent, clearCache } from './extractor';
 import { ReaderView } from './ReaderView';
 import { ErrorBoundary, handleError } from './errorHandling';
 import { addToHistory } from '../shared/history';
+import { addToFavorites, isFavorited } from '../shared/favorites';
 
 // Reader container ID
 const READER_CONTAINER_ID = 'ai-reader-root';
@@ -257,6 +258,34 @@ async function updateSettings(newSettings: Partial<Settings>): Promise<void> {
 }
 
 /**
+ * Add current article to favorites
+ */
+async function toggleFavorite(): Promise<boolean> {
+  if (!currentContent) return false;
+  
+  const result = await isFavorited(window.location.href, currentContent.title);
+  
+  if (result) {
+    // Already favorited, remove it (not implemented yet)
+    return false;
+  } else {
+    // Add to favorites
+    await addToFavorites(
+      window.location.href,
+      currentContent.title,
+      {
+        excerpt: currentContent.excerpt,
+        byline: currentContent.byline,
+        siteName: currentContent.siteName,
+        content: currentContent.content,
+        length: currentContent.length,
+      }
+    );
+    return true;
+  }
+}
+
+/**
  * Create the reader container element
  */
 function createReaderContainer(): HTMLElement {
@@ -307,6 +336,7 @@ function renderReaderView(container: HTMLElement): void {
           settings: state.settings,
           onClose: disableReadingMode,
           onSettingsChange: updateSettings,
+          onAddToFavorites: toggleFavorite,
         }),
       }
     )
