@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ReadFlow Pro</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 360px;
+      min-height: 480px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #333;
+    }
+    
+    .onboarding-container { padding: 24px; min-height: 480px; display: flex; flex-direction: column; }
+    .onboarding-header { text-align: center; margin-bottom: 24px; }
+    .onboarding-icon { font-size: 48px; margin-bottom: 12px; }
+    .onboarding-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 4px; }
+    .onboarding-subtitle { font-size: 14px; color: rgba(255,255,255,0.8); }
+    
+    .onboarding-progress { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
+    .onboarding-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.3s; }
+    .onboarding-dot.active { background: white; width: 24px; border-radius: 4px; }
+    
+    .onboarding-card {
+      background: white; border-radius: 16px; padding: 24px; flex: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .onboarding-card-icon { font-size: 56px; margin-bottom: 16px; }
+    .onboarding-card-title { font-size: 18px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; }
+    .onboarding-card-content { font-size: 14px; color: #666; line-height: 1.6; }
+    .onboarding-card-content code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    
+    .onboarding-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .onboarding-btn { padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
+    .onboarding-btn-primary { background: linear-gradient(135deg, #10b981, #059669); color: white; flex: 1; }
+    .onboarding-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16,185,129,0.4); }
+    .onboarding-btn-secondary { background: #f5f5f5; color: #666; }
+    .onboarding-btn-secondary:hover { background: #eee; }
+    
+    .onboarding-skip { text-align: center; margin-top: 16px; }
+    .onboarding-skip a { color: rgba(255,255,255,0.7); font-size: 13px; text-decoration: none; }
+    .onboarding-skip a:hover { color: white; }
+    
+    .changelog-container { background: white; border-radius: 16px; margin: 16px; max-height: 420px; overflow-y: auto; }
+    .changelog-header { padding: 20px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 10; }
+    .changelog-title { font-size: 18px; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 8px; }
+    .changelog-version { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .changelog-item { padding: 16px 20px; border-bottom: 1px solid #f5f5f5; }
+    .changelog-version-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .changelog-version-tag { background: #f0f0f0; color: #333; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .changelog-date { font-size: 12px; color: #999; }
+    .changelog-features { list-style: none; }
+    .changelog-features li { font-size: 13px; color: #666; padding: 4px 0; padding-left: 16px; position: relative; }
+    .changelog-features li::before { content: '✓'; position: absolute; left: 0; color: #10b981; font-weight: bold; }
+    .changelog-skip { text-align: center; padding: 16px; background: #f9f9f9; }
+    .changelog-skip button { background: none; border: none; color: #666; font-size: 13px; cursor: pointer; }
+    .changelog-skip button:hover { color: #333; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script>
+    const CHANGELOG = [
+      { version: '2.8.0', date: '2026-02-21', features: ['新增：入门引导', '新增：更新日志', 'UI/UX优化'] },
+      { version: '2.7.0', date: '2026-02-21', features: ['Store发布材料'] },
+      { version: '2.6.0', date: '2026-02-21', features: ['TTS朗读功能'] },
+      { version: '2.5.0', date: '2026-02-21', features: ['夜间模式自动切换'] },
+      { version: '2.4.0', date: '2026-02-21', features: ['自定义主题', 'TTS模块'] },
+      { version: '2.3.0', date: '2026-02-21', features: ['导出功能(MD/HTML/PDF)'] },
+      { version: '2.2.0', date: '2026-02-21', features: ['收藏功能'] },
+      { version: '2.1.0', date: '2026-02-21', features: ['阅读历史记录'] }
+    ];
+    
+    const ONBOARDING = [
+      { icon: '📖', title: '欢迎使用 ReadFlow Pro!', content: '专注于沉浸式阅读体验的Chrome扩展' },
+      { icon: '⚡', title: '一键开启阅读', content: '点击扩展图标或使用快捷键立即进入纯净阅读模式' },
+      { icon: '🎨', title: '多主题选择', content: '浅色、深色、护眼，还有6种自定义主题可选' },
+      { icon: '🌙', title: '夜间自动切换', content: '晚上8点自动进入深色模式，保护眼睛' },
+      { icon: '💎', title: 'Pro功能', content: '解锁TTS朗读、收藏夹、导出、云同步等高级功能' }
+    ];
+    
+    const CURRENT_VERSION = '2.8.0';
+    const STORAGE_KEY = 'readflow_onboarding';
+    
+    let currentStep = 0;
+    
+    function renderOnboarding() {
+      const step = ONBOARDING[currentStep];
+      const progress = ONBOARDING.map((_, i) => 
+        `<div class="onboarding-dot ${i === currentStep ? 'active' : ''}"></div>`
+      ).join('');
+      
+      document.getElementById('app').innerHTML = `
+        <div class="onboarding-container">
+          <div class="onboarding-header">
+            <div class="onboarding-icon">${step.icon}</div>
+            <div class="onboarding-title">${step.title}</div>
+            <div class="onboarding-subtitle">第 ${currentStep + 1} / ${ONBOARDING.length} 步</div>
+          </div>
+          <div class="onboarding-progress">${progress}</div>
+          <div class="onboarding-card">
+            <div class="onboarding-card-icon">${step.icon}</div>
+            <div class="onboarding-card-title">${step.title}</div>
+            <div class="onboarding-card-content">${step.content}</div>
+            <div class="onboarding-actions">
+              ${currentStep > 0 ? '<button class="onboarding-btn onboarding-btn-secondary" onclick="prevStep()">上一步</button>' : ''}
+              <button class="onboarding-btn onboarding-btn-primary" onclick="nextStep()">
+                ${currentStep === ONBOARDING.length - 1 ? '开始使用 →' : '下一步'}
+              </button>
+            </div>
+          </div>
+          <div class="onboarding-skip">
+            <a href="#" onclick="skipOnboarding(event)">跳过引导</a>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderChangelog() {
+      const items = CHANGELOG.map(item => `
+        <div class="changelog-item">
+          <div class="changelog-version-row">
+            <span class="changelog-version-tag">v${item.version}</span>
+            <span class="changelog-date">${item.date}</span>
+          </div>
+          <ul class="changelog-features">
+            ${item.features.map(f => `<li>${f}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+      
+      document.getElementById('app').innerHTML = `
+        <div class="changelog-container">
+          <div class="changelog-header">
+            <div class="changelog-title">🆕 更新日志 <span class="changelog-version">v${CURRENT_VERSION}</span></div>
+          </div>
+          ${items}
+          <div class="changelog-skip">
+            <button onclick="closeChangelog()">知道了，开始使用 →</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    window.nextStep = function() {
+      if (currentStep < ONBOARDING.length - 1) { currentStep++; renderOnboarding(); }
+      else completeOnboarding();
+    };
+    window.prevStep = function() { if (currentStep > 0) { currentStep--; renderOnboarding(); } };
+    window.skipOnboarding = function(e) { e.preventDefault(); completeOnboarding(); };
+    window.closeChangelog = function() {
+      chrome.storage.local.set({ [STORAGE_KEY]: { needsOnboarding: false, lastVersion: CURRENT_VERSION } });
+      window.location.reload();
+    };
+    
+    function completeOnboarding() {
+      chrome.storage.local.set({ [STORAGE_KEY]: { needsOnboarding: false, lastVersion: CURRENT_VERSION } });
+      renderChangelog();
+    }
+    
+    async function init() {
+      const result = await chrome.storage.local.get(STORAGE_KEY);
+      const state = result[STORAGE_KEY];
+      if (state && !state.needsOnboarding && state.lastVersion === CURRENT_VERSION) { window.close(); return; }
+      if (state && state.lastVersion && state.lastVersion !== CURRENT_VERSION) { renderChangelog(); }
+      else renderOnboarding();
+    }
+    
+    init();
+  </script>
+</body>
+</html>
