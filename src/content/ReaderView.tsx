@@ -9,6 +9,7 @@ import type { Settings, ExtractedContent } from '../shared/types';
 import { SettingsPanel } from './SettingsPanel';
 import { CodeBlock } from './CodeBlock';
 import { ttsReader } from '../shared/tts';
+import { initTextSelection, cleanupTextSelection } from './features/textSelection';
 
 interface ReaderViewProps {
   /** Extracted content to display */
@@ -97,6 +98,14 @@ export function ReaderView({
   useEffect(() => {
     return () => {
       ttsReader.stop();
+    };
+  }, []);
+
+  // Initialize text selection handler
+  useEffect(() => {
+    initTextSelection();
+    return () => {
+      cleanupTextSelection();
     };
   }, []);
 
