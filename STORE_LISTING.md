@@ -80,6 +80,52 @@ Turn any cluttered webpage into a clean, focused reading experience with one cli
 
 ---
 
+## 单一用途说明（Single Purpose Description）
+
+> Chrome Web Store 要求每个扩展只服务于一个明确目的，需在提交时填写。
+
+**填写内容（直接复制）：**
+
+> Folio extracts the main article content from any webpage and displays it in a clean, distraction-free reading view — removing ads, navigation bars, sidebars, and other visual noise so users can focus entirely on reading.
+
+**中文备注（自用理解，不需要提交）：**
+Folio 从任意网页中提取正文内容，以干净、无干扰的阅读界面展示，去除广告、导航栏、侧边栏等视觉噪音，让用户专注阅读本身。
+
+---
+
+## 权限请求理由（Permission Justifications）
+
+> 提交时 Chrome Web Store 会要求对每个权限逐条说明用途，以下是各权限的准确理由，基于代码实际使用情况。
+
+### `storage`
+**理由：**
+> Folio uses the `storage` permission to save the user's reading preferences — including theme (light/dark/sepia), font size, line height, and page width — locally on the user's device via `chrome.storage.local`. No data is ever sent to any server.
+
+### `activeTab`
+**理由：**
+> Folio uses the `activeTab` permission to identify the currently active browser tab when the user clicks the extension icon, enabling the popup to communicate with and control the reading mode on that specific tab.
+
+### `tabs`
+**理由：**
+> Folio uses the `tabs` permission to: (1) query the active tab to route messages between the popup and the content script; (2) listen for tab URL changes and tab closures in the background service worker to clean up internal state; (3) retrieve tab URL before script injection to avoid injecting into restricted browser pages (e.g., chrome://).
+
+### `scripting`
+**理由：**
+> Folio uses the `scripting` permission to programmatically inject the content script (`content.js`) into a tab if it was not automatically loaded — for example, on pages opened before the extension was installed or updated. This ensures reading mode can be activated reliably on any page without requiring a full page reload.
+
+### Host Permission: `<all_urls>`
+**理由（这条审核最严格，逐字填写）：**
+
+> Folio is a reading mode extension that must work on any webpage the user chooses to read. The `<all_urls>` host permission is required for two reasons:
+>
+> 1. The content script declared in `content_scripts` uses `<all_urls>` as its match pattern so it is available on any page the user opens — but it remains completely inactive until the user explicitly enables reading mode via the popup toggle.
+>
+> 2. The `chrome.scripting.executeScript` API (used as a fallback to inject the content script if not already present) requires host permissions for the target tab's URL.
+>
+> Folio does not read, collect, or transmit any page content. It only extracts article text locally within the browser when the user actively toggles reading mode on.
+
+---
+
 ## 隐私政策（Privacy Policy）
 
 > Chrome Web Store 要求必须有隐私政策链接，可以放在 GitHub Pages 或任意公开页面上。
