@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI Reading Extension",
-  "version": "2.9.0",
-  "description": "A clean reading experience for every webpage",
+  "name": "Folio",
+  "version": "3.0.1",
+  "description": "Pure reading, zero distraction — clean reader for any webpage",
   "action": {
     "default_icon": {
       "16": "icon16.png",

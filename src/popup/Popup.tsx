@@ -96,7 +96,7 @@ export const Popup: React.FC = () => {
           <BookIcon />
         </div>
         <div>
-          <h1 className="popup-title">阅读助手</h1>
+          <h1 className="popup-title">Folio</h1>
           <p className="popup-subtitle">专注内容，享受阅读</p>
         </div>
       </header>
@@ -129,7 +129,7 @@ export const Popup: React.FC = () => {
       </main>
 
       <footer className="popup-footer">
-        <span className="version">v2.9.0</span>
+        <span className="version">v3.0.1</span>
       </footer>
     </div>
   );
