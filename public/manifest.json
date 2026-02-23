@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
   "name": "AI Reading Extension",
-  "version": "2.8.0",
-  "description": "An AI-powered reading extension for Chrome",
+  "version": "2.9.0",
+  "description": "A clean reading experience for every webpage",
   "action": {
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
       "128": "icon128.png"
     },
-    "default_popup": "onboarding.html"
+    "default_popup": "popup.html"
   },
   "permissions": [
     "storage",

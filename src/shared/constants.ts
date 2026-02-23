@@ -9,10 +9,10 @@ import type { Settings, MessageType, Theme } from './types';
  */
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
-  fontSize: 18,
-  lineHeight: 1.6,
-  pageWidth: 800,
-  fontFamily: 'system-ui',
+  fontSize: 19,
+  lineHeight: 1.75,
+  pageWidth: 680,
+  fontFamily: "Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif",
 };
 
 /**

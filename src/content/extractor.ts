@@ -27,6 +27,15 @@ function countWords(text: string): number {
 }
 
 /**
+ * Strip inline style attributes from HTML so our reader CSS takes full control
+ */
+function stripInlineStyles(html: string): string {
+  return html
+    .replace(/\s+style="[^"]*"/gi, '')
+    .replace(/\s+style='[^']*'/gi, '');
+}
+
+/**
  * Calculate estimated reading time in minutes
  */
 function calculateReadTime(wordCount: number): number {
@@ -101,24 +110,27 @@ export function extractContent(
     const reader = new Readability(docClone, {
       charThreshold: 500,
       classesToPreserve: ['code', 'pre', 'highlight', 'language-'],
-      keepClasses: true,
+      keepClasses: false,
     });
-    
+
     const article = reader.parse();
-    
+
     if (!article) {
       return {
         success: false,
         error: 'Failed to extract content: Readability returned null',
       };
     }
-    
+
     if (!article.content || article.content.trim().length < 50) {
       return {
         success: false,
         error: 'Extracted content is too short or empty',
       };
     }
+
+    // Strip inline styles — let our reader CSS handle all styling
+    const cleanContent = stripInlineStyles(article.content);
     
     // Build extracted content object
     const textContent = article.textContent ?? '';
@@ -126,7 +138,7 @@ export function extractContent(
     
     const extractedContent: ExtractedContent = {
       title: article.title || doc.title || 'Untitled',
-      content: article.content,
+      content: cleanContent,
       textContent: textContent,
       excerpt: generateExcerpt(article.excerpt || textContent),
       byline: article.byline || null,

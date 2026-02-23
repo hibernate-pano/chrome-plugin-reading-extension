@@ -29,7 +29,7 @@ export default defineConfig({
       external: ['chrome'],
       input: {
         // Popup 入口
-        popup: resolve(__dirname, 'index.html'),
+        popup: resolve(__dirname, 'popup.html'),
         // Background 入口
         background: resolve(__dirname, 'src/background/index.ts')
       },

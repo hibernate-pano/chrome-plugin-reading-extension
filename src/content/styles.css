@@ -1,44 +1,103 @@
 /**
- * Reading Mode Styles
- * Simplified styles for the refactored AI Reading Extension
- * Requirements: 3.1, 4.2, 6.5
+ * Reading Mode Styles — Clean Reader v3
+ * Injected into Shadow DOM for complete CSS isolation from the host page
  */
+
+/* ============================================
+   Shadow DOM Host Reset
+   Prevents any page CSS from bleeding in via inheritance
+   ============================================ */
+
+:host {
+  all: initial;
+  display: block;
+}
+
+/* Box model baseline inside Shadow DOM */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 /* ============================================
    CSS Variables & Theme System
    ============================================ */
 
 :root {
-  /* Default (Light) Theme */
-  --reader-bg: #ffffff;
-  --reader-text: #1a1a1a;
-  --reader-text-muted: #666666;
-  --reader-accent: #0066cc;
-  --reader-border: #e5e5e5;
-  --reader-code-bg: #f5f5f5;
-  --reader-selection: rgba(0, 102, 204, 0.2);
-  --reader-focus-ring: #0066cc;
+  /* Light Theme (default) — warm, easy on the eyes */
+  --reader-bg: #faf9f7;
+  --reader-text: #2c2b28;
+  --reader-text-muted: #8a8680;
+  --reader-accent: #1a56db;
+  --reader-border: #e8e4dc;
+  --reader-code-bg: #f2ede6;
+  --reader-selection: rgba(26, 86, 219, 0.12);
+  --reader-focus-ring: #1a56db;
   --reader-focus-ring-offset: 2px;
+  --reader-shadow: rgba(0, 0, 0, 0.06);
+  --reader-overlay-bg: rgba(250, 249, 247, 0.97);
 }
 
 /* ============================================
-   Keyboard Navigation & Focus Styles
+   Theme Variants
    ============================================ */
 
-/* Skip to content link - visible only on focus */
+.reader-theme-light {
+  --reader-bg: #faf9f7;
+  --reader-text: #2c2b28;
+  --reader-text-muted: #8a8680;
+  --reader-accent: #1a56db;
+  --reader-border: #e8e4dc;
+  --reader-code-bg: #f2ede6;
+  --reader-selection: rgba(26, 86, 219, 0.12);
+  --reader-shadow: rgba(0, 0, 0, 0.06);
+  --reader-overlay-bg: rgba(250, 249, 247, 0.97);
+}
+
+.reader-theme-dark {
+  --reader-bg: #1c1b1a;
+  --reader-text: #e6e4df;
+  --reader-text-muted: #7a7872;
+  --reader-accent: #8ab4f8;
+  --reader-border: #2d2d2b;
+  --reader-code-bg: #252423;
+  --reader-selection: rgba(138, 180, 248, 0.18);
+  --reader-shadow: rgba(0, 0, 0, 0.3);
+  --reader-overlay-bg: rgba(28, 27, 26, 0.98);
+}
+
+.reader-theme-sepia {
+  --reader-bg: #f5eed6;
+  --reader-text: #433422;
+  --reader-text-muted: #8a7560;
+  --reader-accent: #7a5c2e;
+  --reader-border: #d4c9a8;
+  --reader-code-bg: #ede6cc;
+  --reader-selection: rgba(122, 92, 46, 0.15);
+  --reader-shadow: rgba(0, 0, 0, 0.06);
+  --reader-overlay-bg: rgba(245, 238, 214, 0.97);
+}
+
+/* ============================================
+   Accessibility — Skip Link & Focus
+   ============================================ */
+
 .reader-skip-link {
   position: fixed;
   top: -100px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483010;
-  padding: 0.75rem 1.5rem;
+  padding: 0.6rem 1.2rem;
   background-color: var(--reader-accent);
   color: white;
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.9rem;
-  border-radius: 0 0 8px 8px;
+  font-size: 0.875rem;
+  border-radius: 0 0 6px 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: top 0.2s ease;
 }
@@ -48,68 +107,13 @@
   outline: none;
 }
 
-/* Global focus styles for keyboard navigation */
-.reader-overlay *:focus {
-  outline: 2px solid var(--reader-focus-ring);
-  outline-offset: var(--reader-focus-ring-offset);
-}
-
-/* Remove focus outline for mouse users */
-.reader-overlay *:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Enhanced focus-visible styles */
 .reader-overlay *:focus-visible {
   outline: 2px solid var(--reader-focus-ring);
   outline-offset: var(--reader-focus-ring-offset);
 }
 
-/* Focus styles for content area when skipped to */
 .reader-content:focus {
   outline: none;
-}
-
-.reader-content:focus-visible {
-  outline: 2px dashed var(--reader-accent);
-  outline-offset: 4px;
-}
-
-/* ============================================
-   Theme Variants
-   ============================================ */
-
-/* Light Theme (default) */
-.reader-theme-light {
-  --reader-bg: #ffffff;
-  --reader-text: #1a1a1a;
-  --reader-text-muted: #666666;
-  --reader-accent: #0066cc;
-  --reader-border: #e5e5e5;
-  --reader-code-bg: #f5f5f5;
-  --reader-selection: rgba(0, 102, 204, 0.2);
-}
-
-/* Dark Theme */
-.reader-theme-dark {
-  --reader-bg: #1a1a1a;
-  --reader-text: #e5e5e5;
-  --reader-text-muted: #999999;
-  --reader-accent: #66b3ff;
-  --reader-border: #333333;
-  --reader-code-bg: #2d2d2d;
-  --reader-selection: rgba(102, 179, 255, 0.3);
-}
-
-/* Sepia Theme */
-.reader-theme-sepia {
-  --reader-bg: #f4ecd8;
-  --reader-text: #5c4b37;
-  --reader-text-muted: #8b7355;
-  --reader-accent: #8b6914;
-  --reader-border: #d4c4a8;
-  --reader-code-bg: #ebe3d0;
-  --reader-selection: rgba(139, 105, 20, 0.2);
 }
 
 /* ============================================
@@ -123,33 +127,170 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 2rem;
   overflow-y: auto;
   background-color: var(--reader-bg);
+  animation: reader-fade-in 0.25s ease;
   transition: background-color 0.3s ease;
 }
 
 .reader-container {
   width: 100%;
-  max-width: var(--reader-page-width, 800px);
+  max-width: var(--reader-page-width, 680px);
   min-height: 100vh;
-  padding: 2rem;
+  padding: 5rem 2rem 6rem;
   background-color: var(--reader-bg);
   color: var(--reader-text);
-  font-family: var(--reader-font-family, system-ui, -apple-system, sans-serif);
-  font-size: var(--reader-font-size, 18px);
-  line-height: var(--reader-line-height, 1.6);
-  transition: all 0.3s ease;
+  font-family: var(--reader-font-family, Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif);
+  font-size: var(--reader-font-size, 19px);
+  line-height: var(--reader-line-height, 1.75);
+  transition: font-size 0.15s ease, line-height 0.15s ease;
 }
 
-/* Body lock when reader is active */
 body.reader-mode-active {
   overflow: hidden;
 }
 
 /* ============================================
-   Typography
+   Toolbar — auto-hiding top bar
    ============================================ */
+
+.reader-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483001;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(to bottom, var(--reader-bg) 60%, transparent);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.reader-toolbar--hidden {
+  opacity: 0;
+}
+
+.reader-toolbar--visible {
+  opacity: 1;
+}
+
+.reader-toolbar > * {
+  pointer-events: auto;
+}
+
+/* ============================================
+   Close Button
+   ============================================ */
+
+.reader-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--reader-border);
+  border-radius: 8px;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.reader-close-btn:hover {
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text);
+  border-color: var(--reader-text-muted);
+}
+
+.reader-close-btn:focus-visible {
+  outline: 2px solid var(--reader-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Settings Button (toolbar right side)
+   ============================================ */
+
+.reader-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--reader-border);
+  border-radius: 8px;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.reader-settings-btn:hover,
+.reader-settings-btn--active {
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text);
+  border-color: var(--reader-text-muted);
+}
+
+.reader-settings-btn:focus-visible {
+  outline: 2px solid var(--reader-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Header
+   ============================================ */
+
+.reader-header {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--reader-border);
+}
+
+.reader-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.85em;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--reader-text);
+  letter-spacing: -0.01em;
+}
+
+.reader-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.2rem;
+  font-size: 0.85em;
+  color: var(--reader-text-muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.reader-meta__item {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.reader-meta__separator {
+  color: var(--reader-border);
+  user-select: none;
+}
+
+/* ============================================
+   Article Content Typography
+   ============================================ */
+
+.reader-content {
+  /* Optimal reading measure */
+}
+
+.reader-content > * + * {
+  margin-top: 0;
+}
 
 .reader-content h1,
 .reader-content h2,
@@ -157,33 +298,61 @@ body.reader-mode-active {
 .reader-content h4,
 .reader-content h5,
 .reader-content h6 {
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-  font-weight: 600;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  font-weight: 700;
   line-height: 1.3;
   color: var(--reader-text);
+  letter-spacing: -0.01em;
 }
 
-.reader-content h1 { font-size: 2em; }
-.reader-content h2 { font-size: 1.5em; }
-.reader-content h3 { font-size: 1.25em; }
-.reader-content h4 { font-size: 1.1em; }
+.reader-content h1 { font-size: 1.75em; }
+.reader-content h2 { font-size: 1.4em; }
+.reader-content h3 { font-size: 1.2em; }
+.reader-content h4 { font-size: 1.05em; }
 .reader-content h5 { font-size: 1em; }
-.reader-content h6 { font-size: 0.9em; }
+.reader-content h6 { font-size: 0.9em; font-weight: 600; color: var(--reader-text-muted); }
 
 .reader-content p {
-  margin-bottom: 1em;
+  margin-top: 0;
+  margin-bottom: 1.4em;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+.reader-content p:last-child {
+  margin-bottom: 0;
 }
 
 .reader-content a {
   color: var(--reader-accent);
   text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
   text-decoration-color: transparent;
-  transition: text-decoration-color 0.2s ease;
+  transition: text-decoration-color 0.15s ease;
 }
 
 .reader-content a:hover {
   text-decoration-color: var(--reader-accent);
+}
+
+.reader-content a:focus-visible {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Strong emphasis */
+.reader-content strong,
+.reader-content b {
+  font-weight: 700;
+  color: var(--reader-text);
+}
+
+.reader-content em,
+.reader-content i {
+  font-style: italic;
 }
 
 /* ============================================
@@ -192,19 +361,25 @@ body.reader-mode-active {
 
 .reader-content ul,
 .reader-content ol {
-  margin: 1em 0;
-  padding-left: 2em;
+  margin: 0 0 1.4em 0;
+  padding-left: 1.75em;
 }
 
 .reader-content li {
-  margin-bottom: 0.5em;
+  margin-bottom: 0.4em;
+  line-height: var(--reader-line-height, 1.75);
+}
+
+.reader-content li:last-child {
+  margin-bottom: 0;
 }
 
 .reader-content ul ul,
 .reader-content ol ol,
 .reader-content ul ol,
 .reader-content ol ul {
-  margin: 0.5em 0;
+  margin-top: 0.4em;
+  margin-bottom: 0;
 }
 
 /* ============================================
@@ -212,10 +387,9 @@ body.reader-mode-active {
    ============================================ */
 
 .reader-content blockquote {
-  margin: 1.5em 0;
-  padding: 0.5em 1em;
-  border-left: 4px solid var(--reader-accent);
-  background-color: var(--reader-code-bg);
+  margin: 1.75em 0;
+  padding: 0.75em 1.25em;
+  border-left: 3px solid var(--reader-accent);
   color: var(--reader-text-muted);
   font-style: italic;
 }
@@ -225,25 +399,28 @@ body.reader-mode-active {
 }
 
 /* ============================================
-   Images
+   Images & Figures
    ============================================ */
 
 .reader-content img {
   max-width: 100%;
   height: auto;
-  margin: 1em 0;
-  border-radius: 4px;
+  display: block;
+  margin: 1.75em auto;
+  border-radius: 6px;
 }
 
 .reader-content figure {
-  margin: 1.5em 0;
+  margin: 1.75em 0;
   text-align: center;
 }
 
 .reader-content figcaption {
-  margin-top: 0.5em;
-  font-size: 0.9em;
+  margin-top: 0.6em;
+  font-size: 0.875em;
   color: var(--reader-text-muted);
+  font-style: italic;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* ============================================
@@ -252,14 +429,15 @@ body.reader-mode-active {
 
 .reader-content table {
   width: 100%;
-  margin: 1em 0;
+  margin: 1.5em 0;
   border-collapse: collapse;
-  font-size: 0.95em;
+  font-size: 0.92em;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .reader-content th,
 .reader-content td {
-  padding: 0.75em;
+  padding: 0.6em 0.85em;
   text-align: left;
   border: 1px solid var(--reader-border);
 }
@@ -269,8 +447,18 @@ body.reader-mode-active {
   font-weight: 600;
 }
 
-.reader-content tr:nth-child(even) {
+.reader-content tr:nth-child(even) td {
   background-color: var(--reader-code-bg);
+}
+
+/* ============================================
+   Horizontal Rule
+   ============================================ */
+
+.reader-content hr {
+  border: none;
+  border-top: 1px solid var(--reader-border);
+  margin: 2.5em 0;
 }
 
 /* ============================================
@@ -278,11 +466,12 @@ body.reader-mode-active {
    ============================================ */
 
 .reader-content code:not(pre code) {
-  padding: 0.2em 0.4em;
+  padding: 0.15em 0.4em;
   background-color: var(--reader-code-bg);
-  border-radius: 3px;
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 0.9em;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  font-size: 0.875em;
+  color: var(--reader-text);
 }
 
 /* ============================================
@@ -291,11 +480,12 @@ body.reader-mode-active {
 
 .reader-code-block {
   position: relative;
-  margin: 1.5em 0;
+  margin: 1.75em 0;
   border-radius: 8px;
   overflow: hidden;
   background-color: var(--reader-code-bg);
   border: 1px solid var(--reader-border);
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
 }
 
 .reader-code-block__header {
@@ -304,52 +494,50 @@ body.reader-mode-active {
   align-items: center;
   padding: 0.5em 1em;
   background-color: var(--reader-border);
-  font-size: 0.85em;
+  font-size: 0.8em;
   color: var(--reader-text-muted);
 }
 
 .reader-code-block__language {
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  font-size: 0.75em;
 }
 
 .reader-code-block__copy {
   display: inline-flex;
   align-items: center;
-  gap: 0.25em;
-  padding: 0.25em 0.5em;
+  gap: 0.3em;
+  padding: 0.2em 0.6em;
   background: transparent;
-  border: 1px solid var(--reader-border);
+  border: 1px solid var(--reader-text-muted);
   border-radius: 4px;
   color: var(--reader-text-muted);
   font-size: 0.85em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  opacity: 0.7;
 }
 
 .reader-code-block__copy:hover {
-  background-color: var(--reader-bg);
+  opacity: 1;
   color: var(--reader-text);
-}
-
-.reader-code-block__copy:focus {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
+  border-color: var(--reader-text);
 }
 
 .reader-code-block__copy--copied {
   color: #22c55e;
   border-color: #22c55e;
+  opacity: 1;
 }
 
 .reader-code-block pre {
   margin: 0;
   padding: 1em;
   overflow-x: auto;
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 0.9em;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .reader-code-block code {
@@ -360,180 +548,32 @@ body.reader-mode-active {
 }
 
 /* ============================================
-   Syntax Highlighting (Basic)
+   Syntax Highlighting
    ============================================ */
 
-/* Keywords */
-.reader-code-block .token-keyword {
-  color: #d73a49;
-}
-.reader-theme-dark .reader-code-block .token-keyword {
-  color: #ff7b72;
-}
-.reader-theme-sepia .reader-code-block .token-keyword {
-  color: #a0522d;
-}
+.reader-code-block .token-keyword { color: #d73a49; }
+.reader-theme-dark .reader-code-block .token-keyword { color: #ff7b72; }
+.reader-theme-sepia .reader-code-block .token-keyword { color: #a0522d; }
 
-/* Strings */
-.reader-code-block .token-string {
-  color: #032f62;
-}
-.reader-theme-dark .reader-code-block .token-string {
-  color: #a5d6ff;
-}
-.reader-theme-sepia .reader-code-block .token-string {
-  color: #6b4423;
-}
+.reader-code-block .token-string { color: #032f62; }
+.reader-theme-dark .reader-code-block .token-string { color: #a5d6ff; }
+.reader-theme-sepia .reader-code-block .token-string { color: #6b4423; }
 
-/* Comments */
-.reader-code-block .token-comment {
-  color: #6a737d;
-  font-style: italic;
-}
-.reader-theme-dark .reader-code-block .token-comment {
-  color: #8b949e;
-}
-.reader-theme-sepia .reader-code-block .token-comment {
-  color: #8b7355;
-}
+.reader-code-block .token-comment { color: #6a737d; font-style: italic; }
+.reader-theme-dark .reader-code-block .token-comment { color: #8b949e; }
+.reader-theme-sepia .reader-code-block .token-comment { color: #8b7355; }
 
-/* Numbers */
-.reader-code-block .token-number {
-  color: #005cc5;
-}
-.reader-theme-dark .reader-code-block .token-number {
-  color: #79c0ff;
-}
-.reader-theme-sepia .reader-code-block .token-number {
-  color: #8b4513;
-}
+.reader-code-block .token-number { color: #005cc5; }
+.reader-theme-dark .reader-code-block .token-number { color: #79c0ff; }
+.reader-theme-sepia .reader-code-block .token-number { color: #8b4513; }
 
-/* Functions */
-.reader-code-block .token-function {
-  color: #6f42c1;
-}
-.reader-theme-dark .reader-code-block .token-function {
-  color: #d2a8ff;
-}
-.reader-theme-sepia .reader-code-block .token-function {
-  color: #704214;
-}
+.reader-code-block .token-function { color: #6f42c1; }
+.reader-theme-dark .reader-code-block .token-function { color: #d2a8ff; }
+.reader-theme-sepia .reader-code-block .token-function { color: #704214; }
 
-/* Operators */
-.reader-code-block .token-operator {
-  color: #d73a49;
-}
-.reader-theme-dark .reader-code-block .token-operator {
-  color: #ff7b72;
-}
-.reader-theme-sepia .reader-code-block .token-operator {
-  color: #a0522d;
-}
-
-/* Punctuation */
-.reader-code-block .token-punctuation {
-  color: var(--reader-text);
-}
-
-/* ============================================
-   Header
-   ============================================ */
-
-.reader-header {
-  margin-bottom: 2em;
-  padding-bottom: 1em;
-  border-bottom: 1px solid var(--reader-border);
-}
-
-.reader-title {
-  margin: 0 0 0.5em;
-  font-size: 2em;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--reader-text);
-}
-
-.reader-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1em;
-  font-size: 0.9em;
-  color: var(--reader-text-muted);
-}
-
-.reader-meta__item {
-  display: flex;
-  align-items: center;
-  gap: 0.25em;
-}
-
-.reader-favorite-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.1em;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: transform 0.2s, background 0.2s;
-}
-
-.reader-favorite-btn:hover {
-  transform: scale(1.2);
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.reader-tts-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.1em;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: transform 0.2s, background 0.2s;
-}
-
-.reader-tts-btn:hover {
-  transform: scale(1.2);
-  background: rgba(0, 0, 0, 0.05);
-}
-
-/* ============================================
-   Floating Button
-   ============================================ */
-
-.reader-floating-btn {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 2147483001;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--reader-accent);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.reader-floating-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-.reader-floating-btn:focus {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
-}
-
-.reader-floating-btn svg {
-  width: 24px;
-  height: 24px;
-}
+.reader-code-block .token-operator { color: #d73a49; }
+.reader-theme-dark .reader-code-block .token-operator { color: #ff7b72; }
+.reader-theme-sepia .reader-code-block .token-operator { color: #a0522d; }
 
 /* ============================================
    Settings Panel
@@ -541,15 +581,16 @@ body.reader-mode-active {
 
 .reader-settings-panel {
   position: fixed;
-  bottom: 5rem;
-  right: 2rem;
+  top: 56px;
+  right: 1rem;
   z-index: 2147483002;
-  width: 280px;
+  width: 260px;
   padding: 1rem;
   background-color: var(--reader-bg);
   border: 1px solid var(--reader-border);
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 28px var(--reader-shadow), 0 2px 8px var(--reader-shadow);
+  animation: reader-slide-down 0.18s ease;
 }
 
 .reader-settings-panel__header {
@@ -563,37 +604,36 @@ body.reader-mode-active {
 
 .reader-settings-panel__title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--reader-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0.01em;
 }
 
 .reader-settings-panel__close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .reader-settings-panel__close:hover {
   background-color: var(--reader-code-bg);
+  color: var(--reader-text);
 }
 
-.reader-settings-panel__close:focus {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
-}
-
-/* Settings Group */
+/* Settings Groups */
 .reader-settings-group {
   margin-bottom: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .reader-settings-group:last-child {
@@ -603,49 +643,55 @@ body.reader-mode-active {
 .reader-settings-label {
   display: block;
   margin-bottom: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--reader-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* Theme Selector */
 .reader-theme-selector {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .reader-theme-btn {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.45rem 0.25rem;
   background-color: var(--reader-code-bg);
-  border: 2px solid transparent;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  color: var(--reader-text);
+  border: 1.5px solid transparent;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--reader-text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .reader-theme-btn:hover {
+  color: var(--reader-text);
   border-color: var(--reader-border);
-}
-
-.reader-theme-btn:focus {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
 }
 
 .reader-theme-btn--active {
   border-color: var(--reader-accent);
+  color: var(--reader-accent);
   background-color: var(--reader-bg);
 }
 
-/* Slider */
+/* Sliders */
+.reader-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .reader-slider {
-  width: 100%;
-  height: 6px;
-  background-color: var(--reader-code-bg);
-  border-radius: 3px;
+  flex: 1;
+  height: 4px;
+  background-color: var(--reader-border);
+  border-radius: 2px;
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
@@ -655,89 +701,43 @@ body.reader-mode-active {
 .reader-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background-color: var(--reader-accent);
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.15s ease;
 }
 
 .reader-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
 .reader-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background-color: var(--reader-accent);
   border: none;
   border-radius: 50%;
   cursor: pointer;
 }
 
-.reader-slider:focus {
+.reader-slider:focus-visible {
   outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .reader-slider-value {
-  display: inline-block;
-  min-width: 3em;
+  min-width: 2.8em;
   text-align: right;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--reader-text-muted);
-}
-
-.reader-slider-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.reader-slider-row .reader-slider {
-  flex: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================
-   Close Button
-   ============================================ */
-
-.reader-close-btn {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 2147483001;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--reader-code-bg);
-  border: 1px solid var(--reader-border);
-  border-radius: 50%;
-  color: var(--reader-text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.reader-close-btn:hover {
-  background-color: var(--reader-bg);
-  color: var(--reader-text);
-}
-
-.reader-close-btn:focus {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
-}
-
-.reader-close-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* ============================================
-   Selection
+   Text Selection
    ============================================ */
 
 .reader-container ::selection {
@@ -749,16 +749,16 @@ body.reader-mode-active {
    ============================================ */
 
 .reader-overlay::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .reader-overlay::-webkit-scrollbar-track {
-  background: var(--reader-code-bg);
+  background: transparent;
 }
 
 .reader-overlay::-webkit-scrollbar-thumb {
   background: var(--reader-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .reader-overlay::-webkit-scrollbar-thumb:hover {
@@ -770,18 +770,14 @@ body.reader-mode-active {
    ============================================ */
 
 @keyframes reader-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes reader-slide-up {
+@keyframes reader-slide-down {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
@@ -789,66 +785,39 @@ body.reader-mode-active {
   }
 }
 
-.reader-overlay {
-  animation: reader-fade-in 0.3s ease;
-}
-
-.reader-settings-panel {
-  animation: reader-slide-up 0.2s ease;
-}
-
 /* ============================================
-   Responsive Design
+   Responsive
    ============================================ */
 
 @media (max-width: 768px) {
-  .reader-overlay {
-    padding: 1rem;
-  }
-
   .reader-container {
-    padding: 1rem;
+    padding: 4.5rem 1.25rem 5rem;
   }
 
   .reader-title {
     font-size: 1.5em;
   }
 
-  .reader-floating-btn {
-    bottom: 1rem;
-    right: 1rem;
-    width: 44px;
-    height: 44px;
-  }
-
   .reader-settings-panel {
-    bottom: 4rem;
+    top: auto;
+    bottom: 1rem;
     right: 1rem;
     left: 1rem;
     width: auto;
-  }
-
-  .reader-close-btn {
-    top: 0.5rem;
-    right: 0.5rem;
   }
 }
 
 @media (max-width: 480px) {
   .reader-container {
-    padding: 0.75rem;
+    padding: 4rem 1rem 4.5rem;
   }
 
   .reader-title {
-    font-size: 1.25em;
+    font-size: 1.35em;
   }
 
   .reader-meta {
-    flex-direction: column;
-    gap: 0.5em;
-  }
-
-  .reader-code-block pre {
+    gap: 0.4rem 0.8rem;
     font-size: 0.8em;
   }
 }
@@ -860,13 +829,11 @@ body.reader-mode-active {
 @media print {
   .reader-overlay {
     position: static;
-    padding: 0;
     background: white;
   }
 
-  .reader-floating-btn,
+  .reader-toolbar,
   .reader-settings-panel,
-  .reader-close-btn,
   .reader-skip-link {
     display: none;
   }
@@ -882,78 +849,18 @@ body.reader-mode-active {
 }
 
 /* ============================================
-   Enhanced Keyboard Navigation Styles
+   Reduced Motion
    ============================================ */
 
-/* Button focus states */
-.reader-close-btn:focus-visible,
-.reader-floating-btn:focus-visible,
-.reader-settings-panel__close:focus-visible,
-.reader-code-block__copy:focus-visible,
-.reader-theme-btn:focus-visible {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.2);
-}
-
-/* Slider focus states */
-.reader-slider:focus-visible {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
-}
-
-.reader-slider:focus-visible::-webkit-slider-thumb {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.3);
-}
-
-/* Theme button keyboard navigation */
-.reader-theme-btn:focus-visible {
-  position: relative;
-  z-index: 1;
-}
-
-/* Code block focus for scrolling */
-.reader-code-block code:focus-visible {
-  outline: 2px dashed var(--reader-accent);
-  outline-offset: 2px;
-}
-
-/* Link focus within content */
-.reader-content a:focus-visible {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  :root {
-    --reader-focus-ring: #000000;
-  }
-  
-  .reader-theme-dark {
-    --reader-focus-ring: #ffffff;
-  }
-  
-  .reader-skip-link:focus {
-    background-color: #000000;
-    color: #ffffff;
-  }
-}
-
-/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  .reader-skip-link {
+  .reader-overlay,
+  .reader-settings-panel,
+  .reader-toolbar {
+    animation: none;
     transition: none;
   }
-  
+
   .reader-slider::-webkit-slider-thumb {
     transition: none;
-  }
-  
-  .reader-overlay,
-  .reader-settings-panel {
-    animation: none;
   }
 }

@@ -55,23 +55,26 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
   }, []);
 
   // Handle click outside to close
+  // Must listen on shadow root (not document) to get accurate event.target within Shadow DOM.
+  // From document's perspective, all Shadow DOM clicks are retargeted to the shadow host,
+  // making panelRef.current.contains(target) always return false.
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        // Check if click is on the floating button
-        const target = event.target as HTMLElement;
-        if (target.closest('.reader-floating-btn')) {
-          return;
-        }
+      const target = event.target as HTMLElement;
+      if (panelRef.current && !panelRef.current.contains(target)) {
+        // Don't close when clicking the settings toggle button itself
+        if (target.closest?.('.reader-settings-btn')) return;
         onClose();
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const root = panelRef.current?.getRootNode() ?? document;
+    root.addEventListener('mousedown', handleClickOutside as EventListener);
+    return () => root.removeEventListener('mousedown', handleClickOutside as EventListener);
   }, [onClose]);
 
   // Handle escape key to close and focus trap
+  // Keyboard events: listen on shadow root for correct activeElement resolution
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
@@ -88,16 +91,17 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
 
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
+        // Use shadow root's activeElement for accurate focus tracking inside Shadow DOM
+        const shadowRoot = panelRef.current.getRootNode() as ShadowRoot | Document;
+        const active = shadowRoot.activeElement;
 
         if (event.shiftKey) {
-          // Shift + Tab: if on first element, go to last
-          if (document.activeElement === firstElement) {
+          if (active === firstElement) {
             event.preventDefault();
             lastElement.focus();
           }
         } else {
-          // Tab: if on last element, go to first
-          if (document.activeElement === lastElement) {
+          if (active === lastElement) {
             event.preventDefault();
             firstElement.focus();
           }
@@ -105,8 +109,9 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
+    const root = panelRef.current?.getRootNode() ?? document;
+    root.addEventListener('keydown', handleKeyDown as EventListener, true);
+    return () => root.removeEventListener('keydown', handleKeyDown as EventListener, true);
   }, [onClose]);
 
   // Handle keyboard activation for buttons
