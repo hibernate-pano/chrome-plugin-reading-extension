@@ -130,7 +130,7 @@ export const Popup: React.FC = () => {
 
       <footer className="popup-footer">
         <a href="changelog.html" target="_blank" className="changelog-link">更新日志</a>
-        <span className="version">v3.1.0</span>
+        <span className="version">v3.1.1</span>
       </footer>
     </div>
   );
