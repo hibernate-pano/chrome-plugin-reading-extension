@@ -93,6 +93,7 @@ export function ReaderView({
   // CSS custom properties for settings
   const containerStyle = useMemo(() => ({
     '--reader-font-size': `${settings.fontSize}px`,
+    '--reader-code-font-size': `${settings.codeFontSize}px`,
     '--reader-line-height': `${settings.lineHeight}`,
     '--reader-page-width': `${settings.pageWidth}px`,
     '--reader-font-family': settings.fontFamily,

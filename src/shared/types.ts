@@ -17,6 +17,8 @@ export interface Settings {
   theme: Theme;
   /** Font size in pixels (12-32) */
   fontSize: number;
+  /** Code block font size in pixels (10-24) */
+  codeFontSize: number;
   /** Line height multiplier (1.2-2.0) */
   lineHeight: number;
   /** Page width in pixels (600-1200) */

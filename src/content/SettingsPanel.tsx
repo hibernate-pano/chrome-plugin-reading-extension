@@ -136,6 +136,12 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
     onChange({ fontSize });
   }, [onChange]);
 
+  // Code font size change handler
+  const handleCodeFontSizeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const codeFontSize = parseInt(event.target.value, 10);
+    onChange({ codeFontSize });
+  }, [onChange]);
+
   // Line height change handler
   const handleLineHeightChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const lineHeight = parseFloat(event.target.value);
@@ -219,6 +225,31 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
             tabIndex={0}
           />
           <span className="reader-slider-value" aria-hidden="true">{settings.fontSize}px</span>
+        </div>
+      </div>
+
+      {/* Code Font Size Slider */}
+      <div className="reader-settings-group">
+        <label className="reader-settings-label" htmlFor="reader-code-font-size">
+          Code Font Size
+        </label>
+        <div className="reader-slider-row">
+          <input
+            id="reader-code-font-size"
+            type="range"
+            className="reader-slider"
+            min={SETTINGS_CONSTRAINTS.codeFontSize.min}
+            max={SETTINGS_CONSTRAINTS.codeFontSize.max}
+            step={1}
+            value={settings.codeFontSize}
+            onChange={handleCodeFontSizeChange}
+            aria-valuemin={SETTINGS_CONSTRAINTS.codeFontSize.min}
+            aria-valuemax={SETTINGS_CONSTRAINTS.codeFontSize.max}
+            aria-valuenow={settings.codeFontSize}
+            aria-valuetext={`${settings.codeFontSize} pixels`}
+            tabIndex={0}
+          />
+          <span className="reader-slider-value" aria-hidden="true">{settings.codeFontSize}px</span>
         </div>
       </div>
 

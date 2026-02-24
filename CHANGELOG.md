@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
   - Show/Hide images in reading mode
   - Settings panel toggle for quick switching
   - Hide images completely to save bandwidth
+- 💻 **Code Font Size Setting**
+  - Separate font size control for code blocks
+  - Independent from main content font size
+  - Range: 10px - 24px
 
 ### Improved
 

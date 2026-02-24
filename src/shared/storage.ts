@@ -31,6 +31,10 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     ? clamp(settings.fontSize, SETTINGS_CONSTRAINTS.fontSize.min, SETTINGS_CONSTRAINTS.fontSize.max)
     : DEFAULT_SETTINGS.fontSize;
 
+  const codeFontSize = typeof settings.codeFontSize === 'number'
+    ? clamp(settings.codeFontSize, SETTINGS_CONSTRAINTS.codeFontSize.min, SETTINGS_CONSTRAINTS.codeFontSize.max)
+    : DEFAULT_SETTINGS.codeFontSize;
+
   const lineHeight = typeof settings.lineHeight === 'number'
     ? clamp(settings.lineHeight, SETTINGS_CONSTRAINTS.lineHeight.min, SETTINGS_CONSTRAINTS.lineHeight.max)
     : DEFAULT_SETTINGS.lineHeight;
@@ -50,6 +54,7 @@ export function validateSettings(settings: Partial<Settings>): Settings {
   return {
     theme,
     fontSize,
+    codeFontSize,
     lineHeight,
     pageWidth,
     fontFamily,

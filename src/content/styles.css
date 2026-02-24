@@ -577,7 +577,7 @@ body.reader-mode-active {
   margin: 0;
   padding: 1em;
   overflow-x: auto;
-  font-size: 0.9em;
+  font-size: var(--reader-code-font-size, 14px);
   line-height: 1.6;
 }
 

@@ -10,6 +10,7 @@ import type { Settings, MessageType, Theme } from './types';
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   fontSize: 19,
+  codeFontSize: 14,
   lineHeight: 1.75,
   pageWidth: 680,
   fontFamily: "Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif",
@@ -21,6 +22,7 @@ export const DEFAULT_SETTINGS: Settings = {
  */
 export const SETTINGS_CONSTRAINTS = {
   fontSize: { min: 12, max: 32 },
+  codeFontSize: { min: 10, max: 24 },
   lineHeight: { min: 1.2, max: 2.0 },
   pageWidth: { min: 600, max: 1200 },
 } as const;
