@@ -15,6 +15,7 @@ export interface CustomTheme {
 }
 
 export const EXTRA_THEMES: CustomTheme[] = [
+  // 彩色主题
   {
     id: 'ocean',
     name: '海洋',
@@ -74,6 +75,67 @@ export const EXTRA_THEMES: CustomTheme[] = [
     accent: '#8b5cf6',
     border: '#ddd6fe',
     codeBg: '#ede9fe'
+  },
+  // 纸张主题
+  {
+    id: 'old-newsprint',
+    name: '旧报纸',
+    name_en: 'Old Newspaper',
+    background: '#f4e4bc',
+    text: '#3d3322',
+    accent: '#8b7355',
+    border: '#c9b896',
+    codeBg: '#e8d8a8'
+  },
+  {
+    id: 'rice-paper',
+    name: '宣纸',
+    name_en: 'Rice Paper',
+    background: '#faf8f5',
+    text: '#4a4a4a',
+    accent: '#b8860b',
+    border: '#e8e4dc',
+    codeBg: '#f0ede6'
+  },
+  {
+    id: 'parchment',
+    name: '羊皮纸',
+    name_en: 'Parchment',
+    background: '#f5e6c8',
+    text: '#4a3c2a',
+    accent: '#8b4513',
+    border: '#d4c4a8',
+    codeBg: '#ebe0c8'
+  },
+  {
+    id: 'sticky-note',
+    name: '便签纸',
+    name_en: 'Sticky Note',
+    background: '#fff9c4',
+    text: '#5d4037',
+    accent: '#ff8f00',
+    border: '#ffe082',
+    codeBg: '#fff59d'
+  },
+  {
+    id: 'book-page',
+    name: '书籍纸张',
+    name_en: 'Book Page',
+    background: '#fdf8f0',
+    text: '#2c2c2c',
+    accent: '#8b0000',
+    border: '#e0d5c5',
+    codeBg: '#f5efe6'
+  },
+  {
+    id: 'coffee-stain',
+    name: '咖啡渍',
+    name_en: 'Coffee Stain',
+    background: '#f0e6d8',
+    text: '#4a3c34',
+    accent: '#6f4e37',
+    border: '#c9b8a8',
+    codeBg: '#e8ddd0'
   }
 ];
 
