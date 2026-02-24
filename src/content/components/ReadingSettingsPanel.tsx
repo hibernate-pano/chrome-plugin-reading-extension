@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UserSettings } from '../../types';
+import { EXTRA_THEMES } from '../../shared/themes';
 
 interface ReadingSettingsPanelProps {
   settings: UserSettings;
@@ -17,11 +18,21 @@ const FONT_FAMILIES = {
   times: { name: 'Times', value: '"Times New Roman", Times, serif' },
 };
 
-const THEMES = [
+// Default themes
+const DEFAULT_THEMES = [
   { value: 'light', label: '浅色', icon: '☀️' },
   { value: 'dark', label: '深色', icon: '🌙' },
   { value: 'sepia', label: '护眼', icon: '📄' },
 ];
+
+// Combine with extra themes
+const ALL_THEMES = [
+  ...DEFAULT_THEMES,
+  ...EXTRA_THEMES.map(t => ({ value: t.id, label: t.name, icon: '' }))
+];
+
+// Use ALL_THEMES as THEMES for backward compatibility
+const THEMES = ALL_THEMES;
 
 export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
   settings,

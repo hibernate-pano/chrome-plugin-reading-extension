@@ -74,9 +74,18 @@ export const CUSTOM_THEMES = {
 } as const;
 
 /**
- * Valid theme values
+ * Valid theme values (includes all default and custom themes)
  */
-export const VALID_THEMES: readonly Theme[] = ['light', 'dark', 'sepia'] as const;
+export const VALID_THEMES: readonly Theme[] = [
+  'light', 'dark', 'sepia',
+  'ocean', 'forest', 'sunset', 'galaxy', 'mint', 'lavender',
+  'old-newsprint', 'rice-paper', 'parchment', 'sticky-note', 'book-page', 'coffee-stain',
+  'starry-night', 'aurora', 'dawn', 'desert', 'midnight',
+  'marble', 'concrete', 'silk',
+  'terminal', 'crt', 'gameboy',
+  'ukiyoe', 'ink-wash', 'neon',
+  'high-contrast', 'focus'
+] as const;
 
 /**
  * Message type constants
@@ -116,6 +125,174 @@ export const THEME_COLORS: Record<Theme, {
     text: '#5c4b37',
     accent: '#8b6914',
     border: '#d4c4a8',
+  },
+  ocean: {
+    background: '#e8f4f8',
+    text: '#1a3a4a',
+    accent: '#0077b6',
+    border: '#90e0ef',
+  },
+  forest: {
+    background: '#f0f7f4',
+    text: '#1d3a2a',
+    accent: '#2d6a4f',
+    border: '#95d5b2',
+  },
+  sunset: {
+    background: '#fff5f0',
+    text: '#4a2c2a',
+    accent: '#e85d04',
+    border: '#ffccbc',
+  },
+  galaxy: {
+    background: '#1a1a2e',
+    text: '#e8e8e8',
+    accent: '#7b2cbf',
+    border: '#3c096c',
+  },
+  mint: {
+    background: '#f0fff4',
+    text: '#1a3a2a',
+    accent: '#10b981',
+    border: '#a7f3d0',
+  },
+  lavender: {
+    background: '#f5f3ff',
+    text: '#2e1065',
+    accent: '#8b5cf6',
+    border: '#ddd6fe',
+  },
+  'old-newsprint': {
+    background: '#f4e4bc',
+    text: '#3d3322',
+    accent: '#8b7355',
+    border: '#c9b896',
+  },
+  'rice-paper': {
+    background: '#faf8f5',
+    text: '#4a4a4a',
+    accent: '#b8860b',
+    border: '#e8e4dc',
+  },
+  parchment: {
+    background: '#f5e6c8',
+    text: '#4a3c2a',
+    accent: '#8b4513',
+    border: '#d4c4a8',
+  },
+  'sticky-note': {
+    background: '#fff9c4',
+    text: '#5d4037',
+    accent: '#ff8f00',
+    border: '#ffe082',
+  },
+  'book-page': {
+    background: '#fdf8f0',
+    text: '#2c2c2c',
+    accent: '#8b0000',
+    border: '#e0d5c5',
+  },
+  'coffee-stain': {
+    background: '#f0e6d8',
+    text: '#4a3c34',
+    accent: '#6f4e37',
+    border: '#c9b8a8',
+  },
+  'starry-night': {
+    background: '#0a0a1a',
+    text: '#c9d1e8',
+    accent: '#ffd700',
+    border: '#1a1a3a',
+  },
+  aurora: {
+    background: '#0d1b2a',
+    text: '#b8d4e3',
+    accent: '#00ff87',
+    border: '#1b3a4b',
+  },
+  dawn: {
+    background: '#fef3e2',
+    text: '#4a3728',
+    accent: '#ff7b54',
+    border: '#f5dcc4',
+  },
+  desert: {
+    background: '#f5e6d3',
+    text: '#5c4033',
+    accent: '#c4956a',
+    border: '#dcc8b0',
+  },
+  midnight: {
+    background: '#1a1a2e',
+    text: '#a8b2d1',
+    accent: '#64ffda',
+    border: '#2d2d4a',
+  },
+  marble: {
+    background: '#f8f8f8',
+    text: '#2d2d2d',
+    accent: '#8e8e8e',
+    border: '#e0e0e0',
+  },
+  concrete: {
+    background: '#e5e5e5',
+    text: '#333333',
+    accent: '#6b6b6b',
+    border: '#cccccc',
+  },
+  silk: {
+    background: '#faf5f0',
+    text: '#4a4045',
+    accent: '#c9a8b0',
+    border: '#e8e0dc',
+  },
+  terminal: {
+    background: '#0d1117',
+    text: '#58a6ff',
+    accent: '#3fb950',
+    border: '#21262d',
+  },
+  crt: {
+    background: '#1a1a1a',
+    text: '#33ff33',
+    accent: '#ffaa00',
+    border: '#2d2d2d',
+  },
+  gameboy: {
+    background: '#9bbc0f',
+    text: '#0f380f',
+    accent: '#306230',
+    border: '#8bac0f',
+  },
+  ukiyoe: {
+    background: '#f5efe5',
+    text: '#2d2d2d',
+    accent: '#e63946',
+    border: '#d4c4b0',
+  },
+  'ink-wash': {
+    background: '#f4f1eb',
+    text: '#1a1a1a',
+    accent: '#8b0000',
+    border: '#d4cfc5',
+  },
+  neon: {
+    background: '#0a0a0f',
+    text: '#ffffff',
+    accent: '#ff00ff',
+    border: '#ff00ff',
+  },
+  'high-contrast': {
+    background: '#000000',
+    text: '#ffff00',
+    accent: '#00ffff',
+    border: '#ffffff',
+  },
+  focus: {
+    background: '#fafafa',
+    text: '#374151',
+    accent: '#9ca3af',
+    border: '#e5e7eb',
   },
 } as const;
 

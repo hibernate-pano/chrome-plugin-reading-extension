@@ -6,7 +6,8 @@
 
 import React, { useCallback, useEffect, useRef, type JSX } from 'react';
 import type { Settings, Theme } from '../shared/types';
-import { SETTINGS_CONSTRAINTS, VALID_THEMES } from '../shared/constants';
+import { SETTINGS_CONSTRAINTS, VALID_THEMES, THEME_COLORS } from '../shared/constants';
+import { EXTRA_THEMES, type CustomTheme } from '../shared/themes';
 
 interface SettingsPanelProps {
   /** Current settings */
@@ -17,14 +18,27 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
-/**
- * Theme display names
- */
-const THEME_LABELS: Record<Theme, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  sepia: 'Sepia',
-};
+// Default theme definitions
+const DEFAULT_THEMES: CustomTheme[] = [
+  { id: 'light', name: '浅色', name_en: 'Light', background: '#ffffff', text: '#1a1a1a', accent: '#0066cc', border: '#e5e5e5' },
+  { id: 'dark', name: '深色', name_en: 'Dark', background: '#1a1a1a', text: '#e5e5e5', accent: '#66b3ff', border: '#333333' },
+  { id: 'sepia', name: '护眼', name_en: 'Sepia', background: '#f4ecd8', text: '#5c4b37', accent: '#8b6914', border: '#d4c4a8' },
+];
+
+// Combine all themes for the settings panel
+const ALL_THEMES = [...DEFAULT_THEMES, ...EXTRA_THEMES];
+
+// Create theme labels from all themes
+const THEME_LABELS: Record<Theme, string> = ALL_THEMES.reduce((acc, theme) => {
+  acc[theme.id as Theme] = theme.name;
+  return acc;
+}, {} as Record<Theme, string>);
+
+// Create theme colors from all themes
+const ALL_THEME_COLORS = ALL_THEMES.reduce((acc, theme) => {
+  acc[theme.id as Theme] = { background: theme.background, text: theme.text, accent: theme.accent, border: theme.border };
+  return acc;
+}, {} as Record<Theme, { background: string; text: string; accent: string; border: string }>);
 
 /**
  * Get all focusable elements within a container
@@ -181,25 +195,34 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
       {/* Theme Selector */}
       <div className="reader-settings-group">
         <label className="reader-settings-label" id="theme-label">Theme</label>
-        <div 
-          className="reader-theme-selector" 
-          role="radiogroup" 
+        <div
+          className="reader-theme-selector"
+          role="radiogroup"
           aria-labelledby="theme-label"
         >
-          {VALID_THEMES.map((theme) => (
-            <button
-              key={theme}
-              className={`reader-theme-btn ${settings.theme === theme ? 'reader-theme-btn--active' : ''}`}
-              onClick={() => handleThemeChange(theme)}
-              onKeyDown={(e) => handleKeyboardActivation(e, () => handleThemeChange(theme))}
-              role="radio"
-              aria-checked={settings.theme === theme}
-              type="button"
-              tabIndex={0}
-            >
-              {THEME_LABELS[theme]}
-            </button>
-          ))}
+          {VALID_THEMES.map((theme) => {
+            const colors = ALL_THEME_COLORS[theme] || THEME_COLORS[theme];
+            return (
+              <button
+                key={theme}
+                className={`reader-theme-btn ${settings.theme === theme ? 'reader-theme-btn--active' : ''}`}
+                onClick={() => handleThemeChange(theme)}
+                onKeyDown={(e) => handleKeyboardActivation(e, () => handleThemeChange(theme))}
+                role="radio"
+                aria-checked={settings.theme === theme}
+                type="button"
+                tabIndex={0}
+                title={THEME_LABELS[theme] || theme}
+                style={colors ? {
+                  backgroundColor: colors.background,
+                  color: colors.text,
+                  borderColor: settings.theme === theme ? colors.accent : colors.border,
+                } : undefined}
+              >
+                {THEME_LABELS[theme] || theme}
+              </button>
+            );
+          })}
         </div>
       </div>
 

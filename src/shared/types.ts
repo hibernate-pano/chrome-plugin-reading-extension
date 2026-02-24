@@ -5,8 +5,9 @@
 
 /**
  * Theme options for reading mode
+ * Includes default themes and custom themes from EXTRA_THEMES
  */
-export type Theme = 'light' | 'dark' | 'sepia';
+export type Theme = 'light' | 'dark' | 'sepia' | 'ocean' | 'forest' | 'sunset' | 'galaxy' | 'mint' | 'lavender' | 'old-newsprint' | 'rice-paper' | 'parchment' | 'sticky-note' | 'book-page' | 'coffee-stain' | 'starry-night' | 'aurora' | 'dawn' | 'desert' | 'midnight' | 'marble' | 'concrete' | 'silk' | 'terminal' | 'crt' | 'gameboy' | 'ukiyoe' | 'ink-wash' | 'neon' | 'high-contrast' | 'focus';
 
 /**
  * User settings for reading mode
