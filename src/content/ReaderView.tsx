@@ -99,6 +99,7 @@ export function ReaderView({
   } as React.CSSProperties), [settings]);
 
   const themeClass = `reader-theme-${settings.theme}`;
+  const imagesClass = settings.showImages ? '' : 'reader-images-hidden';
   const toolbarClass = `reader-toolbar ${toolbarVisible ? 'reader-toolbar--visible' : 'reader-toolbar--hidden'}`;
 
   const processedContent = useMemo(() => {
@@ -106,7 +107,7 @@ export function ReaderView({
   }, [content.content]);
 
   return (
-    <div className={`reader-overlay ${themeClass}`} style={containerStyle} role="main">
+    <div className={`reader-overlay ${themeClass} ${imagesClass}`} style={containerStyle} role="main">
       {/* Skip to content link */}
       <a
         href="#reader-content"

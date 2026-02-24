@@ -43,12 +43,17 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     ? settings.fontFamily
     : DEFAULT_SETTINGS.fontFamily;
 
+  const showImages = typeof settings.showImages === 'boolean'
+    ? settings.showImages
+    : DEFAULT_SETTINGS.showImages;
+
   return {
     theme,
     fontSize,
     lineHeight,
     pageWidth,
     fontFamily,
+    showImages,
   };
 }
 

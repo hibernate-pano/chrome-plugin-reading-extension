@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lineHeight: 1.75,
   pageWidth: 680,
   fontFamily: "Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif",
+  showImages: true,
 };
 
 /**

@@ -165,7 +165,8 @@ body.reader-mode-active {
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
   background: linear-gradient(to bottom, var(--reader-bg) 60%, transparent);
-  transition: opacity 0.4s ease;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
@@ -196,13 +197,21 @@ body.reader-mode-active {
   border-radius: 8px;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reader-close-btn:hover {
   background-color: var(--reader-code-bg);
   color: var(--reader-text);
   border-color: var(--reader-text-muted);
+  transform: scale(1.05);
+}
+
+.reader-close-btn:active {
+  transform: scale(0.95);
 }
 
 .reader-close-btn:focus-visible {
@@ -225,7 +234,10 @@ body.reader-mode-active {
   border-radius: 8px;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reader-settings-btn:hover,
@@ -233,6 +245,11 @@ body.reader-mode-active {
   background-color: var(--reader-code-bg);
   color: var(--reader-text);
   border-color: var(--reader-text-muted);
+  transform: scale(1.05);
+}
+
+.reader-settings-btn:active {
+  transform: scale(0.95);
 }
 
 .reader-settings-btn:focus-visible {
@@ -330,11 +347,15 @@ body.reader-mode-active {
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
   text-decoration-color: transparent;
-  transition: text-decoration-color 0.15s ease;
+  transition: text-decoration-color 0.2s ease, color 0.2s ease;
 }
 
 .reader-content a:hover {
   text-decoration-color: var(--reader-accent);
+}
+
+.reader-content a:active {
+  color: var(--reader-text);
 }
 
 .reader-content a:focus-visible {
@@ -408,6 +429,19 @@ body.reader-mode-active {
   display: block;
   margin: 1.75em auto;
   border-radius: 6px;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Hide images when showImages is false */
+.reader-overlay.reader-images-hidden img,
+.reader-overlay.reader-images-hidden figure img {
+  opacity: 0;
+  pointer-events: none;
+  display: none;
+}
+
+.reader-overlay.reader-images-hidden figure {
+  display: none;
 }
 
 .reader-content figure {
@@ -516,7 +550,7 @@ body.reader-mode-active {
   color: var(--reader-text-muted);
   font-size: 0.85em;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.7;
 }
 
@@ -524,6 +558,13 @@ body.reader-mode-active {
   opacity: 1;
   color: var(--reader-text);
   border-color: var(--reader-text);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px var(--reader-shadow);
+}
+
+.reader-code-block__copy:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .reader-code-block__copy--copied {
@@ -589,8 +630,11 @@ body.reader-mode-active {
   background-color: var(--reader-bg);
   border: 1px solid var(--reader-border);
   border-radius: 12px;
-  box-shadow: 0 8px 28px var(--reader-shadow), 0 2px 8px var(--reader-shadow);
-  animation: reader-slide-down 0.18s ease;
+  box-shadow: 0 8px 28px var(--reader-shadow), 0 2px 8px var(--reader-shadow),
+              0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  animation: reader-slide-down 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .reader-settings-panel__header {
@@ -666,18 +710,24 @@ body.reader-mode-active {
   font-weight: 500;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reader-theme-btn:hover {
   color: var(--reader-text);
   border-color: var(--reader-border);
+  transform: translateY(-1px);
+}
+
+.reader-theme-btn:active {
+  transform: translateY(0);
 }
 
 .reader-theme-btn--active {
   border-color: var(--reader-accent);
   color: var(--reader-accent);
   background-color: var(--reader-bg);
+  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.15);
 }
 
 /* Sliders */
@@ -706,11 +756,17 @@ body.reader-mode-active {
   background-color: var(--reader-accent);
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(26, 86, 219, 0.25);
 }
 
 .reader-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
+  transform: scale(1.2);
+  box-shadow: 0 3px 8px rgba(26, 86, 219, 0.35);
+}
+
+.reader-slider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
 }
 
 .reader-slider::-moz-range-thumb {
@@ -720,6 +776,8 @@ body.reader-mode-active {
   border: none;
   border-radius: 50%;
   cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(26, 86, 219, 0.25);
 }
 
 .reader-slider:focus-visible {
@@ -734,6 +792,53 @@ body.reader-mode-active {
   font-size: 0.8rem;
   color: var(--reader-text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* ============================================
+   Toggle Buttons (Show/Hide Images)
+   ============================================ */
+
+.reader-toggle-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.reader-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--reader-code-bg);
+  border: 1.5px solid transparent;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reader-toggle-btn:hover {
+  color: var(--reader-text);
+  border-color: var(--reader-border);
+  transform: translateY(-1px);
+}
+
+.reader-toggle-btn:active {
+  transform: translateY(0);
+}
+
+.reader-toggle-btn--active {
+  border-color: var(--reader-accent);
+  color: var(--reader-accent);
+  background-color: var(--reader-bg);
+  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.15);
+}
+
+.reader-toggle-btn svg {
+  flex-shrink: 0;
 }
 
 /* ============================================
@@ -770,18 +875,22 @@ body.reader-mode-active {
    ============================================ */
 
 @keyframes reader-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes reader-slide-down {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-12px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 

@@ -23,6 +23,8 @@ export interface Settings {
   pageWidth: number;
   /** CSS font-family value */
   fontFamily: string;
+  /** Whether to show images in the article */
+  showImages: boolean;
 }
 
 /**

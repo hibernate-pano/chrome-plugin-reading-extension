@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>更新日志 - Folio</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1c1b1a;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+      width: 360px;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e8e4dc;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #f2ede6 0%, #e8e4dc 100%);
+      border-radius: 10px;
+      color: #2c2b28;
+    }
+
+    .title-group h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1c1b1a;
+    }
+
+    .title-group p {
+      font-size: 12px;
+      color: #8a8680;
+    }
+
+    .version-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #f0f5ff;
+      color: #1a56db;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .changelog {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .release {
+      margin-bottom: 24px;
+    }
+
+    .release-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .release-version {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1c1b1a;
+    }
+
+    .release-date {
+      font-size: 12px;
+      color: #8a8680;
+    }
+
+    .release-content {
+      padding-left: 0;
+    }
+
+    .release-content ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .release-content li {
+      position: relative;
+      padding-left: 20px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #4a4844;
+    }
+
+    .release-content li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #1a56db;
+      font-weight: bold;
+    }
+
+    .feature {
+      background: #faf9f7;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 1px solid #e8e4dc;
+    }
+
+    .feature-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: #1c1b1a;
+      margin-bottom: 4px;
+    }
+
+    .feature-title span {
+      margin-right: 6px;
+    }
+
+    .feature-desc {
+      font-size: 12px;
+      color: #6a6660;
+      padding-left: 0;
+    }
+
+    .feature-desc li::before {
+      content: '—';
+      color: #8a8680;
+    }
+
+    .footer {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #e8e4dc;
+      text-align: center;
+    }
+
+    .footer a {
+      color: #1a56db;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* New badge */
+    .new-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      background: #22c55e;
+      color: white;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: 6px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    </div>
+    <div class="title-group">
+      <h1>Folio <span class="version-badge">v3.1.0</span></h1>
+      <p>更新日志 · Changelog</p>
+    </div>
+  </div>
+
+  <div class="changelog">
+    <!-- Latest Release -->
+    <div class="release">
+      <div class="release-header">
+        <span class="release-version">v3.1.0</span>
+        <span class="release-date">2026-02-24</span>
+        <span class="new-badge">最新</span>
+      </div>
+      <div class="release-content">
+        <div class="feature">
+          <div class="feature-title"><span>🖼️</span> 图片显示开关</div>
+          <ul class="feature-desc">
+            <li>在阅读模式中显示/隐藏图片</li>
+            <li>设置面板中添加了快捷切换按钮</li>
+            <li>隐藏图片时可节省流量</li>
+          </ul>
+        </div>
+        <div class="feature">
+          <div class="feature-title"><span>✨</span> UI/UX 优化</div>
+          <ul class="feature-desc">
+            <li>微交互和动画效果增强</li>
+            <li>使用 cubic-bezier 缓动函数，过渡更流畅</li>
+            <li>按钮悬停状态添加上浮效果</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Previous Release -->
+    <div class="release">
+      <div class="release-header">
+        <span class="release-version">v3.0.0</span>
+        <span class="release-date">2026-02-22</span>
+      </div>
+      <div class="release-content">
+        <div class="feature">
+          <div class="feature-title"><span>🚀</span> 全新重构</div>
+          <ul class="feature-desc">
+            <li>完整的阅读体验重建</li>
+            <li>全新简洁 UI 设计</li>
+            <li>支持三种主题：浅色、深色、护眼</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- v2.9.0 -->
+    <div class="release">
+      <div class="release-header">
+        <span class="release-version">v2.9.0</span>
+        <span class="release-date">2026-02-22</span>
+      </div>
+      <div class="release-content">
+        <div class="feature">
+          <div class="feature-title"><span>✨</span> 文本选择功能</div>
+          <ul class="feature-desc">
+            <li>选中文本时显示工具栏</li>
+            <li>支持复制和引用功能</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="#" onclick="window.close()">关闭</a>
+    <span style="color: #ccc; margin: 0 8px;">|</span>
+    <a href="https://github.com/folio-reader/folio" target="_blank">GitHub</a>
+  </div>
+</body>
+</html>
