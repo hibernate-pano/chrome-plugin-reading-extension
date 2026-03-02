@@ -7,6 +7,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef, type JSX } fr
 import type { Settings, ExtractedContent } from '../shared/types';
 import { SettingsPanel } from './SettingsPanel';
 import { CodeBlock } from './CodeBlock';
+import { getReaderThemeById } from '../shared/readerThemes';
 
 interface ReaderViewProps {
   content: ExtractedContent;
@@ -90,14 +91,22 @@ export function ReaderView({
     settingsBtnRef.current?.focus();
   }, []);
 
-  // CSS custom properties for settings
-  const containerStyle = useMemo(() => ({
-    '--reader-font-size': `${settings.fontSize}px`,
-    '--reader-code-font-size': `${settings.codeFontSize}px`,
-    '--reader-line-height': `${settings.lineHeight}`,
-    '--reader-page-width': `${settings.pageWidth}px`,
-    '--reader-font-family': settings.fontFamily,
-  } as React.CSSProperties), [settings]);
+  // CSS custom properties for theme colors + typography settings
+  const containerStyle = useMemo(() => {
+    const themeData = getReaderThemeById(settings.theme);
+    return {
+      '--reader-bg': themeData.background,
+      '--reader-text': themeData.text,
+      '--reader-accent': themeData.accent,
+      '--reader-border': themeData.border,
+      '--reader-code-bg': themeData.codeBg,
+      '--reader-font-size': `${settings.fontSize}px`,
+      '--reader-code-font-size': `${settings.codeFontSize}px`,
+      '--reader-line-height': `${settings.lineHeight}`,
+      '--reader-page-width': `${settings.pageWidth}px`,
+      '--reader-font-family': settings.fontFamily,
+    } as React.CSSProperties;
+  }, [settings]);
 
   const themeClass = `reader-theme-${settings.theme}`;
   const imagesClass = settings.showImages ? '' : 'reader-images-hidden';
