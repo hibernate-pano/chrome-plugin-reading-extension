@@ -16,6 +16,9 @@ dist/
 dist-ssr/
 *.local
 
+# Test coverage reports
+coverage/
+
 # Old source code backup (from refactor)
 src-old/
 
