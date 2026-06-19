@@ -35,6 +35,9 @@ export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 /**
  * 函数类型
  */
+// AnyFunction deliberately uses `any` to accept any function signature;
+// changing to `unknown` would break callers that pass typed functions.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyFunction = (...args: any[]) => any;
 export type VoidFunction = () => void;
 export type AsyncFunction<T = void> = () => Promise<T>;
