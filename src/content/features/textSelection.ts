@@ -3,9 +3,6 @@
  * Shows a popup when user selects text in the reader
  */
 
-import { createRoot, type Root } from 'react-dom/client';
-
-let popupRoot: Root | null = null;
 let popupContainer: HTMLDivElement | null = null;
 
 /**

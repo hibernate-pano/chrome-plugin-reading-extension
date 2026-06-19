@@ -37,7 +37,7 @@ class ContentExporter {
         exportContent += this.toMarkdown(content, options);
         break;
       case 'html':
-        exportContent += this.toHTML(content, metadata, options);
+        exportContent += this.toHTML(content, metadata);
         break;
       case 'text':
         exportContent += this.toPlainText(content);
@@ -67,7 +67,7 @@ class ContentExporter {
   /**
    * 转换为HTML格式
    */
-  private toHTML(content: string, metadata: ArticleMetadata, options: ExportOptions): string {
+  private toHTML(content: string, metadata: ArticleMetadata): string {
     return `
 <!DOCTYPE html>
 <html lang="zh-CN">
