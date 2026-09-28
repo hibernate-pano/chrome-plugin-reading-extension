@@ -1,254 +1,157 @@
-# 📚 Chrome 阅读助手
+# 📚 Folio — Chrome 阅读助手
 
-> 版本 v2.0.0 | 极简 · 优雅 · 专注
+> 版本 v3.3.0 | 极简 · 优雅 · 专注 · 本地优先
 
-一款专注于"极简设计、本地优先"的 Chrome 阅读扩展，提供纯净、沉浸的网页阅读体验。
+一款 Chrome 阅读扩展（Manifest V3）。点击工具栏图标进入纯净阅读模式——剥离广告、导航、悬浮元素，只留下正文与恰到好处的排版。
 
-## ✨ v2.0.0 重大更新
+## ✨ 核心功能
 
-🎉 **完全重构** - 从 100+ 文件简化为 ~15 个核心文件，代码更简洁、更易维护。
+- **手动触发的阅读模式**：点击工具栏图标切换进入/退出。不做全站自动触发——阅读模式是有损的（Readability 会丢弃交互元素与动态内容），自动启用会在电商、后台、文档站上碍事
+- **智能内容提取**：基于 Mozilla Readability，自动识别文章主体，过滤导航/广告/侧栏
+- **Shadow DOM 隔离**：样式注入 Shadow DOM，页面 CSS 无法穿透，扩展样式也不会泄漏到原页面
+- **三套主题**：浅色 / 深色 / 护眼
+- **排版可调**：字号 12–32px、行高 1.2–2.0、页宽 600–1200px
+- **代码高亮**：内置轻量 tokenizer，支持 15 种语言的高亮与一键复制
+- **阅读历史**：记录最近 200 篇阅读过的文章，保存在本地
 
-### 新架构亮点
+### 键盘操作
 
-| 方面 | 旧架构 | 新架构 |
-|------|--------|--------|
-| 文件数量 | 100+ | ~15 |
-| 状态管理 | Zustand + 多层中间件 | 直接使用 Chrome Storage API |
-| 错误处理 | 5个管理器类 | 1个简单的错误处理函数 |
-| 代码高亮 | 动态加载 highlight.js | 轻量级内置高亮 |
+| 按键 | 作用 |
+|------|------|
+| `Esc` | 退出阅读模式（设置面板打开时先关面板） |
 
-## ✨ 功能特点
+## 🚧 开发中
 
-### 🎯 核心功能
+- **一键导出 PDF**：以 A4 排版输出当前文章
 
-- **一键开启**：极简 popup 界面，点击即可切换阅读模式
-- **智能提取**：基于 Mozilla Readability，精准提取网页主要内容
-- **沉浸阅读**：过滤广告、导航等干扰元素，专注内容本身
-- **悬浮设置**：极简悬浮面板，快速调整阅读参数
+## 🔒 隐私
 
-### 🎨 阅读体验
-
-- **多主题支持**：浅色、深色、护眼三种主题
-- **字体定制**：自定义字体选择
-- **灵活排版**：自定义字号、行高、页面宽度
-- **代码高亮**：支持技术文章中的代码块语法高亮
-
-### 🔒 隐私保护
-
-- **本地优先**：所有数据本地存储，不依赖云服务
-- **无跟踪**：不收集任何用户数据
-- **离线可用**：无需网络连接即可使用
-
-### ⚡ 性能优化
-
-- **按需加载**：内容脚本采用最小化注入
-- **轻量级**：Bundle 大小 < 500KB
-- **快速启动**：阅读模式 2 秒内启动
+- **本地优先**：所有数据（设置、阅读历史）存于 Chrome Storage API，不上传任何服务器
+- **无跟踪**：不收集、不上报任何用户行为
+- **离线可用**：核心功能完全在本地运行
+- **最小权限**：`storage` + `activeTab` + `tabs` + `scripting` + `<all_urls>` host permission（内容脚本需在任意页面运行）
 
 ## 🛠️ 技术栈
 
-### 核心框架
-
-- **React** 18.2.0 - 声明式 UI 框架
-- **TypeScript** 5.2.2 - 类型安全开发
-- **Vite** 5.1.6 - 快速构建工具
-
-### UI & 样式
-
-- **Tailwind CSS** 3.4.0 - 原子化 CSS 框架
-- **CSS Modules** - 组件级样式隔离
-
-### 存储
-
-- **Chrome Storage API** - 本地数据持久化
-
-### 内容处理
-
-- **@mozilla/readability** 0.5.0 - 智能内容提取
+- React 18 + TypeScript 5（strict）
+- Vite 5（两套配置：`vite.config.ts` 构建 background；`vite.content.config.ts` 构建 IIFE 格式的 content script）
+- Chrome Extension Manifest V3（Service Worker）
+- Shadow DOM + `?inline` CSS 注入
+- @mozilla/readability 0.5
+- vitest + jsdom
 
 ## 🚀 快速开始
 
-### 前提条件
+### 前提
 
-- **Node.js** 18+
-- **pnpm** 8+ (推荐使用 pnpm)
+- Node.js 18+
+- pnpm 9+
 
-### 安装依赖
+### 安装与开发
 
 ```bash
-# 克隆仓库
 git clone <repository-url>
 cd chrome-plugin-reading-extension
-
-# 安装依赖
 pnpm install
-```
 
-### 开发构建
-
-```bash
-# 开发模式（带调试信息）
-pnpm run build:new:debug
-
-# 生产构建
-pnpm run build:new
-
-# 代码检查
-pnpm run lint
-
-# 运行测试
-pnpm run test
+pnpm run dev          # watch 模式，构建持续刷新到 dist/
+pnpm run build        # 生产构建
+pnpm run test         # 运行测试
+pnpm run lint         # ESLint
 ```
 
 ### 加载到 Chrome
 
-1. 运行构建命令：
-
-   ```bash
-   pnpm run build:new
-   ```
-
-2. 打开 Chrome 扩展管理页面：
-
-   ```
-   chrome://extensions/
-   ```
-
-3. 启用**开发者模式**（右上角开关）
-
-4. 点击**加载已解压的扩展程序**
-
-5. 选择项目的 `dist` 目录
-
-6. 完成！扩展图标会出现在工具栏
-
-### 使用方法
-
-1. 打开任意网页
-2. 点击工具栏中的扩展图标
-3. 切换**阅读模式**开关
-4. 享受沉浸式阅读体验！
-
-在阅读模式下，点击左侧悬浮按钮 ⚙️ 可调整阅读设置。
+1. 运行 `pnpm run build`
+2. 打开 `chrome://extensions/`
+3. 启用右上角**开发者模式**
+4. 点击**加载已解压的扩展程序**，选择项目根目录下的 `dist/` 文件夹
+5. 工具栏出现 Folio 图标 → 完成
 
 ## 📁 项目结构
 
 ```
-chrome-plugin-reading-extension/
-├── src/
-│   ├── background/
-│   │   └── index.ts          # Service Worker 入口
-│   ├── content/
-│   │   ├── index.ts          # 内容脚本入口
-│   │   ├── extractor.ts      # 内容提取器
-│   │   ├── ReaderView.tsx    # 阅读视图组件
-│   │   ├── SettingsPanel.tsx # 设置面板组件
-│   │   ├── CodeBlock.tsx     # 代码块组件
-│   │   ├── errorHandling.ts  # 错误处理
-│   │   └── styles.css        # 阅读模式样式
-│   ├── popup/
-│   │   ├── index.tsx         # Popup 入口
-│   │   ├── Popup.tsx         # Popup 组件
-│   │   └── styles.css        # Popup 样式
-│   └── shared/
-│       ├── storage.ts        # 存储工具
-│       ├── types.ts          # TypeScript 类型
-│       ├── constants.ts      # 常量和默认值
-│       └── index.ts          # 导出入口
-├── public/
-│   ├── manifest.json         # Chrome 扩展清单
-│   └── icon*.png             # 扩展图标
-├── tests/
-│   ├── setup.ts              # 测试设置
-│   └── extractor.test.ts     # 提取器测试
-├── dist/                     # 构建输出（加载此目录）
-└── package.json
+src/
+├── background/        # Service Worker：消息路由 + content script 注入
+├── content/           # 内容脚本（Shadow DOM 挂载点）
+│   ├── ReaderView.tsx     # 阅读主视图 + 工具栏
+│   ├── SettingsPanel.tsx  # 设置面板
+│   ├── CodeBlock.tsx      # 代码块（高亮 + 复制）
+│   ├── extractor.ts       # Readability 封装 + 缓存
+│   ├── errorHandling.ts   # ErrorBoundary 与错误上报
+│   ├── styles.css         # 阅读样式（注入 Shadow DOM）
+│   └── index.ts           # 入口：Shadow DOM 容器与消息处理
+├── shared/            # 跨模块共享
+│   ├── storage.ts        # 设置持久化与校验
+│   ├── history.ts        # 阅读历史
+│   ├── readerThemes.ts   # 主题定义
+│   ├── constants.ts      # 消息类型、存储键、默认值
+│   └── types.ts          # 类型定义
+└── types/
 
-总计: ~15 个核心文件（相比旧架构的 100+ 文件）
+public/                # 静态资源（图标、manifest.json）
+tests/                 # vitest 测试
+dist/                  # 构建产物（加载此目录到 Chrome）
 ```
 
-## 🏗️ 架构设计
+总计：9 个 TS/TSX 文件，约 2.4k 行。
 
-### 简化的架构
+## 🏗️ 架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Chrome Extension                         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   Popup     │  │  Background │  │   Content Script    │  │
-│  │  (React)    │  │  (Service   │  │                     │  │
-│  │             │  │   Worker)   │  │  ┌───────────────┐  │  │
-│  │ ┌─────────┐ │  │             │  │  │ ReaderView    │  │  │
-│  │ │ Toggle  │ │  │ ┌─────────┐ │  │  │ (React)       │  │  │
-│  │ │ Switch  │ │  │ │ Message │ │  │  └───────────────┘  │  │
-│  │ └─────────┘ │  │ │ Router  │ │  │  ┌───────────────┐  │  │
-│  └─────────────┘  │ └─────────┘ │  │  │ Settings      │  │  │
-│                   └─────────────┘  │  │ Panel         │  │  │
-│                                    │  └───────────────┘  │  │
-│                                    │  ┌───────────────┐  │  │
-│                                    │  │ Extractor     │  │  │
-│                                    │  └───────────────┘  │  │
-│                                    └─────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│                    Shared Modules                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  Storage    │  │   Types     │  │   Constants         │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                     Chrome Extension (MV3)                    │
+├──────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐  ┌─────────────────┐  ┌───────────────┐  │
+│  │   Background    │  │ Content Script  │  │   Shadow DOM  │  │
+│  │ (Service Worker)│  │                 │  │  (ReaderView) │  │
+│  │                 │  │ • 提取正文       │  │               │  │
+│  │ • 注入脚本       │  │ • 管理挂载点     │  │ • 渲染正文     │  │
+│  │ • 消息转发       │  │ • 处理设置变更   │  │ • 工具栏       │  │
+│  │ • 图标点击切换   │  │                 │  │ • 设置面板     │  │
+│  └────────┬────────┘  └────────┬────────┘  └───────────────┘  │
+│           │ chrome.tabs      │ chrome.runtime                │
+│           └──────────────────┘                               │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                  Shared Modules                       │   │
+│  │  storage · history · readerThemes · constants · types │   │
+│  └──────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### 设计原则
 
-1. **简单优先**：每个模块只做一件事，做好一件事
-2. **最小依赖**：减少第三方库，只保留必要的（Readability、React）
-3. **直接实现**：避免过度抽象，代码应该直接表达意图
-4. **渐进增强**：核心功能必须可靠，高级功能可选
+1. **手动触发，不打扰**：阅读模式是有损降级，应当由用户主动进入
+2. **简单优先**：每个模块只做一件事，做好一件事
+3. **最小依赖**：只保留真正被用到的依赖
+4. **直接实现**：避免过度抽象，代码直接表达意图
+5. **本地优先**：任何涉及用户数据的设计先问"能在本地完成吗？"
 
 ## 🧪 测试
 
 ```bash
-# 运行所有测试
-pnpm run test
-
-# 监听模式
-pnpm run test:watch
-
-# 覆盖率报告
-pnpm run test:coverage
+pnpm run test           # 单次跑全部测试
+pnpm run test:watch     # 监听模式
+pnpm run test:coverage  # 覆盖率报告
 ```
 
-## 🤝 贡献指南
+## 🤝 贡献
 
-欢迎贡献代码、提交问题或建议！
-
-1. Fork 本仓库
-2. 创建特性分支：`git checkout -b feature/amazing-feature`
-3. 提交更改：`git commit -m 'feat: add amazing feature'`
-4. 推送分支：`git push origin feature/amazing-feature`
+1. Fork 仓库
+2. 创建分支：`git checkout -b feature/xxx`
+3. 提交：`git commit -m 'feat: xxx'`
+4. 推送：`git push origin feature/xxx`
 5. 提交 Pull Request
 
-### 提交规范
+### 提交规范（Conventional Commits）
 
-采用 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
-
-- `feat:` 新功能
-- `fix:` 修复 bug
-- `docs:` 文档更新
-- `style:` 代码格式调整
-- `refactor:` 代码重构
-- `perf:` 性能优化
-- `test:` 测试相关
-- `chore:` 构建/工具相关
+`feat:` 新功能 · `fix:` 修 bug · `docs:` 文档 · `refactor:` 重构 · `perf:` 性能 · `test:` 测试 · `chore:` 工具/构建
 
 ## 📄 许可证
 
-[MIT License](LICENSE)
-
-## 💬 联系方式
-
-如有问题或建议，欢迎提交 [Issue](../../issues)。
+MIT License
 
 ---
 
-**Made with ❤️ for better reading experience**
+**Made with ❤️ for better reading experience.**

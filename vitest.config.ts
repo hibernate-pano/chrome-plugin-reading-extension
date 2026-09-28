@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src-new'),
+      '@': resolve(__dirname, './src'),
+      '@shared': resolve(__dirname, './src/shared'),
+      '@content': resolve(__dirname, './src/content'),
+      '@background': resolve(__dirname, './src/background'),
     },
   },
   test: {
@@ -17,8 +20,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src-new/**/*.ts', 'src-new/**/*.tsx'],
-      exclude: ['src-new/**/*.d.ts', 'src-new/**/.gitkeep'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: ['src/**/*.d.ts', 'src/**/.gitkeep'],
       thresholds: {
         statements: 70,
         branches: 70,
