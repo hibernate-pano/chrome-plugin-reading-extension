@@ -18,9 +18,7 @@ export type {
 export {
   DEFAULT_SETTINGS,
   SETTINGS_CONSTRAINTS,
-  VALID_THEMES,
   MESSAGE_TYPES,
-  THEME_COLORS,
   STORAGE_KEYS,
   READING_SPEED,
 } from './constants';
@@ -34,3 +32,6 @@ export {
   saveSetting,
   resetSettings,
 } from './storage';
+
+// Themes
+export { READER_THEMES, getReaderThemeById, type ReaderTheme, type ThemeId } from './readerThemes';

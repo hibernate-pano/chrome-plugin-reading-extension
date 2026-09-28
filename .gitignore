@@ -65,3 +65,6 @@ CLAUDE.md
 .husky/
 .playwright-mcp/
 .sisyphus/
+.mimosa/
+.v2c/
+.video_agent/

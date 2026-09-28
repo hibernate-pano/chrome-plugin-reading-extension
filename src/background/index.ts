@@ -141,7 +141,7 @@ async function forwardToContentScript<T>(
 /**
  * Handle messages from popup or content script
  */
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Log non-trivial messages
   if (message.type !== MESSAGE_TYPES.PING) {
     console.log('[Background] Received message:', message.type);

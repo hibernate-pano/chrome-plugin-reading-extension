@@ -38,14 +38,6 @@ const LANGUAGE_PATTERNS: Record<string, RegExp> = {
 };
 
 /**
- * Supported languages for syntax highlighting
- */
-const _SUPPORTED_LANGUAGES = [
-  'javascript', 'typescript', 'python', 'java', 'cpp', 'c',
-  'go', 'rust', 'html', 'css', 'sql', 'json', 'yaml', 'bash', 'markdown'
-] as const;
-
-/**
  * Detect programming language from code content
  */
 function detectLanguage(code: string): string {

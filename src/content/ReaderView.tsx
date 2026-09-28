@@ -91,25 +91,23 @@ export function ReaderView({
     settingsBtnRef.current?.focus();
   }, []);
 
-  // CSS custom properties for theme colors + typography settings
+  // CSS custom properties — keep this list to the four things the user can adjust.
   const containerStyle = useMemo(() => {
     const themeData = getReaderThemeById(settings.theme);
     return {
       '--reader-bg': themeData.background,
       '--reader-text': themeData.text,
+      '--reader-text-muted': themeData.textMuted,
       '--reader-accent': themeData.accent,
       '--reader-border': themeData.border,
       '--reader-code-bg': themeData.codeBg,
       '--reader-font-size': `${settings.fontSize}px`,
-      '--reader-code-font-size': `${settings.codeFontSize}px`,
       '--reader-line-height': `${settings.lineHeight}`,
       '--reader-page-width': `${settings.pageWidth}px`,
-      '--reader-font-family': settings.fontFamily,
     } as React.CSSProperties;
   }, [settings]);
 
   const themeClass = `reader-theme-${settings.theme}`;
-  const imagesClass = settings.showImages ? '' : 'reader-images-hidden';
   const toolbarClass = `reader-toolbar ${toolbarVisible ? 'reader-toolbar--visible' : 'reader-toolbar--hidden'}`;
 
   const processedContent = useMemo(() => {
@@ -117,7 +115,7 @@ export function ReaderView({
   }, [content.content]);
 
   return (
-    <div className={`reader-overlay ${themeClass} ${imagesClass}`} style={containerStyle} role="main">
+    <div className={`reader-overlay ${themeClass}`} style={containerStyle} role="main">
       {/* Skip to content link */}
       <a
         href="#reader-content"

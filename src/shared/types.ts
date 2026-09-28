@@ -3,31 +3,27 @@
  * Simplified types for the refactored architecture
  */
 
+import type { ThemeId } from './readerThemes';
+
 /**
  * Theme options for reading mode
- * Includes default themes and custom themes from EXTRA_THEMES
+ * Three base themes: light, dark, sepia
  */
-export type Theme = 'light' | 'dark' | 'sepia' | 'ocean' | 'forest' | 'sunset' | 'galaxy' | 'mint' | 'lavender' | 'old-newsprint' | 'rice-paper' | 'parchment' | 'sticky-note' | 'book-page' | 'coffee-stain' | 'starry-night' | 'aurora' | 'dawn' | 'desert' | 'midnight' | 'marble' | 'concrete' | 'silk' | 'terminal' | 'crt' | 'gameboy' | 'ukiyoe' | 'ink-wash' | 'neon' | 'high-contrast' | 'focus';
+export type Theme = ThemeId;
 
 /**
  * User settings for reading mode
- * Simplified from the original UserSettings interface
+ * Only the four most essential controls: theme, font size, line height, page width.
  */
 export interface Settings {
-  /** Visual theme (light/dark/sepia) */
+  /** Visual theme */
   theme: Theme;
   /** Font size in pixels (12-32) */
   fontSize: number;
-  /** Code block font size in pixels (10-24) */
-  codeFontSize: number;
   /** Line height multiplier (1.2-2.0) */
   lineHeight: number;
   /** Page width in pixels (600-1200) */
   pageWidth: number;
-  /** CSS font-family value */
-  fontFamily: string;
-  /** Whether to show images in the article */
-  showImages: boolean;
 }
 
 /**
@@ -86,8 +82,6 @@ export interface ContentScriptState {
   isActive: boolean;
   /** Current user settings */
   settings: Settings;
-  /** Original page content (for restoration) */
-  originalContent: string | null;
 }
 
 /**

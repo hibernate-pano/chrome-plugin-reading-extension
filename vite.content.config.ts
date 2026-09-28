@@ -1,3 +1,9 @@
+/**
+ * Vite Configuration — Content Script
+ * Builds content.js (IIFE) + content.css from src/content/index.ts.
+ * Content scripts must be IIFE and cannot use ES modules at runtime.
+ */
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
@@ -9,62 +15,58 @@ export default defineConfig({
   base: './',
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-    'process.env': '{}'
+    'process.env': '{}',
   },
   plugins: [react()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      'turndown': resolve(__dirname, 'node_modules/turndown/lib/turndown.browser.cjs')
-    }
+      '@shared': resolve(__dirname, 'src/shared'),
+      '@content': resolve(__dirname, 'src/content'),
+    },
   },
   css: {
-    postcss: './postcss.config.js'
+    postcss: './postcss.config.js',
   },
   build: {
     outDir: 'dist',
+    // Don't empty — background.js already built by vite.config.ts
     emptyOutDir: false,
     rollupOptions: {
       external: ['chrome'],
       input: {
-        content: resolve(__dirname, 'src/content/index.ts')
+        content: resolve(__dirname, 'src/content/index.ts'),
       },
       output: {
         globals: {
-          chrome: 'chrome'
+          chrome: 'chrome',
         },
         format: 'iife',
         dir: 'dist',
-        entryFileNames: () => 'content.js',
-        chunkFileNames: 'assets/content-chunks/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
-      }
+        entryFileNames: 'content.js',
+        // Inline all chunks — required for IIFE content scripts
+        inlineDynamicImports: true,
+        assetFileNames: (assetInfo) => {
+          // Content script CSS — referenced as content.css in manifest
+          if (assetInfo.name?.endsWith('.css')) {
+            return 'content.css';
+          }
+          return 'assets/[name]-[hash].[ext]';
+        },
+      },
     },
-    minify: 'terser',
-    target: 'es2020',
     sourcemap: process.env.NODE_ENV !== 'production',
-    cssCodeSplit: true,
-    reportCompressedSize: false,
-    chunkSizeWarningLimit: 600,
+    target: 'es2020',
+    minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: process.env.NODE_ENV === 'production',
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info'],
-        passes: 2,
-        ecma: 2020,
-        unsafe_arrows: true,
-        unsafe_methods: true
+        pure_funcs:
+          process.env.NODE_ENV === 'production'
+            ? ['console.debug', 'console.log']
+            : [],
       },
-      mangle: {
-        safari10: true,
-        toplevel: true
-      },
-      format: {
-        comments: false
-      }
-    }
-  }
+    },
+  },
 });
-
-

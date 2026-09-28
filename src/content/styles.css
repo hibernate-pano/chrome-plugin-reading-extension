@@ -140,7 +140,7 @@
   padding: 5rem 2rem 6rem;
   background-color: var(--reader-bg);
   color: var(--reader-text);
-  font-family: var(--reader-font-family, Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif);
+  font-family: ui-serif, Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif;
   font-size: var(--reader-font-size, 19px);
   line-height: var(--reader-line-height, 1.75);
   transition: font-size 0.15s ease, line-height 0.15s ease;
@@ -432,18 +432,6 @@ body.reader-mode-active {
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-/* Hide images when showImages is false */
-.reader-overlay.reader-images-hidden img,
-.reader-overlay.reader-images-hidden figure img {
-  opacity: 0;
-  pointer-events: none;
-  display: none;
-}
-
-.reader-overlay.reader-images-hidden figure {
-  display: none;
-}
-
 .reader-content figure {
   margin: 1.75em 0;
   text-align: center;
@@ -577,7 +565,7 @@ body.reader-mode-active {
   margin: 0;
   padding: 1em;
   overflow-x: auto;
-  font-size: var(--reader-code-font-size, 14px);
+  font-size: 0.875em;
   line-height: 1.6;
 }
 

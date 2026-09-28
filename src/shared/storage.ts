@@ -3,13 +3,11 @@
  * Simplified wrapper around Chrome Storage API with type safety
  */
 
-import type { Settings } from './types';
-import {
-  DEFAULT_SETTINGS,
-  SETTINGS_CONSTRAINTS,
-  VALID_THEMES,
-  STORAGE_KEYS,
-} from './constants';
+import type { Settings, Theme } from './types';
+import { DEFAULT_SETTINGS, SETTINGS_CONSTRAINTS, STORAGE_KEYS } from './constants';
+import { READER_THEMES } from './readerThemes';
+
+const VALID_THEME_IDS: readonly Theme[] = READER_THEMES.map((t) => t.id);
 
 /**
  * Clamp a number between min and max values
@@ -20,20 +18,17 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * Validate and normalize settings object
- * Returns a complete Settings object with all invalid values replaced by defaults
+ * Returns a complete Settings object with all invalid values replaced by defaults.
+ * Unknown / deprecated fields from older versions are silently dropped.
  */
 export function validateSettings(settings: Partial<Settings>): Settings {
-  const theme = VALID_THEMES.includes(settings.theme as typeof VALID_THEMES[number])
-    ? settings.theme!
+  const theme = VALID_THEME_IDS.includes(settings.theme as Theme)
+    ? (settings.theme as Theme)
     : DEFAULT_SETTINGS.theme;
 
   const fontSize = typeof settings.fontSize === 'number'
     ? clamp(settings.fontSize, SETTINGS_CONSTRAINTS.fontSize.min, SETTINGS_CONSTRAINTS.fontSize.max)
     : DEFAULT_SETTINGS.fontSize;
-
-  const codeFontSize = typeof settings.codeFontSize === 'number'
-    ? clamp(settings.codeFontSize, SETTINGS_CONSTRAINTS.codeFontSize.min, SETTINGS_CONSTRAINTS.codeFontSize.max)
-    : DEFAULT_SETTINGS.codeFontSize;
 
   const lineHeight = typeof settings.lineHeight === 'number'
     ? clamp(settings.lineHeight, SETTINGS_CONSTRAINTS.lineHeight.min, SETTINGS_CONSTRAINTS.lineHeight.max)
@@ -43,23 +38,7 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     ? clamp(settings.pageWidth, SETTINGS_CONSTRAINTS.pageWidth.min, SETTINGS_CONSTRAINTS.pageWidth.max)
     : DEFAULT_SETTINGS.pageWidth;
 
-  const fontFamily = typeof settings.fontFamily === 'string' && settings.fontFamily.trim()
-    ? settings.fontFamily
-    : DEFAULT_SETTINGS.fontFamily;
-
-  const showImages = typeof settings.showImages === 'boolean'
-    ? settings.showImages
-    : DEFAULT_SETTINGS.showImages;
-
-  return {
-    theme,
-    fontSize,
-    codeFontSize,
-    lineHeight,
-    pageWidth,
-    fontFamily,
-    showImages,
-  };
+  return { theme, fontSize, lineHeight, pageWidth };
 }
 
 /**
@@ -70,11 +49,11 @@ export async function getSettings(): Promise<Settings> {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEYS.SETTINGS);
     const stored = result[STORAGE_KEYS.SETTINGS];
-    
+
     if (!stored || typeof stored !== 'object') {
       return { ...DEFAULT_SETTINGS };
     }
-    
+
     return validateSettings(stored as Partial<Settings>);
   } catch (error) {
     console.error('[Reader] Failed to get settings:', error);
@@ -91,7 +70,7 @@ export async function saveSettings(settings: Partial<Settings>): Promise<void> {
     const current = await getSettings();
     const merged = { ...current, ...settings };
     const validated = validateSettings(merged);
-    
+
     await chrome.storage.local.set({
       [STORAGE_KEYS.SETTINGS]: validated,
     });

@@ -1,0 +1,10 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[scripts]
+setup = "pnpm install --prefer-offline"
+run = "pnpm run dev"
+run_mode = "concurrent"
+
+[prompts]
+general = "这是一个 Chrome 扩展项目（v3 manifest），构建产物在 dist/ 目录，通过 chrome://extensions/ 以「加载已解压的扩展程序」方式加载。修改后请运行 pnpm run build 验证构建产物。优先使用 pnpm，遵循项目现有的 Conventional Commits 规范。"
+code_review = "重点关注：1) Chrome 扩展 manifest 配置是否正确（permissions、content_scripts、background service worker）；2) 是否在 src 与 public 之间正确分离了产物（dist/ 内的路径变更是否需要同步更新 manifest.json 的 web_accessible_resources）；3) 是否有跨域/隐私问题（项目坚持本地优先原则，不收集用户数据）；4) TypeScript 类型与 React 组件的正确性。"

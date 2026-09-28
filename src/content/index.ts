@@ -27,7 +27,6 @@ const READER_HOST_ID = 'ai-reader-host';
 let state: ContentScriptState = {
   isActive: false,
   settings: { ...DEFAULT_SETTINGS },
-  originalContent: null,
 };
 
 let reactRoot: Root | null = null;
@@ -117,8 +116,8 @@ async function enableReadingMode(): Promise<void> {
       result.data.title,
       {
         excerpt: result.data.excerpt,
-        byline: result.data.byline,
-        siteName: result.data.siteName,
+        byline: result.data.byline ?? undefined,
+        siteName: result.data.siteName ?? undefined,
         length: result.data.wordCount,
       },
       {
