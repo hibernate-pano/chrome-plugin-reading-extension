@@ -81,10 +81,6 @@ function handleMessage(
           sendResponse({ success: true });
           break;
 
-        case MESSAGE_TYPES.EXPORT_PDF:
-          sendResponse(await exportToPdf());
-          break;
-
         default:
           sendResponse({ success: false, error: 'Unknown message type' });
       }
@@ -264,6 +260,7 @@ function renderReaderView(mount: HTMLElement): void {
           settings: state.settings,
           onClose: disableReadingMode,
           onSettingsChange: updateSettings,
+          onExportPdf: exportToPdf,
         }),
       }
     )

@@ -5,7 +5,6 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef, type JSX } from 'react';
 import type { Settings, ExtractedContent } from '../shared/types';
-import { MESSAGE_TYPES } from '../shared/constants';
 import { SettingsPanel } from './SettingsPanel';
 import { CodeBlock } from './CodeBlock';
 import { getReaderThemeById } from '../shared/readerThemes';
@@ -15,6 +14,8 @@ interface ReaderViewProps {
   settings: Settings;
   onClose: () => void;
   onSettingsChange: (settings: Partial<Settings>) => void;
+  /** Hand the article to the background, which opens the print page. */
+  onExportPdf: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export function ReaderView({
@@ -22,6 +23,7 @@ export function ReaderView({
   settings,
   onClose,
   onSettingsChange,
+  onExportPdf,
 }: ReaderViewProps): JSX.Element {
   const [showSettings, setShowSettings] = useState(false);
   const [toolbarVisible, setToolbarVisible] = useState(true);
@@ -94,16 +96,23 @@ export function ReaderView({
     setExporting(true);
     setExportError(null);
     try {
-      const response = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.EXPORT_PDF });
-      if (!response?.success) {
-        setExportError(response?.error ?? '导出失败');
+      const result = await onExportPdf();
+      if (!result.success) {
+        setExportError(result.error ?? '导出失败');
       }
     } catch (error) {
       setExportError(error instanceof Error ? error.message : '导出失败');
     } finally {
       setExporting(false);
     }
-  }, [exporting]);
+  }, [exporting, onExportPdf]);
+
+  // Clear a stale error so it does not sit on screen after the next success.
+  useEffect(() => {
+    if (!exportError) return;
+    const timer = setTimeout(() => setExportError(null), 6000);
+    return () => clearTimeout(timer);
+  }, [exportError]);
 
   const closeSettings = useCallback(() => {
     setShowSettings(false);
@@ -158,29 +167,35 @@ export function ReaderView({
           <CloseIcon />
         </button>
 
-        <button
-          className="reader-export-btn"
-          onClick={handleExportPdf}
-          disabled={exporting}
-          aria-label="导出 PDF"
-          title="导出 PDF"
-          type="button"
-        >
-          {exporting ? <SpinnerIcon /> : <DownloadIcon />}
-        </button>
+        {/* Right-aligned control cluster — the two-bar top strip is
+            space-between, so these must sit together or they drift apart. */}
+        <div className="reader-toolbar__actions">
+          <button
+            className="reader-export-btn"
+            onClick={handleExportPdf}
+            disabled={exporting}
+            aria-label="导出 PDF"
+            title="导出 PDF"
+            type="button"
+          >
+            {exporting ? <SpinnerIcon /> : <DownloadIcon />}
+          </button>
 
-        <button
-          ref={settingsBtnRef}
-          className={`reader-settings-btn${showSettings ? ' reader-settings-btn--active' : ''}`}
-          onClick={toggleSettings}
-          aria-label={showSettings ? 'Close settings' : 'Open settings'}
-          aria-expanded={showSettings}
-          type="button"
-        >
-          <SettingsIcon />
-        </button>
+          <button
+            ref={settingsBtnRef}
+            className={`reader-settings-btn${showSettings ? ' reader-settings-btn--active' : ''}`}
+            onClick={toggleSettings}
+            aria-label={showSettings ? 'Close settings' : 'Open settings'}
+            aria-expanded={showSettings}
+            type="button"
+          >
+            <SettingsIcon />
+          </button>
+        </div>
       </div>
 
+      {/* Anchored to the overlay, not the toolbar — the toolbar is a
+          fixed top strip and would push this out of the viewport. */}
       {exportError && (
         <div className="reader-export-error" role="alert">
           {exportError}

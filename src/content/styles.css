@@ -182,6 +182,14 @@ body.reader-mode-active {
   pointer-events: auto;
 }
 
+/* The toolbar is space-between, so the two secondary controls need to be
+   grouped or they get pushed to opposite ends of the strip. */
+.reader-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ============================================
    Close Button
    ============================================ */
@@ -310,9 +318,12 @@ body.reader-mode-active {
 }
 
 .reader-export-error {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  /* Anchored to the top-right of the viewport, below the toolbar strip.
+     The toolbar itself is position: fixed with no positioning context, so
+     an absolutely positioned child of it would resolve against the wrong box. */
+  position: fixed;
+  top: 4.5rem;
+  right: 1.25rem;
   max-width: 260px;
   padding: 8px 12px;
   font-size: 12px;
