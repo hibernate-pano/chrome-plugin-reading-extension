@@ -34,6 +34,7 @@ export const MESSAGE_TYPES: Record<MessageType, MessageType> = {
   UPDATE_SETTINGS: 'UPDATE_SETTINGS',
   PING: 'PING',
   ENSURE_CONTENT_SCRIPT: 'ENSURE_CONTENT_SCRIPT',
+  EXPORT_PDF: 'EXPORT_PDF',
 } as const;
 
 /**
@@ -42,8 +43,46 @@ export const MESSAGE_TYPES: Record<MessageType, MessageType> = {
 export const STORAGE_KEYS = {
   SETTINGS: 'reader_settings',
   READING_HISTORY: 'reading_history',
+  PRINT_SETTINGS: 'print_settings',
+  /** Prefix for one-shot payloads handed to the print page */
+  PRINT_PAYLOAD: 'print_payload_',
   LAST_SYNC: 'last_sync_time',
 } as const;
+
+/**
+ * A4 geometry. The print stylesheet derives its measurements from these so
+ * the preview column and the printed page cannot drift apart.
+ */
+export const A4 = {
+  /** Page width in mm */
+  width: 210,
+  /** Page height in mm */
+  height: 297,
+  /** Top/bottom margin in mm */
+  marginVertical: 20,
+  /** Left/right margin in mm */
+  marginHorizontal: 18,
+  /** Printable width: 210 - 18*2 = 174mm */
+  get contentWidth(): number {
+    return A4.width - A4.marginHorizontal * 2;
+  },
+  /** Printable height: 297 - 20*2 = 257mm */
+  get contentHeight(): number {
+    return A4.height - A4.marginVertical * 2;
+  },
+} as const;
+
+/**
+ * Font sizes offered in the print toolbar, in points.
+ */
+export const PRINT_FONT_SIZES = [9, 10.5, 11, 12, 13] as const;
+
+/**
+ * Code blocks at or above this line count may break across pages.
+ * Shorter ones are kept intact. Without this split, a long block forced to
+ * avoid page breaks overflows and the browser silently drops its tail.
+ */
+export const CODE_BLOCK_BREAK_THRESHOLD_LINES = 30;
 
 /**
  * Reading time calculation constants

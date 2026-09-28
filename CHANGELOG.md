@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- 📄 **一键导出 PDF**
+  - 阅读模式工具栏新增下载按钮，在新标签页以 A4 排版输出当前文章
+  - 纸张主题：浅色 / 护眼（刻意不提供深色，打印费墨且对比度差）
+  - 字号可在 9–13pt 间调节，选择被持久化
+  - 借用 Chrome 排版引擎输出：文字矢量可选中，5 千字文章约数百 KB，零新增运行时依赖
+  - A4 分页规范：标题不落页底、段落避免孤行、代码块按行数分档决定是否允许跨页、
+    图片不跨页切断且不超一页高、宽表格压在 174mm 内
+  - 修复懒加载图片：识别透明占位图，从 data-src / srcset 等属性回填真实地址
+  - 打印前等待图片解码（上限 5 秒），失败时如实提示数量而非静默输出空白
+  - 打印页不执行文章内的任何脚本，并拒绝非 http(s) 的来源链接
+
+### Changed
+
+- 抽出 `src/shared/codeHighlight.ts`，供阅读视图与打印页共用同一套 tokenizer
+  （移除 CodeBlock.tsx 中 133 行重复实现）
+- 新增 `vite.print.config.ts` 构建打印页；`build` 脚本串联三套配置
+- manifest 的 web_accessible_resources 增加 print.html
+
+### Notes
+
+- 预览页为连续滚动，**不提供分页预览**。浏览器无分页查询 API，自行模拟的断页
+  与实际输出必然有偏差且无法修正；精确分页请使用 Chrome 打印对话框的预览。
+  详见 `docs/superpowers/specs/2026-09-29-pdf-export-design.md` §6
+
 ## [3.3.0] - 2026-09-28
 
 扩展收敛为单一职责：抽取正文并在 Shadow DOM 中以阅读格式展示。代码量从 5.7k 行降至 2.4k 行。

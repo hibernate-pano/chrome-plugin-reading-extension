@@ -27,7 +27,8 @@
     {
       "resources": [
         "assets/*",
-        "content.css"
+        "content.css",
+        "print.html"
       ],
       "matches": [
         "<all_urls>"

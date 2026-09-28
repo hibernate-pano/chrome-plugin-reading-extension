@@ -11,6 +11,7 @@ import type {
   ContentScriptState,
   StateResponse,
   ExtractedContent,
+  PrintPayload,
 } from '../shared/types';
 import { MESSAGE_TYPES, DEFAULT_SETTINGS } from '../shared/constants';
 import { getSettings, saveSettings } from '../shared/storage';
@@ -78,6 +79,10 @@ function handleMessage(
             await updateSettings(message.payload as Partial<Settings>);
           }
           sendResponse({ success: true });
+          break;
+
+        case MESSAGE_TYPES.EXPORT_PDF:
+          sendResponse(await exportToPdf());
           break;
 
         default:
@@ -174,6 +179,37 @@ async function updateSettings(newSettings: Partial<Settings>): Promise<void> {
     }
   } catch (error) {
     handleError(error, 'storage');
+  }
+}
+
+/**
+ * Hand the current article to the background, which opens the print page.
+ *
+ * The HTML is sent as a string; nothing is fetched and no code executes.
+ */
+async function exportToPdf(): Promise<{ success: boolean; error?: string }> {
+  if (!currentContent) {
+    return { success: false, error: '阅读模式未开启' };
+  }
+
+  const payload: PrintPayload = {
+    title: currentContent.title,
+    byline: currentContent.byline,
+    siteName: currentContent.siteName,
+    content: currentContent.content,
+    sourceUrl: window.location.href,
+    exportedAt: Date.now(),
+  };
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.EXPORT_PDF,
+      payload,
+    });
+    return (response as { success: boolean; error?: string }) ?? { success: false, error: 'No response' };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 

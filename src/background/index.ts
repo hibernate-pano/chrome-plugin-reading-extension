@@ -4,8 +4,8 @@
  * Requirements: 1.2, 7.1
  */
 
-import type { Message, MessageType } from '../shared/types';
-import { MESSAGE_TYPES } from '../shared/constants';
+import type { Message, MessageType, PrintPayload } from '../shared/types';
+import { MESSAGE_TYPES, STORAGE_KEYS } from '../shared/constants';
 
 // Track tabs with injected content scripts
 const injectedTabs = new Set<number>();
@@ -139,6 +139,39 @@ async function forwardToContentScript<T>(
 }
 
 /**
+ * Handle EXPORT_PDF — hand the article to a new print page.
+ *
+ * The write and the tab creation happen in the same event loop turn so a
+ * Service Worker shutdown cannot land between them and strand the payload.
+ * The token travels in the URL fragment, which is never sent to a server.
+ */
+async function handleExportPdf(payload: unknown): Promise<{ success: boolean; error?: string }> {
+  if (!payload || typeof payload !== 'object') {
+    return { success: false, error: 'Invalid payload' };
+  }
+
+  const article = payload as PrintPayload;
+  if (typeof article.content !== 'string' || article.content.length === 0) {
+    return { success: false, error: 'Nothing to export' };
+  }
+
+  const token = crypto.randomUUID().replace(/-/g, '');
+  const key = `${STORAGE_KEYS.PRINT_PAYLOAD}${token}`;
+
+  try {
+    await chrome.storage.session.set({ [key]: article });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `Failed to stage article: ${message}` };
+  }
+
+  const page = await chrome.runtime.getURL('print.html');
+  await chrome.tabs.create({ url: `${page}#${token}`, active: true });
+
+  return { success: true };
+}
+
+/**
  * Handle messages from popup or content script
  */
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -151,6 +184,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === MESSAGE_TYPES.PING) {
     sendResponse({ pong: true });
     return false;
+  }
+
+  // Content script hands over the article; open the print page for it.
+  if (message.type === MESSAGE_TYPES.EXPORT_PDF) {
+    handleExportPdf(message.payload)
+      .then(sendResponse)
+      .catch((error: unknown) => {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        sendResponse({ success: false, error: errorMessage });
+      });
+    return true; // Async response
   }
 
   // Handle ENSURE_CONTENT_SCRIPT request from popup

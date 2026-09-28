@@ -64,7 +64,8 @@ export type MessageType =
   | 'GET_STATE'
   | 'UPDATE_SETTINGS'
   | 'PING'
-  | 'ENSURE_CONTENT_SCRIPT';
+  | 'ENSURE_CONTENT_SCRIPT'
+  | 'EXPORT_PDF';
 
 /**
  * Message structure for extension communication
@@ -72,6 +73,38 @@ export type MessageType =
 export interface Message<T = unknown> {
   type: MessageType;
   payload?: T;
+}
+
+/**
+ * Data handed from the content script to the print page.
+ * Passed through storage.session keyed by a one-shot token.
+ */
+export interface PrintPayload {
+  title: string;
+  byline: string | null;
+  siteName: string | null;
+  /** Sanitized article HTML from Readability */
+  content: string;
+  /** Original page URL, shown in the print footer */
+  sourceUrl: string;
+  /** Unix ms of export time */
+  exportedAt: number;
+}
+
+/**
+ * Paper themes for print output.
+ * Dark is deliberately excluded — printing a dark theme wastes ink and
+ * has poor contrast on paper.
+ */
+export type PrintTheme = 'light' | 'sepia';
+
+/**
+ * User-adjustable print appearance, persisted separately from reading settings.
+ */
+export interface PrintSettings {
+  theme: PrintTheme;
+  /** Body font size in points */
+  fontSize: number;
 }
 
 /**

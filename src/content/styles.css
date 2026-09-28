@@ -258,6 +258,74 @@ body.reader-mode-active {
 }
 
 /* ============================================
+   Export PDF Button
+   ============================================ */
+
+.reader-export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--reader-border);
+  border-radius: 8px;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reader-export-btn:hover:not(:disabled) {
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text);
+  border-color: var(--reader-text-muted);
+  transform: scale(1.05);
+}
+
+.reader-export-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.reader-export-btn:focus-visible {
+  outline: 2px solid var(--reader-focus-ring);
+  outline-offset: 2px;
+}
+
+.reader-export-btn:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.reader-spinner {
+  animation: reader-spin 0.9s linear infinite;
+}
+
+@keyframes reader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.reader-export-error {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  max-width: 260px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a1222b;
+  background: var(--reader-bg);
+  border: 1px solid var(--reader-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--reader-shadow);
+  z-index: 2147483000;
+}
+
+/* ============================================
    Header
    ============================================ */
 
@@ -953,7 +1021,8 @@ body.reader-mode-active {
 
   .reader-toolbar,
   .reader-settings-panel,
-  .reader-skip-link {
+  .reader-skip-link,
+  .reader-export-error {
     display: none;
   }
 

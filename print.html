@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>导出 PDF · Folio</title>
+  </head>
+  <body>
+    <div class="toolbar" role="toolbar" aria-label="打印设置">
+      <span class="toolbar__title" id="doc-title">加载中…</span>
+
+      <div class="toolbar__group">
+        <span class="toolbar__label">主题</span>
+        <div class="segmented" role="group" aria-label="纸张主题">
+          <button class="segmented__btn" type="button" data-theme="light" aria-pressed="true">
+            浅色
+          </button>
+          <button class="segmented__btn" type="button" data-theme="sepia" aria-pressed="false">
+            护眼
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar__group">
+        <span class="toolbar__label">字号</span>
+        <div class="stepper">
+          <button class="stepper__btn" type="button" id="font-down" aria-label="减小字号">−</button>
+          <span class="stepper__value" id="font-value">11pt</span>
+          <button class="stepper__btn" type="button" id="font-up" aria-label="增大字号">+</button>
+        </div>
+      </div>
+
+      <div class="toolbar__spacer"></div>
+
+      <div class="toolbar__group">
+        <span class="toolbar__label">A4 · 174mm 行宽</span>
+        <button class="btn" type="button" id="print-btn" disabled>打印 / 存为 PDF</button>
+      </div>
+    </div>
+
+    <div class="status status--hidden" id="status" role="status" aria-live="polite"></div>
+
+    <main class="page">
+      <div class="sheet sheet--light" id="sheet"></div>
+    </main>
+
+    <script type="module" src="/src/print/main.ts"></script>
+  </body>
+</html>

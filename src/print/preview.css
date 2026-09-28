@@ -1,0 +1,304 @@
+/**
+ * Screen-only styles for the print preview.
+ *
+ * Everything here exists to help the user judge appearance before printing.
+ * All of it disappears in print — @media print { display: none } at the end
+ * is what guarantees the toolbar never lands on paper.
+ */
+
+:root {
+  --ui-bg: #ffffff;
+  --ui-surface: #f6f6f7;
+  --ui-border: #d9d9de;
+  --ui-text: #1d1d1f;
+  --ui-muted: #6e6e73;
+  --ui-accent: #1a56db;
+  --ui-shadow: rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+/* ============================================
+   Toolbar
+   ============================================ */
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--ui-border);
+  box-shadow: 0 1px 3px var(--ui-shadow);
+}
+
+.toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar__spacer {
+  flex: 1;
+}
+
+.toolbar__label {
+  font-size: 12px;
+  color: var(--ui-muted);
+  white-space: nowrap;
+}
+
+.toolbar__title {
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Segmented control for theme choice */
+.segmented {
+  display: flex;
+  padding: 2px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 7px;
+}
+
+.segmented__btn {
+  padding: 5px 13px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--ui-muted);
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segmented__btn:hover {
+  color: var(--ui-text);
+}
+
+.segmented__btn[aria-pressed='true'] {
+  background: #ffffff;
+  color: var(--ui-text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px var(--ui-shadow);
+}
+
+/* Stepper for font size */
+.stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--ui-border);
+  border-radius: 7px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.stepper__btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  line-height: 1;
+  font-family: inherit;
+  color: var(--ui-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.stepper__btn:hover:not(:disabled) {
+  background: var(--ui-surface);
+}
+
+.stepper__btn:disabled {
+  color: #c4c4c8;
+  cursor: not-allowed;
+}
+
+.stepper__value {
+  min-width: 52px;
+  text-align: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text);
+  border-left: 1px solid var(--ui-border);
+  border-right: 1px solid var(--ui-border);
+  padding: 0 6px;
+  line-height: 28px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #ffffff;
+  background: var(--ui-accent);
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  background: #1548b8;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.btn--ghost {
+  color: var(--ui-text);
+  background: transparent;
+  border: 1px solid var(--ui-border);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--ui-surface);
+}
+
+/* ============================================
+   Status
+   ============================================ */
+
+.status {
+  padding: 7px 20px;
+  font-size: 12px;
+  color: var(--ui-muted);
+  background: #fffaf0;
+  border-bottom: 1px solid #f0e4c8;
+}
+
+.status--hidden {
+  display: none;
+}
+
+.status--error {
+  color: #a1222b;
+  background: #fdf2f2;
+  border-bottom-color: #f0d0d0;
+}
+
+/* ============================================
+   Page
+   ============================================ */
+
+.page {
+  padding: 28px 20px 80px;
+}
+
+.sheet {
+  /* A visual stand-in for a sheet of A4. It is NOT a pagination preview —
+     the column simply runs continuously, exactly as it will print. The
+     width is the point: 174mm is the real A4 text measure. */
+  max-width: 174mm;
+  margin: 0 auto;
+  padding: 20mm 18mm;
+  background: #ffffff;
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  box-shadow: 0 1px 3px var(--ui-shadow);
+}
+
+.sheet--light {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+.sheet--sepia {
+  background: #f7f1e3;
+  color: #3a3226;
+}
+
+/* ============================================
+   Empty / error state
+   ============================================ */
+
+.placeholder {
+  max-width: 460px;
+  margin: 90px auto;
+  padding: 32px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--ui-shadow);
+}
+
+.placeholder h1 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.placeholder p {
+  font-size: 13px;
+  color: var(--ui-muted);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+.placeholder pre {
+  padding: 10px;
+  margin-bottom: 18px;
+  font-size: 11px;
+  text-align: left;
+  background: var(--ui-surface);
+  border-radius: 5px;
+  overflow-x: auto;
+  color: var(--ui-muted);
+}
+
+/* ============================================
+   Print
+   Nothing from the screen chrome may reach the paper.
+   ============================================ */
+
+@media print {
+  .toolbar,
+  .status,
+  .placeholder {
+    display: none !important;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent !important;
+    color: inherit;
+  }
+}

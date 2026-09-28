@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef, type JSX } from 'react';
 import type { Settings, ExtractedContent } from '../shared/types';
+import { MESSAGE_TYPES } from '../shared/constants';
 import { SettingsPanel } from './SettingsPanel';
 import { CodeBlock } from './CodeBlock';
 import { getReaderThemeById } from '../shared/readerThemes';
@@ -24,6 +25,8 @@ export function ReaderView({
 }: ReaderViewProps): JSX.Element {
   const [showSettings, setShowSettings] = useState(false);
   const [toolbarVisible, setToolbarVisible] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,6 +89,22 @@ export function ReaderView({
     setShowSettings((prev) => !prev);
   }, []);
 
+  const handleExportPdf = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const response = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.EXPORT_PDF });
+      if (!response?.success) {
+        setExportError(response?.error ?? '导出失败');
+      }
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : '导出失败');
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting]);
+
   const closeSettings = useCallback(() => {
     setShowSettings(false);
     settingsBtnRef.current?.focus();
@@ -140,6 +159,17 @@ export function ReaderView({
         </button>
 
         <button
+          className="reader-export-btn"
+          onClick={handleExportPdf}
+          disabled={exporting}
+          aria-label="导出 PDF"
+          title="导出 PDF"
+          type="button"
+        >
+          {exporting ? <SpinnerIcon /> : <DownloadIcon />}
+        </button>
+
+        <button
           ref={settingsBtnRef}
           className={`reader-settings-btn${showSettings ? ' reader-settings-btn--active' : ''}`}
           onClick={toggleSettings}
@@ -150,6 +180,12 @@ export function ReaderView({
           <SettingsIcon />
         </button>
       </div>
+
+      {exportError && (
+        <div className="reader-export-error" role="alert">
+          {exportError}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="reader-container">
@@ -265,6 +301,31 @@ function CloseIcon(): JSX.Element {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function DownloadIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function SpinnerIcon(): JSX.Element {
+  return (
+    <svg className="reader-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="12" y1="2" x2="12" y2="6" />
+      <line x1="12" y1="18" x2="12" y2="22" />
+      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+      <line x1="2" y1="12" x2="6" y2="12" />
+      <line x1="18" y1="12" x2="22" y2="12" />
+      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
+      <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
     </svg>
   );
 }

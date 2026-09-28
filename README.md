@@ -12,17 +12,26 @@
 - **三套主题**：浅色 / 深色 / 护眼
 - **排版可调**：字号 12–32px、行高 1.2–2.0、页宽 600–1200px
 - **代码高亮**：内置轻量 tokenizer，支持 15 种语言的高亮与一键复制
+- **一键导出 PDF**：以 A4 排版输出当前文章，文字可选中可搜索
 - **阅读历史**：记录最近 200 篇阅读过的文章，保存在本地
+
+### 导出 PDF
+
+点击阅读模式工具栏的下载图标，在新标签页中：
+
+- 以 **A4 纸张**排版（上下 20mm、左右 18mm 页边距，正文宽 174mm）
+- 可切换**浅色 / 护眼**纸张主题，调节**字号 9–13pt**
+- 点「打印 / 存为 PDF」交给 Chrome 排版引擎输出——文字保持矢量，5 千字文章约数百 KB
+
+打印设置会被记住。深色主题**不提供**导出选项：整页黑底打印费墨且对比度差。
+
+预览页是**连续滚动**，不显示分页。浏览器没有分页查询 API，任何自行模拟的分页预览都会与实际输出有偏差；精确分页请看 Chrome 打印对话框的预览。
 
 ### 键盘操作
 
 | 按键 | 作用 |
 |------|------|
 | `Esc` | 退出阅读模式（设置面板打开时先关面板） |
-
-## 🚧 开发中
-
-- **一键导出 PDF**：以 A4 排版输出当前文章
 
 ## 🔒 隐私
 
@@ -72,29 +81,38 @@ pnpm run lint         # ESLint
 
 ```
 src/
-├── background/        # Service Worker：消息路由 + content script 注入
+├── background/        # Service Worker：消息路由 + content script 注入 + 导出调度
 ├── content/           # 内容脚本（Shadow DOM 挂载点）
-│   ├── ReaderView.tsx     # 阅读主视图 + 工具栏
+│   ├── ReaderView.tsx     # 阅读主视图 + 工具栏（含导出按钮）
 │   ├── SettingsPanel.tsx  # 设置面板
 │   ├── CodeBlock.tsx      # 代码块（高亮 + 复制）
 │   ├── extractor.ts       # Readability 封装 + 缓存
 │   ├── errorHandling.ts   # ErrorBoundary 与错误上报
 │   ├── styles.css         # 阅读样式（注入 Shadow DOM）
 │   └── index.ts           # 入口：Shadow DOM 容器与消息处理
+├── print/             # PDF 导出页（扩展页面，A4 排版）
+│   ├── main.ts            # 入口：读数据 → 渲染 → 接线
+│   ├── buildDocument.ts   # 文章 → 打印文档（含清洗与代码高亮）
+│   ├── prepareImages.ts   # 懒加载图片修复 + 就绪等待
+│   ├── print.css          # @page A4 + pt 排版
+│   └── preview.css        # 屏幕预览（工具条，打印时不生效）
 ├── shared/            # 跨模块共享
 │   ├── storage.ts        # 设置持久化与校验
+│   ├── printSettings.ts  # 打印设置持久化
+│   ├── codeHighlight.ts  # 语法高亮 tokenizer
 │   ├── history.ts        # 阅读历史
 │   ├── readerThemes.ts   # 主题定义
-│   ├── constants.ts      # 消息类型、存储键、默认值
+│   ├── constants.ts      # 消息类型、存储键、A4 尺寸、默认值
 │   └── types.ts          # 类型定义
 └── types/
 
-public/                # 静态资源（图标、manifest.json）
-tests/                 # vitest 测试
-dist/                  # 构建产物（加载此目录到 Chrome）
+print.html                # 打印页 HTML 入口（vite 构建为 dist/print.html）
+public/                   # 静态资源（图标、manifest.json）
+tests/                    # vitest 测试
+dist/                     # 构建产物（加载此目录到 Chrome）
 ```
 
-总计：9 个 TS/TSX 文件，约 2.4k 行。
+总计：19 个 TS/TSX 文件，约 3.3k 行。
 
 ## 🏗️ 架构
 
