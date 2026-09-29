@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   resolveLazySrc,
   eagerizeImages,
-  constrainImageHeights,
 } from '../../src/print/prepareImages';
-import { MAX_IMAGE_HEIGHT_MM } from '../../src/shared/constants';
 
 function makeImage(attrs: Record<string, string>): HTMLImageElement {
   const img = document.createElement('img');
@@ -70,17 +68,5 @@ describe('eagerizeImages', () => {
     expect(a.getAttribute('loading')).toBe('eager');
     expect(b.getAttribute('loading')).toBe('eager');
     expect(b.getAttribute('decoding')).toBe('sync');
-  });
-});
-
-describe('constrainImageHeights', () => {
-  it('caps images at the configured print height', () => {
-    const img = makeImage({ src: 'https://example.com/tall.png' });
-    const root = document.createElement('div');
-    root.appendChild(img);
-
-    constrainImageHeights(root);
-
-    expect(img.style.maxHeight).toBe(`${MAX_IMAGE_HEIGHT_MM}mm`);
   });
 });

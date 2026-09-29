@@ -247,13 +247,25 @@ body {
 .p-content img {
   display: block;
   max-width: 100%;
-  /* Also enforced at runtime via MAX_IMAGE_HEIGHT_MM — keep in sync.
-     A figure never splits across pages, so an oversized one would be pushed
-     to the next page and strand blank space; capping it bounds that gap. */
+  /* A figure never splits across pages, so an oversized one would be pushed
+     to the next page and strand blank space; capping it bounds that gap.
+     The toolbar's image-size levels override this (see below). */
   max-height: 150mm;
   height: auto;
   margin: 0 auto;
   border-radius: 0.8mm;
+}
+
+/* Image-size levels, selectable in the toolbar and persisted.
+   Smaller images also shrink the worst-case pushed-figure gap. */
+.p-imgsize-medium .p-content img {
+  max-width: 70%;
+  max-height: 110mm;
+}
+
+.p-imgsize-small .p-content img {
+  max-width: 45%;
+  max-height: 75mm;
 }
 
 .p-caption {

@@ -12,8 +12,6 @@
  *    the user print, with a ceiling so a dead image host can't hang the page.
  */
 
-import { MAX_IMAGE_HEIGHT_MM } from '../shared/constants';
-
 /** Attributes lazy-loading libraries stash the real URL in. */
 const LAZY_SRC_ATTRS = [
   'data-src',
@@ -134,19 +132,8 @@ export function waitForImages(root: HTMLElement, timeoutMs = 5000): Promise<Imag
         continue;
       }
 
-      image.addEventListener('load', () => settleOne(true), { once: true });
-      image.addEventListener('error', () => settleOne(false), { once: true });
+    image.addEventListener('load', () => settleOne(true), { once: true });
+    image.addEventListener('error', () => settleOne(false), { once: true });
     }
   });
-}
-
-/**
- * Cap image height so an oversized image scales down instead of being
- * pushed to its own page with most of the previous page left blank.
- */
-export function constrainImageHeights(root: HTMLElement): void {
-  const maxHeight = `${MAX_IMAGE_HEIGHT_MM}mm`;
-  for (const image of Array.from(root.querySelectorAll('img'))) {
-    image.style.maxHeight = maxHeight;
-  }
 }

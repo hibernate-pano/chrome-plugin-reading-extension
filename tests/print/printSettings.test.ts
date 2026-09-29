@@ -17,6 +17,16 @@ describe('validatePrintSettings', () => {
     expect(validatePrintSettings({ theme: 'dark' as never }).theme).toBe('light');
   });
 
+  it('keeps a valid image size', () => {
+    for (const size of ['large', 'medium', 'small'] as const) {
+      expect(validatePrintSettings({ imageSize: size }).imageSize).toBe(size);
+    }
+  });
+
+  it('rejects an unknown image size', () => {
+    expect(validatePrintSettings({ imageSize: 'huge' as never }).imageSize).toBe('large');
+  });
+
   it('accepts every offered font size', () => {
     for (const size of PRINT_FONT_SIZES) {
       expect(validatePrintSettings({ fontSize: size }).fontSize).toBe(size);

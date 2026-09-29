@@ -99,12 +99,21 @@ export interface PrintPayload {
 export type PrintTheme = 'light' | 'sepia';
 
 /**
+ * How large images render relative to the text column.
+ * Smaller levels shrink both width and height, which also shrinks the
+ * worst-case "pushed to next page" whitespace.
+ */
+export type PrintImageSize = 'large' | 'medium' | 'small';
+
+/**
  * User-adjustable print appearance, persisted separately from reading settings.
  */
 export interface PrintSettings {
   theme: PrintTheme;
   /** Body font size in points */
   fontSize: number;
+  /** Rendered size of article images */
+  imageSize: PrintImageSize;
 }
 
 /**

@@ -35,8 +35,8 @@ export function shouldAllowBreak(
  * Mark oversized code blocks and tables as breakable.
  *
  * Figures are deliberately excluded — a photo split across two pages reads
- * worse than the gap it leaves, and image heights are already capped
- * (MAX_IMAGE_HEIGHT_MM), which bounds the worst gap instead.
+ * worse than the gap it leaves, and image heights are already capped in
+ * print.css (150mm), which bounds the worst gap instead.
  *
  * Returns how many blocks were marked.
  */

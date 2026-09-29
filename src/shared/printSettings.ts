@@ -6,14 +6,16 @@
  * missing a theme option that reading has.
  */
 
-import type { PrintSettings, PrintTheme } from './types';
+import type { PrintSettings, PrintTheme, PrintImageSize } from './types';
 import { PRINT_FONT_SIZES, STORAGE_KEYS } from './constants';
 
 const VALID_THEMES: readonly PrintTheme[] = ['light', 'sepia'];
+const VALID_IMAGE_SIZES: readonly PrintImageSize[] = ['large', 'medium', 'small'];
 
 export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   theme: 'light',
   fontSize: 11,
+  imageSize: 'large',
 };
 
 /**
@@ -33,7 +35,11 @@ export function validatePrintSettings(settings: Partial<PrintSettings>): PrintSe
         Math.abs(step - requested) < Math.abs(closest - requested) ? step : closest
       );
 
-  return { theme, fontSize };
+  const imageSize = VALID_IMAGE_SIZES.includes(settings.imageSize as PrintImageSize)
+    ? (settings.imageSize as PrintImageSize)
+    : DEFAULT_PRINT_SETTINGS.imageSize;
+
+  return { theme, fontSize, imageSize };
 }
 
 export async function getPrintSettings(): Promise<PrintSettings> {

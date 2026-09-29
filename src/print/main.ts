@@ -12,11 +12,11 @@
  * print dialog shows the real thing.
  */
 
-import type { PrintPayload, PrintSettings } from '../shared/types';
+import type { PrintPayload, PrintSettings, PrintImageSize } from '../shared/types';
 import { PRINT_FONT_SIZES, STORAGE_KEYS } from '../shared/constants';
-import { getPrintSettings, savePrintSettings } from '../shared/printSettings';
+import { getPrintSettings, savePrintSettings, DEFAULT_PRINT_SETTINGS } from '../shared/printSettings';
 import { buildDocument, buildFilename } from './buildDocument';
-import { eagerizeImages, waitForImages, constrainImageHeights } from './prepareImages';
+import { eagerizeImages, waitForImages } from './prepareImages';
 import { markOversizedBlocks } from './markBreaks';
 
 import './print.css';
@@ -31,9 +31,10 @@ const elements = {
   fontDown: document.getElementById('font-down') as HTMLButtonElement,
   fontUp: document.getElementById('font-up') as HTMLButtonElement,
   themeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme]')),
+  imgSizeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-imgsize]')),
 };
 
-let currentSettings: PrintSettings = { theme: 'light', fontSize: 11 };
+let currentSettings: PrintSettings = { ...DEFAULT_PRINT_SETTINGS };
 let currentFilename = 'article.pdf';
 
 function setStatus(message: string): void {
@@ -82,9 +83,16 @@ function applySettings(): void {
 
   elements.sheet.classList.toggle('sheet--light', currentSettings.theme === 'light');
   elements.sheet.classList.toggle('sheet--sepia', currentSettings.theme === 'sepia');
+  elements.sheet.classList.toggle('p-imgsize-large', currentSettings.imageSize === 'large');
+  elements.sheet.classList.toggle('p-imgsize-medium', currentSettings.imageSize === 'medium');
+  elements.sheet.classList.toggle('p-imgsize-small', currentSettings.imageSize === 'small');
 
   for (const button of elements.themeButtons) {
     button.setAttribute('aria-pressed', String(button.dataset.theme === currentSettings.theme));
+  }
+
+  for (const button of elements.imgSizeButtons) {
+    button.setAttribute('aria-pressed', String(button.dataset.imgsize === currentSettings.imageSize));
   }
 
   const index = currentFontIndex();
@@ -112,11 +120,29 @@ function setTheme(theme: PrintSettings['theme']): void {
   void savePrintSettings({ theme });
 }
 
+const IMAGE_SIZES: readonly PrintImageSize[] = ['large', 'medium', 'small'];
+
+function setImageSize(size: PrintImageSize): void {
+  if (size === currentSettings.imageSize) return;
+  currentSettings.imageSize = size;
+  applySettings();
+  void savePrintSettings({ imageSize: size });
+}
+
 function wireToolbar(): void {
   for (const button of elements.themeButtons) {
     button.addEventListener('click', () => {
       const theme = button.dataset.theme;
       if (theme === 'light' || theme === 'sepia') setTheme(theme);
+    });
+  }
+
+  for (const button of elements.imgSizeButtons) {
+    button.addEventListener('click', () => {
+      const size = button.dataset.imgsize;
+      if (size && IMAGE_SIZES.includes(size as PrintImageSize)) {
+        setImageSize(size as PrintImageSize);
+      }
     });
   }
 
@@ -192,7 +218,6 @@ async function main(): Promise<void> {
   document.title = currentFilename;
 
   const doc = buildDocument(payload);
-  constrainImageHeights(doc);
   eagerizeImages(doc);
   elements.sheet.replaceChildren(doc);
 

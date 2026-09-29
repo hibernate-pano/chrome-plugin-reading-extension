@@ -85,16 +85,6 @@ export const PRINT_FONT_SIZES = [9, 10.5, 11, 12, 13] as const;
 export const CODE_BLOCK_BREAK_THRESHOLD_LINES = 30;
 
 /**
- * How tall a single image may print, in mm.
- *
- * A figure never splits across pages, so one that does not fit the space
- * left on the current page is pushed entirely to the next page — and the
- * leftover space stays blank. Capping image height bounds that blank gap;
- * at nearly a full page (257mm) the gap could be nearly a full page.
- */
-export const MAX_IMAGE_HEIGHT_MM = 150;
-
-/**
  * Blocks taller than half the printable page are allowed to break across
  * pages instead of being kept whole. Forcing a half-page-plus block to stay
  * intact can strand most of a page as blank space. Applied by measuring the
