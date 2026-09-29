@@ -247,8 +247,10 @@ body {
 .p-content img {
   display: block;
   max-width: 100%;
-  /* Set by constrainImageHeights() at runtime; this is the static floor. */
-  max-height: 247mm;
+  /* Also enforced at runtime via MAX_IMAGE_HEIGHT_MM — keep in sync.
+     A figure never splits across pages, so an oversized one would be pushed
+     to the next page and strand blank space; capping it bounds that gap. */
+  max-height: 150mm;
   height: auto;
   margin: 0 auto;
   border-radius: 0.8mm;
@@ -290,6 +292,13 @@ body {
 .p-table th {
   background: var(--p-code-bg);
   font-weight: 650;
+}
+
+/* A table taller than half a page (marked at runtime by markBreaks) breaks
+   across pages instead of stranding blank space. */
+.p-table-wrap[data-long='true'] {
+  break-inside: auto;
+  page-break-inside: auto;
 }
 
 /* ============================================

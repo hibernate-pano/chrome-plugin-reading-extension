@@ -12,7 +12,7 @@
  *    the user print, with a ceiling so a dead image host can't hang the page.
  */
 
-import { A4 } from '../shared/constants';
+import { MAX_IMAGE_HEIGHT_MM } from '../shared/constants';
 
 /** Attributes lazy-loading libraries stash the real URL in. */
 const LAZY_SRC_ATTRS = [
@@ -141,13 +141,12 @@ export function waitForImages(root: HTMLElement, timeoutMs = 5000): Promise<Imag
 }
 
 /**
- * Cap oversized images at slightly less than one printable page height so
- * they scale down instead of being clipped mid-figure.
+ * Cap image height so an oversized image scales down instead of being
+ * pushed to its own page with most of the previous page left blank.
  */
 export function constrainImageHeights(root: HTMLElement): void {
-  const maxHeight = `${A4.contentHeight - 10}mm`;
+  const maxHeight = `${MAX_IMAGE_HEIGHT_MM}mm`;
   for (const image of Array.from(root.querySelectorAll('img'))) {
     image.style.maxHeight = maxHeight;
-    image.style.objectFit = 'contain';
   }
 }

@@ -24,6 +24,16 @@ All notable changes to this project will be documented in this file.
 - 新增 `vite.print.config.ts` 构建打印页；`build` 脚本串联三套配置
 - manifest 的 web_accessible_resources 增加 print.html
 
+### Fixed
+
+- 🖨 **预览与打印列宽不一致**：预览纸张容器把 174mm 当作含边距总宽，
+  border-box 下正文列实际只剩 138mm；改为 210mm 总宽（20/18mm 内边距），
+  正文列与打印输出完全一致
+- 🖨 **打印出现大片空白**：三处缓解——图片高度上限从近整页（247mm）收紧到
+  150mm；超过半页高的代码块与表格按渲染后实测高度改为允许跨页
+  （markBreaks 模块，图片加载完成后测量）；预览纸张宽度修正后，
+  实测结果对打印排版有效
+
 ### Notes
 
 - 预览页为连续滚动，**不提供分页预览**。浏览器无分页查询 API，自行模拟的断页

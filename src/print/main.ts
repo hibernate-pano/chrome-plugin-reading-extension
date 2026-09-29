@@ -17,6 +17,7 @@ import { PRINT_FONT_SIZES, STORAGE_KEYS } from '../shared/constants';
 import { getPrintSettings, savePrintSettings } from '../shared/printSettings';
 import { buildDocument, buildFilename } from './buildDocument';
 import { eagerizeImages, waitForImages, constrainImageHeights } from './prepareImages';
+import { markOversizedBlocks } from './markBreaks';
 
 import './print.css';
 import './preview.css';
@@ -201,6 +202,10 @@ async function main(): Promise<void> {
   // Hold the print button until images settle — printing early yields blanks.
   setStatus('正在加载图片…');
   const result = await waitForImages(elements.sheet, 5000);
+
+  // Image heights changed the layout; now re-measure and let oversized code
+  // blocks and tables break across pages instead of stranding blank space.
+  markOversizedBlocks(elements.sheet);
 
   if (result.failed > 0) {
     setStatus(

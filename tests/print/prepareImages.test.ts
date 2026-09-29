@@ -4,7 +4,7 @@ import {
   eagerizeImages,
   constrainImageHeights,
 } from '../../src/print/prepareImages';
-import { A4 } from '../../src/shared/constants';
+import { MAX_IMAGE_HEIGHT_MM } from '../../src/shared/constants';
 
 function makeImage(attrs: Record<string, string>): HTMLImageElement {
   const img = document.createElement('img');
@@ -74,15 +74,13 @@ describe('eagerizeImages', () => {
 });
 
 describe('constrainImageHeights', () => {
-  it('caps images just under one printable page height', () => {
+  it('caps images at the configured print height', () => {
     const img = makeImage({ src: 'https://example.com/tall.png' });
     const root = document.createElement('div');
     root.appendChild(img);
 
     constrainImageHeights(root);
 
-    const expected = `${A4.contentHeight - 10}mm`;
-    expect(img.style.maxHeight).toBe(expected);
-    expect(img.style.objectFit).toBe('contain');
+    expect(img.style.maxHeight).toBe(`${MAX_IMAGE_HEIGHT_MM}mm`);
   });
 });

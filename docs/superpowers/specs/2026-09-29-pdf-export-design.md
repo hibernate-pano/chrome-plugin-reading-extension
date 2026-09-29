@@ -103,8 +103,8 @@ print.html                        # 根目录，vite 多入口
 | p, li | `orphans: 3; widows: 3` | 避免页尾孤行 |
 | pre（短，< 30 行） | `break-inside: avoid` | 短代码不拆开 |
 | pre（长，≥ 30 行） | 允许跨页 | **超长代码强制避页会溢出丢内容** |
-| figure, img | `break-inside: avoid` + `max-height: 240mm` | 不跨页切断，不超一页高 |
-| table | `width: 100%` + `overflow-wrap: break-word` | 宽表格压进 174mm 不横向溢出 |
+| figure, img | `break-inside: avoid` + `max-height: 150mm` | 不跨页切断；上限约束"整图推下页"造成的留白 |
+| table | `width: 100%` + 超半页高允许跨页（渲染后实测） | 宽表格压进 174mm 不横向溢出，长表格不强制整块留白 |
 
 > 代码块按行数分档是本设计中最容易被忽略的细节。绝大多数实现会无脑写 `break-inside: avoid`，遇到 200 行代码块时浏览器会强行挤在一页内，底部内容直接被裁掉。
 

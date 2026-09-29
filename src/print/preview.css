@@ -215,10 +215,12 @@ body {
 }
 
 .sheet {
-  /* A visual stand-in for a sheet of A4. It is NOT a pagination preview —
-     the column simply runs continuously, exactly as it will print. The
-     width is the point: 174mm is the real A4 text measure. */
-  max-width: 174mm;
+  /* A visual stand-in for one sheet of A4: 210mm wide with the same 20/18mm
+     margins as @page, so the text column is exactly the printed 174mm and
+     line breaks match what the printer will produce. It is NOT a pagination
+     preview — the column runs continuously. */
+  width: 210mm;
+  max-width: 100%;
   margin: 0 auto;
   padding: 20mm 18mm;
   background: #ffffff;
@@ -292,6 +294,8 @@ body {
   }
 
   .sheet {
+    /* Undo the screen stand-in entirely — @page owns the geometry now. */
+    width: auto;
     max-width: none;
     margin: 0;
     padding: 0;
