@@ -17,7 +17,7 @@ import { PRINT_FONT_SIZES, STORAGE_KEYS } from '../shared/constants';
 import { getPrintSettings, savePrintSettings, DEFAULT_PRINT_SETTINGS } from '../shared/printSettings';
 import { buildDocument, buildFilename } from './buildDocument';
 import { eagerizeImages, waitForImages } from './prepareImages';
-import { markOversizedBlocks } from './markBreaks';
+import { markOversizedBlocks, clearBreakMarks } from './markBreaks';
 
 import './print.css';
 import './preview.css';
@@ -111,6 +111,7 @@ function stepFontSize(delta: number): void {
   currentSettings.fontSize = next;
   applySettings();
   void savePrintSettings({ fontSize: next });
+  scheduleRemarking();
 }
 
 function setTheme(theme: PrintSettings['theme']): void {
@@ -127,6 +128,35 @@ function setImageSize(size: PrintImageSize): void {
   currentSettings.imageSize = size;
   applySettings();
   void savePrintSettings({ imageSize: size });
+  scheduleRemarking();
+}
+
+/* ------------------------------------------------------------------ */
+/* Break-decision refresh                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Debounce handle — the font stepper fires in quick bursts and each
+ * re-measure forces a full layout pass.
+ */
+let remarkTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Re-run break decisions from scratch.
+ *
+ * Font-size and image-size changes reflow the document, so measurements
+ * taken at boot go stale: a code block that grew past the keep-whole
+ * threshold would still be forced unbroken, get pushed to the next page in
+ * print, and leave a gap the continuous preview cannot show.
+ */
+function remarkOversizedBlocks(): void {
+  clearBreakMarks(elements.sheet);
+  markOversizedBlocks(elements.sheet);
+}
+
+function scheduleRemarking(): void {
+  if (remarkTimer) clearTimeout(remarkTimer);
+  remarkTimer = setTimeout(remarkOversizedBlocks, 120);
 }
 
 function wireToolbar(): void {
@@ -150,6 +180,9 @@ function wireToolbar(): void {
   elements.fontUp.addEventListener('click', () => stepFontSize(1));
 
   elements.printBtn.addEventListener('click', () => {
+    // Belt and braces: re-measure against the final layout right before the
+    // snapshot, so no stale mark survives into the printed output.
+    remarkOversizedBlocks();
     // Chrome proposes document.title as the saved filename.
     document.title = currentFilename;
     window.print();

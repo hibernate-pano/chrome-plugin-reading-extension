@@ -1,9 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { shouldAllowBreak, markOversizedBlocks } from '../../src/print/markBreaks';
+import {
+  shouldAllowBreak,
+  markOversizedBlocks,
+  clearBreakMarks,
+} from '../../src/print/markBreaks';
 import { ALLOW_BREAK_THRESHOLD_MM } from '../../src/shared/constants';
 
 /** Convert mm to CSS px on the standard 96dpi print scale. */
 const px = (mm: number): number => (mm * 96) / 25.4;
+
+/** jsdom has no layout engine; shadow the offsetHeight getter directly. */
+function block(className: string, heightPx: number): HTMLElement {
+  const el = document.createElement('div');
+  el.className = className;
+  Object.defineProperty(el, 'offsetHeight', { value: heightPx });
+  return el;
+}
 
 describe('shouldAllowBreak', () => {
   it('converts px to mm on the CSS 96dpi scale', () => {
@@ -19,14 +31,6 @@ describe('shouldAllowBreak', () => {
 });
 
 describe('markOversizedBlocks', () => {
-  function block(className: string, heightPx: number): HTMLElement {
-    const el = document.createElement('div');
-    el.className = className;
-    // jsdom has no layout engine; shadow the offsetHeight getter directly.
-    Object.defineProperty(el, 'offsetHeight', { value: heightPx });
-    return el;
-  }
-
   it('marks only oversized code blocks and tables, never figures', () => {
     const root = document.createElement('div');
     const smallCode = block('p-code', 100);
@@ -50,5 +54,21 @@ describe('markOversizedBlocks', () => {
     root.appendChild(already);
 
     expect(markOversizedBlocks(root)).toBe(0);
+  });
+});
+
+describe('clearBreakMarks', () => {
+  it('removes marks so a re-measure starts clean', () => {
+    const root = document.createElement('div');
+    const code = block('p-code', 100);
+    code.setAttribute('data-long', 'true');
+    const table = block('p-table-wrap', 100);
+    table.setAttribute('data-long', 'true');
+    root.append(code, table);
+
+    clearBreakMarks(root);
+
+    expect(code.getAttribute('data-long')).toBeNull();
+    expect(table.getAttribute('data-long')).toBeNull();
   });
 });

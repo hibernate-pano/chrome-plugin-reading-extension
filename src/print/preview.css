@@ -224,7 +224,10 @@ body {
   margin: 0 auto;
   padding: 20mm 18mm;
   background: #ffffff;
-  border: 1px solid var(--ui-border);
+  /* outline, not border — a border participates in layout and would eat
+     ~0.5mm out of the 174mm column under border-box, enough to shift line
+     wraps away from the printed output. */
+  outline: 1px solid var(--ui-border);
   border-radius: 2px;
   box-shadow: 0 1px 3px var(--ui-shadow);
 }
@@ -300,6 +303,7 @@ body {
     margin: 0;
     padding: 0;
     border: none;
+    outline: none;
     border-radius: 0;
     box-shadow: none;
     background: transparent !important;

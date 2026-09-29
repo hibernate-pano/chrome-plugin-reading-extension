@@ -32,6 +32,17 @@ export function shouldAllowBreak(
 }
 
 /**
+ * Remove all break marks so a re-measure starts clean. Font-size changes
+ * reflow the document; a block that shrank below the threshold must no
+ * longer be allowed to break, and one that grew must be re-evaluated.
+ */
+export function clearBreakMarks(root: HTMLElement): void {
+  for (const block of Array.from(root.querySelectorAll('.p-code, .p-table-wrap'))) {
+    block.removeAttribute('data-long');
+  }
+}
+
+/**
  * Mark oversized code blocks and tables as breakable.
  *
  * Figures are deliberately excluded — a photo split across two pages reads
