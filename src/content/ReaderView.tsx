@@ -143,11 +143,28 @@ export function ReaderView({
   }, []);
 
   const toggleSettings = useCallback(() => {
-    setActivePanel((prev) => (prev === 'settings' ? null : 'settings'));
+    // Closing through the gear has to hand focus back, exactly as Escape and
+    // the close button do. Without it the panel unmounts while it owns focus,
+    // focus falls to <body>, and the next Tab is delivered to the host page
+    // behind the overlay — the reader's own keydown listener is on the shadow
+    // root and never sees it.
+    setActivePanel((prev) => {
+      if (prev === 'settings') {
+        // Deferred: the button is still mounted during this state update, so
+        // focusing synchronously here would be undone by the re-render.
+        requestAnimationFrame(() => settingsBtnRef.current?.focus());
+      }
+      return prev === 'settings' ? null : 'settings';
+    });
   }, []);
 
   const toggleHistory = useCallback(() => {
-    setActivePanel((prev) => (prev === 'history' ? null : 'history'));
+    setActivePanel((prev) => {
+      if (prev === 'history') {
+        requestAnimationFrame(() => historyBtnRef.current?.focus());
+      }
+      return prev === 'history' ? null : 'history';
+    });
   }, []);
 
   const handleExportPdf = useCallback(async () => {
@@ -440,9 +457,30 @@ function readCodeBlock(element: Element): CodeBlockContent {
   };
 }
 
+/**
+ * Escape a text node's value for re-entry into an HTML string.
+ *
+ * `nodeValue` is the *decoded* text: the sanitizer wrote `&lt;img …&gt;`, and
+ * parsing that fragment turned it back into a literal `<img …>` character run.
+ * Concatenating it into `pending` un-does the escaping, so article text that
+ * merely looked like markup — a post about HTML, a tutorial showing a tag —
+ * would come back as live DOM under `dangerouslySetInnerHTML`. Escaping here
+ * restores the invariant the sanitizer established.
+ */
+function escapeText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /** Serialize a body child for the raw-HTML run it belongs to. */
 function serializeNode(node: Node): string {
-  return node.nodeType === Node.ELEMENT_NODE ? (node as Element).outerHTML : node.nodeValue ?? '';
+  if (node.nodeType === Node.ELEMENT_NODE) return (node as Element).outerHTML;
+  if (node.nodeType === Node.TEXT_NODE) return escapeText(node.nodeValue ?? '');
+  // Comments and processing instructions carry no article text; dropping them
+  // keeps them from re-entering the string as live markup.
+  return '';
 }
 
 /**

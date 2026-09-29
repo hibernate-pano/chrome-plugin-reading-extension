@@ -35,6 +35,18 @@ let reactRoot: Root | null = null;
 let currentContent: ExtractedContent | null = null;
 
 /**
+ * The enable turn currently in progress, or null when none is.
+ *
+ * `state.isActive` is only set once the reader is mounted, so it cannot guard
+ * the two awaits `enableReadingMode` performs first: two overlapping messages
+ * both pass it, the second removes the host the first root is bound to, and
+ * `renderReaderView` then reuses that root against a detached mount node —
+ * a reader that is on screen, permanently blank, and reported active twice.
+ * Holding the promise itself claims the turn before the first await.
+ */
+let enableInFlight: Promise<void> | null = null;
+
+/**
  * Boot the content script.
  *
  * The message listener is registered first and synchronously. Loading settings is
@@ -114,7 +126,21 @@ function canExtractContent(): boolean {
 
 async function enableReadingMode(): Promise<void> {
   if (state.isActive) return;
+  // Claim the turn before the first await, not after the last: a second message
+  // arriving mid-extraction joins the one already running instead of mounting a
+  // second reader over the first. Both callers see the same outcome, and a
+  // failure is reported once rather than twice.
+  if (enableInFlight) return enableInFlight;
 
+  enableInFlight = runEnableReadingMode();
+  try {
+    return await enableInFlight;
+  } finally {
+    enableInFlight = null;
+  }
+}
+
+async function runEnableReadingMode(): Promise<void> {
   try {
     const result = extractContent(document);
 
@@ -179,16 +205,43 @@ function disableReadingMode(): void {
   }
 }
 
+/**
+ * Apply a settings change, then persist it.
+ *
+ * The reader renders from `state.settings` before storage answers, so memory
+ * leads and every other layer follows it: validate the merged result so
+ * out-of-range values arriving over the message channel never reach the reader
+ * view, repaint, and only then write. A refused write rolls memory *and* the
+ * DOM back to the previous values and rethrows, because swallowing it would
+ * leave the three layers disagreeing — the next unrelated settings change
+ * would repaint to a value that was never saved, and `handleMessage` would have
+ * answered `success: true` over a setting the user believes is kept.
+ */
 async function updateSettings(newSettings: Partial<Settings>): Promise<void> {
+  const previous = state.settings;
+  const next = validateSettings({ ...previous, ...newSettings });
+
+  state.settings = next;
+  repaintReader();
+
   try {
-    // `state.settings` drives rendering immediately, before storage round-trips.
-    // Validate the merged result so out-of-range or wrong-typed values arriving
-    // over the message channel never reach the reader view.
-    state.settings = validateSettings({ ...state.settings, ...newSettings });
-    await saveSettings(newSettings);
-    repaintReader();
+    await saveSettings(next);
   } catch (error) {
+    // Compare-and-swap before rolling back. Sliders fire a change per step, so
+    // several of these run at once against the same `state.settings`. Restoring
+    // the snapshot taken on entry would undo a *later* call that already
+    // succeeded and persisted — the view would snap back to values storage
+    // never held, which is the very symptom this rollback exists to prevent.
+    // So only undo this call when nothing landed on top of it; otherwise
+    // re-read storage and repaint from the truth.
+    if (state.settings === next) {
+      state.settings = previous;
+    } else {
+      state.settings = await getSettings();
+    }
+    repaintReader();
     handleError(error, 'storage');
+    throw error;
   }
 }
 
@@ -288,7 +341,17 @@ function repaintReader(): void {
  */
 function createReaderContainer(): HTMLElement {
   const existing = document.getElementById(READER_HOST_ID);
-  if (existing) existing.remove();
+  if (existing) {
+    // Unmount before removing the host. A root left bound to the mount node
+    // inside this host keeps rendering into a detached node forever: `render`
+    // succeeds, the host is gone, and re-mounting reuses the dead root — a
+    // reader that is on screen and permanently blank.
+    if (reactRoot) {
+      reactRoot.unmount();
+      reactRoot = null;
+    }
+    existing.remove();
+  }
 
   // Host element — appended to body, does not interfere with page layout
   const host = document.createElement('div');
@@ -326,13 +389,25 @@ function renderReaderView(mount: HTMLElement): void {
         onError: (error: Error) => handleError(error, 'render'),
         onRetry: () => {
           disableReadingMode();
-          enableReadingMode();
+          // A retry re-extracts the article, and `enableReadingMode` reports the
+          // failure through `handleError` before rethrowing. The promise is
+          // returned rather than dropped so the callback is no longer typed as
+          // synchronous and the compiler can see what the boundary discards.
+          return enableReadingMode();
         },
         children: React.createElement(ReaderView, {
           content: currentContent,
           settings: state.settings,
           onClose: disableReadingMode,
-          onSettingsChange: updateSettings,
+          // The panel calls this synchronously and has nowhere to surface a
+          // rejected promise, while `updateSettings` has already raised the
+          // toast. Absorbing it here keeps the panel's contract honest —
+          // a refused write simply means the settings did not change — without
+          // hiding the failure from the message channel, which awaits
+          // `updateSettings` directly and gets its `success: false`.
+          onSettingsChange: (settings: Partial<Settings>) => {
+            void updateSettings(settings).catch(() => {});
+          },
           onExportPdf: exportToPdf,
           onResetSettings: resetReaderSettings,
           onLoadHistory: loadHistory,

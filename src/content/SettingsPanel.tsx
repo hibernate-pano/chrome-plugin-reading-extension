@@ -63,6 +63,54 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
   }, []);
 
   /**
+   * Arrow-key navigation for the theme radiogroup.
+   *
+   * `role="radiogroup"` is a single-tab-stop pattern: the arrow keys move
+   * between options and selection follows focus, which is what a screen reader
+   * in forms mode sends. Without this the group is three separate tab stops
+   * whose arrow keys do nothing, and the ARIA roles promise an interaction the
+   * component does not implement.
+   *
+   * Wrapping is deliberate — a radio group is a cycle, so ArrowUp on the first
+   * option lands on the last.
+   */
+  const handleThemeArrow = useCallback((
+    event: React.KeyboardEvent,
+    index: number
+  ) => {
+    const last = READER_THEMES.length - 1;
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        next = index === last ? 0 : index + 1;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        next = index === 0 ? last : index - 1;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = last;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = READER_THEMES[next];
+    if (!target) return;
+    // Selection follows focus, so focus has to move with it or the roving
+    // tabindex would leave the group's single tab stop on the wrong option.
+    const group = event.currentTarget.parentElement;
+    const options = group ? group.querySelectorAll<HTMLButtonElement>('[role="radio"]') : [];
+    const nextOption = options[next];
+    if (nextOption) nextOption.focus();
+    handleThemeChange(target.id);
+  }, [handleThemeChange]);
+
+  /**
    * Restore the defaults.
    *
    * Unlike clearing history this needs no confirmation step: it only rewrites
@@ -118,17 +166,25 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
           role="radiogroup"
           aria-labelledby="theme-label"
         >
-          {READER_THEMES.map((theme) => (
+          {READER_THEMES.map((theme, index) => (
             <button
               key={theme.id}
               className={`reader-theme-swatch ${settings.theme === theme.id ? 'reader-theme-swatch--active' : ''}`}
               onClick={() => handleThemeChange(theme.id)}
-              onKeyDown={(e) => handleKeyboardActivation(e, () => handleThemeChange(theme.id))}
+              onKeyDown={(e) => {
+                // One handler: two `onKeyDown` props would leave the second
+                // shadowing the first and silently kill Enter/Space activation.
+                handleKeyboardActivation(e, () => handleThemeChange(theme.id));
+                handleThemeArrow(e, index);
+              }}
               role="radio"
               aria-checked={settings.theme === theme.id}
               aria-label={theme.name}
               type="button"
-              tabIndex={0}
+              // Roving tabindex: the group is one tab stop, on the selected
+              // option. `tabIndex={0}` on all three would make it three, which
+              // is the behaviour the arrow keys above exist to replace.
+              tabIndex={settings.theme === theme.id ? 0 : -1}
               style={{
                 backgroundColor: theme.background,
                 '--swatch-accent': theme.accent,

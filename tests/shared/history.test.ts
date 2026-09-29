@@ -307,6 +307,124 @@ describe('Reading History', () => {
     });
   });
 
+  describe('overlapping mutations', () => {
+    // Regression: every mutation was an unsynchronized read-modify-write of the
+    // whole array, so two of them interleaving both read the same starting array
+    // and the second write silently discarded the first one's record — while
+    // each caller still got a record back, so nothing reported the loss.
+    function cloneOnRead(): () => void {
+      const backing = vi.mocked(chrome.storage.local.get).getMockImplementation();
+      if (!backing) throw new Error('the storage mock lost its implementation');
+
+      // Real storage structured-clones on read. The shared mock hands back the
+      // same array reference, which would mask the race by letting both
+      // mutations mutate one array and survive anyway.
+      vi.mocked(chrome.storage.local.get).mockImplementation((keys) =>
+        backing(keys).then((result) =>
+          Object.fromEntries(
+            Object.entries(result).map(([key, value]) => [
+              key,
+              Array.isArray(value) ? [...value] : value,
+            ])
+          )
+        )
+      );
+
+      return () => vi.mocked(chrome.storage.local.get).mockImplementation(backing);
+    }
+
+    it('keeps both records when two adds overlap', async () => {
+      const restore = cloneOnRead();
+      try {
+        const [first, second] = await Promise.all([
+          addToHistory('https://example.com/a', 'A', { length: 100 }),
+          addToHistory('https://example.com/b', 'B', { length: 100 }),
+        ]);
+
+        expect(first).not.toBeNull();
+        expect(second).not.toBeNull();
+
+        const history = await getReadingHistory();
+        expect(history.map(r => r.title).sort()).toEqual(['A', 'B']);
+      } finally {
+        // `vi.clearAllMocks()` clears calls, not implementations, so a failed
+        // assertion here would leave the clone wrapper installed for every
+        // later test in the file — turning one real failure into dozens.
+        restore();
+      }
+    });
+
+    it('does not wipe stored records when the read fails', async () => {
+      // The failure `getReadingHistory` cannot express: a storage read that
+      // rejects is indistinguishable from "no history yet" once it has been
+      // flattened to `[]`. A mutation that trusted that flattened value would
+      // write the empty list back and destroy every record while reporting
+      // success.
+      await addToHistory('https://example.com/one', 'One', { length: 100 });
+      await addToHistory('https://example.com/two', 'Two', { length: 100 });
+
+      vi.mocked(chrome.storage.local.get).mockRejectedValueOnce(
+        new Error('storage temporarily unavailable') as never
+      );
+      const added = await addToHistory('https://example.com/three', 'Three', { length: 100 });
+
+      expect(added, 'a refused read must not report success').toBeNull();
+
+      const history = await getReadingHistory();
+      expect(
+        history.map(r => r.title).sort(),
+        'the two existing records must survive a failed read'
+      ).toEqual(['One', 'Two']);
+    });
+
+    it('does not clear stored records when a delete cannot read them', async () => {
+      await addToHistory('https://example.com/keep', 'Keep', { length: 100 });
+
+      vi.mocked(chrome.storage.local.get).mockRejectedValueOnce(
+        new Error('storage temporarily unavailable') as never
+      );
+      const deleted = await deleteFromHistory(generateId('https://example.com/keep', 'Keep'));
+
+      expect(deleted).toBe(false);
+      const history = await getReadingHistory();
+      expect(history.map(r => r.title)).toEqual(['Keep']);
+    });
+
+    it('does not resurrect a deleted record when an add overlaps it', async () => {
+      await addToHistory('https://example.com/gone', 'Gone', { length: 100 });
+      await addToHistory('https://example.com/kept', 'Kept', { length: 100 });
+      const restore = cloneOnRead();
+
+      const [, added] = await Promise.all([
+        deleteFromHistory(generateId('https://example.com/gone', 'Gone')),
+        addToHistory('https://example.com/new', 'New', { length: 100 }),
+      ]);
+
+      expect(added).not.toBeNull();
+      const titles = (await getReadingHistory()).map(r => r.title);
+      expect(titles).toContain('New');
+      expect(titles).toContain('Kept');
+      expect(titles).not.toContain('Gone');
+      restore();
+    });
+
+    it('keeps serving mutations queued behind one whose write failed', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(chrome.storage.local.set).mockRejectedValueOnce(new Error('quota exceeded'));
+
+      // A rejected chain would reject everything queued behind it, so the
+      // second article would silently never be recorded either.
+      const [failed, next] = await Promise.all([
+        addToHistory('https://example.com/lost', 'Lost', { length: 100 }),
+        addToHistory('https://example.com/kept', 'Kept', { length: 100 }),
+      ]);
+
+      expect(failed).toBeNull();
+      expect(next).not.toBeNull();
+      expect((await getReadingHistory()).map(r => r.title)).toEqual(['Kept']);
+    });
+  });
+
   describe('generateId', () => {
     it('is deterministic for the same url and title', () => {
       const first = generateId('https://example.com/a', 'Title');

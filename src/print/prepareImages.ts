@@ -12,7 +12,16 @@
  *    the user print, with a ceiling so a dead image host can't hang the page.
  */
 
-/** Attributes lazy-loading libraries stash the real URL in. */
+import { sanitizeUrlValue } from '../shared/sanitize';
+
+/**
+ * Attributes lazy-loading libraries stash the real URL in.
+ *
+ * Mirrors `LAZY_URL_ATTRS` in `src/shared/sanitize.ts`, which applies the same
+ * scheme check to these values on the way in. `srcset` is deliberately not a
+ * recovery source here: the sanitizer strips it from every element, so an image
+ * whose only URL lives there is gone before this page sees it.
+ */
 const LAZY_SRC_ATTRS = [
   'data-src',
   'data-original',
@@ -36,26 +45,21 @@ function isPlaceholder(src: string | null): boolean {
 /**
  * Recover the real URL for an image that a lazy loader left unresolved.
  * Returns true when src was replaced.
+ *
+ * A candidate has to clear the same scheme check every sanitized `src` clears.
+ * These attributes are spelled `data-*`, so nothing else vets them, and
+ * copying one straight into `src` would make this page the only place in the
+ * pipeline where a page-controlled URL reaches a live attribute unchecked.
  */
 export function resolveLazySrc(image: HTMLImageElement): boolean {
   if (!isPlaceholder(image.getAttribute('src'))) return false;
 
   for (const attr of LAZY_SRC_ATTRS) {
     const candidate = image.getAttribute(attr);
-    if (candidate && !isPlaceholder(candidate)) {
+    // An attribute that is still a placeholder, or that fails the scheme check,
+    // is not this image's URL — keep looking rather than promoting it.
+    if (candidate && !isPlaceholder(candidate) && sanitizeUrlValue(candidate, 'src') !== null) {
       image.setAttribute('src', candidate);
-      return true;
-    }
-  }
-
-  // Some libraries only fill srcset.
-  const srcset = image.getAttribute('srcset');
-  if (srcset) {
-    // Take the last candidate — usually the highest resolution.
-    const candidates = srcset.split(',').map((entry) => entry.trim().split(/\s+/)[0]);
-    const best = candidates[candidates.length - 1];
-    if (best && !isPlaceholder(best)) {
-      image.setAttribute('src', best);
       return true;
     }
   }

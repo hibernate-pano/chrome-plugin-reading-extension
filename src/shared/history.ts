@@ -101,6 +101,56 @@ export async function getReadingHistory(): Promise<ReadingRecord[]> {
 }
 
 /**
+ * Serializes every mutation of `reading_history` within this context.
+ *
+ * Each mutation is a read-modify-write of the whole array, so two of them
+ * interleaving — a fast re-read landing while a delete is still reading — both
+ * read the same starting array and the second write silently discards the
+ * first one's record. Chaining them onto one promise closes that window: every
+ * mutation reads what the previous one wrote.
+ *
+ * It cannot help across tabs. Each tab runs its own copy of this module, so two
+ * tabs reading two articles at the same time still race. Closing that needs a
+ * different storage layout — one key per record plus a separately maintained
+ * index — so that two writers never overwrite the same array. Until then this
+ * is strictly better than no serialization, and never worse.
+ */
+let historyQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Read the stored history, hand it to `fn`, and write back what it returns.
+ *
+ * The read goes straight to storage rather than through `getReadingHistory`,
+ * which collapses "the key is absent" and "the read failed" into the same empty
+ * array. Here that collapse is destructive: a transient read failure would hand
+ * `fn` an empty list, and writing that back would replace 200 records with one
+ * — while the caller saw a success. Letting the read throw instead leaves the
+ * stored data untouched and surfaces as the `null`/`false` every caller already
+ * handles.
+ *
+ * The chain itself must never reject, or one failed write would reject every
+ * mutation queued behind it; each caller still receives its own outcome through
+ * the promise this returns.
+ */
+function mutateHistory(fn: (history: ReadingRecord[]) => ReadingRecord[]): Promise<ReadingRecord[]> {
+  const run = historyQueue.then(async () => {
+    const stored = await chrome.storage.local.get(STORAGE_KEYS.READING_HISTORY);
+    const current = stored[STORAGE_KEYS.READING_HISTORY];
+    const next = fn(Array.isArray(current) ? current : []);
+    const trimmed = next.slice(0, MAX_HISTORY_ITEMS);
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.READING_HISTORY]: trimmed,
+    });
+    // Hand back what was actually stored, not the untrimmed list, so a caller
+    // can never be told about a record that trimming dropped.
+    return trimmed;
+  });
+
+  historyQueue = run.catch(() => {});
+  return run;
+}
+
+/**
  * Add or update a reading record.
  *
  * `content.length` is a **word count** (`ExtractedContent.wordCount`), not a
@@ -127,43 +177,43 @@ export async function addToHistory(
   }
 ): Promise<ReadingRecord | null> {
   try {
-    const history = await getReadingHistory();
     const id = generateId(url, title);
     const now = Date.now();
-    
-    // Check if already exists
-    const existingIndex = history.findIndex(r => r.id === id);
-    
-    const record: ReadingRecord = {
-      id,
-      url,
-      title: title || 'Untitled',
-      excerpt: content.excerpt || '',
-      byline: content.byline || '',
-      siteName: content.siteName || getHostname(url),
-      length: content.length || 0,
-      readingTime: calculateReadingTime(content.length || 0),
-      theme: settings?.theme || 'light',
-      fontSize: settings?.fontSize || 18,
-      createdAt: existingIndex >= 0 ? history[existingIndex].createdAt : now,
-      lastReadAt: now,
-      readCount: existingIndex >= 0 ? history[existingIndex].readCount + 1 : 1,
-    };
 
-    if (existingIndex >= 0) {
-      history[existingIndex] = record;
-    } else {
-      history.unshift(record);
-    }
+    const history = await mutateHistory((stored) => {
+      // Read the existing record inside the serialized section: an index taken
+      // before the queue could already be stale by the time we write.
+      const existingIndex = stored.findIndex(r => r.id === id);
 
-    // Limit history size
-    const trimmed = history.slice(0, MAX_HISTORY_ITEMS);
-    
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.READING_HISTORY]: trimmed,
+      const record: ReadingRecord = {
+        id,
+        url,
+        title: title || 'Untitled',
+        excerpt: content.excerpt || '',
+        byline: content.byline || '',
+        siteName: content.siteName || getHostname(url),
+        length: content.length || 0,
+        readingTime: calculateReadingTime(content.length || 0),
+        theme: settings?.theme || 'light',
+        fontSize: settings?.fontSize || 18,
+        createdAt: existingIndex >= 0 ? stored[existingIndex].createdAt : now,
+        lastReadAt: now,
+        readCount: existingIndex >= 0 ? stored[existingIndex].readCount + 1 : 1,
+      };
+
+      if (existingIndex >= 0) {
+        stored[existingIndex] = record;
+      } else {
+        stored.unshift(record);
+      }
+
+      return stored;
     });
 
-    return record;
+    // Hand back the record out of the array that was written, rather than the
+    // object built inside the closure: one object, two truths, is how a caller
+    // ends up reporting a record that storage never received.
+    return history.find(r => r.id === id) ?? null;
   } catch (error) {
     console.error('[Reader] Failed to add to history:', error);
     return null;
@@ -175,13 +225,8 @@ export async function addToHistory(
  */
 export async function deleteFromHistory(recordId: string): Promise<boolean> {
   try {
-    const history = await getReadingHistory();
-    const filtered = history.filter(r => r.id !== recordId);
-    
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.READING_HISTORY]: filtered,
-    });
-    
+    await mutateHistory(history => history.filter(r => r.id !== recordId));
+
     return true;
   } catch (error) {
     console.error('[Reader] Failed to delete from history:', error);
@@ -194,9 +239,8 @@ export async function deleteFromHistory(recordId: string): Promise<boolean> {
  */
 export async function clearHistory(): Promise<boolean> {
   try {
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.READING_HISTORY]: [],
-    });
+    await mutateHistory(() => []);
+
     return true;
   } catch (error) {
     console.error('[Reader] Failed to clear history:', error);

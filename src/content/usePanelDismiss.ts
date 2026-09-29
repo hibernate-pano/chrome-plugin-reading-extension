@@ -87,6 +87,23 @@ export function usePanelDismiss({
         const root = panelRef.current.getRootNode() as ShadowRoot | Document;
         const active = root.activeElement;
 
+        // Focus is outside the trap, or nowhere at all.
+        //
+        // Clicking panel content that is not focusable — a heading, a
+        // paragraph, the padding — drops focus to <body>, so `active` is null
+        // and neither the first nor the last element matches. Without this
+        // branch Tab walks straight out of an `aria-modal="true"` dialog into
+        // the host page behind it, and Escape stops working too, because the
+        // panel's own listener never sees the keydown. Re-entering from the
+        // correct end keeps the trap closed.
+        const focusEscaped = active === null || !panelRef.current.contains(active);
+
+        if (focusEscaped) {
+          keyboardEvent.preventDefault();
+          (keyboardEvent.shiftKey ? lastElement : firstElement).focus();
+          return;
+        }
+
         if (keyboardEvent.shiftKey) {
           if (active === firstElement) {
             keyboardEvent.preventDefault();

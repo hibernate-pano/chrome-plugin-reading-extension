@@ -1221,3 +1221,61 @@ describe('ReaderView — export PDF', () => {
     });
   });
 });
+
+describe('renderContentNodes escape handling', () => {
+  /**
+   * The sink where escaping has to hold.
+   *
+   * `sanitizeArticleHtml` escapes `<` so article prose cannot become markup, and
+   * `content/index.ts` hands the sanitized string straight to this component. A
+   * text node parsed out of that string has its entities decoded again, so
+   * anything that re-emits `nodeValue` into the raw-HTML run inverts the
+   * escaping. These tests pin the composition — sanitizer output arriving at the
+   * sink — which is the step no other test covered.
+   */
+  function contentRegion(): HTMLElement {
+    const region = document.querySelector('#reader-content');
+    if (!(region instanceof HTMLElement)) throw new Error('reader content region not found');
+    return region;
+  }
+
+  it('keeps escaped markup in article text inert when a code block follows it', () => {
+    // The sanitizer's output for prose that merely *looks* like markup. The
+    // `<code>` sibling forces the split path through `serializeNode`, which is
+    // where the decoded text used to re-enter the fragment unescaped.
+    const sanitized =
+      '<p>before &lt;img src=x onerror="globalThis.__folioXss = 1"&gt; ' +
+      '<code>const a = 1;</code></p>';
+
+    renderReader({ content: sanitized });
+
+    expect(contentRegion().querySelectorAll('img')).toHaveLength(0);
+    expect((globalThis as Record<string, unknown>).__folioXss).toBeUndefined();
+    // The prose itself still reads correctly — escaping must not mangle it.
+    expect(contentRegion().textContent).toContain('<img src=x');
+  });
+
+  it('keeps escaped markup inert in prose with no code block at all', () => {
+    // The same text with no sibling element, so the whole paragraph stays on
+    // the outerHTML path. Guards the case where the two paths disagree.
+    const sanitized = '<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>';
+
+    renderReader({ content: sanitized });
+
+    expect(contentRegion().querySelectorAll('script')).toHaveLength(0);
+    expect(contentRegion().textContent).toContain('<script>alert(1)</script>');
+  });
+
+  it('escapes ampersands so entity text is not re-interpreted', () => {
+    // `&amp;` decodes to `&`; re-emitted raw, a following entity-looking run
+    // would decode a second time.
+    //
+    // The `<code>` sibling is load-bearing, not decoration: without an element
+    // to recurse into, the whole `<p>` goes through the `outerHTML` branch and
+    // `escapeText` is never called — this test would pass against code that
+    // escaped nothing at all.
+    renderReader({ content: '<p>Tom &amp;amp; Jerry &amp;lt;b&amp;gt;</p><code>x</code>' });
+
+    expect(contentRegion().textContent).toContain('Tom &amp; Jerry &lt;b&gt;');
+  });
+});

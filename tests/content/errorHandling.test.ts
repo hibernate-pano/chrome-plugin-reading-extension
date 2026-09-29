@@ -632,8 +632,63 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('child exploded')).toBeDefined();
   });
 
-  it('re-renders the latest children while it has never errored', () => {
-    const { rerender } = render(
+  // Regression: `onRetry` re-runs the work that failed — here, re-extracting
+  // the article — so it is async. It was typed `() => void`, so the discarded
+  // promise was invisible to the compiler and a failed retry surfaced as an
+  // unhandled rejection instead of the error path the rest of the flow uses.
+  it('absorbs a rejected async onRetry instead of leaving it unhandled', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // A plain function, not `vi.fn()`: vitest's mock swallows a rejected
+    // promise, which would hide the very thing this test is about.
+    let calls = 0;
+    const onRetry = () => {
+      calls += 1;
+      return Promise.reject(new Error('extraction failed'));
+    };
+
+    // Node reports an unhandled rejection only after the microtask queue drains,
+    // so a macrotask has to pass before the absence of one means anything.
+    const unhandled: unknown[] = [];
+    const listener = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', listener);
+
+    try {
+      render(React.createElement(ErrorBoundary, { onRetry }, React.createElement(Boom)));
+
+      fireEvent.click(screen.getByRole('button', { name: '重试' }));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(calls).toBe(1);
+      expect(unhandled, 'a failed retry must not escape as an unhandled rejection').toEqual([]);
+    } finally {
+      process.off('unhandledRejection', listener);
+    }
+  });
+
+  it('accepts an async onRetry and still resets the boundary', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    let calls = 0;
+    const onRetry = async () => {
+      calls += 1;
+      shouldThrow = false;
+    };
+
+    render(React.createElement(ErrorBoundary, { onRetry }, React.createElement(Boom)));
+    expect(screen.getByText('出现了一些问题')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: '重试' }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(calls).toBe(1);
+    expect(screen.getByText('children recovered')).toBeDefined();
+  });
+
+  it('re-renders the latest children while it has never errored', () => {    const { rerender } = render(
       React.createElement(
         ErrorBoundary,
         null,

@@ -163,6 +163,23 @@ function readerShadow(): ShadowRoot {
   return host.shadowRoot;
 }
 
+/** Click a control inside the reader's shadow root and let React settle. */
+async function clickInReader(selector: string): Promise<void> {
+  const control = readerShadow().querySelector<HTMLElement>(selector);
+  if (!control) throw new Error(`the reader has no "${selector}" control`);
+  await act(async () => {
+    control.click();
+  });
+}
+
+/** Open the reading-history panel and wait for its storage read to land. */
+async function openHistoryPanel(): Promise<void> {
+  await clickInReader('[aria-label="Open reading history"]');
+  await vi.waitFor(() => {
+    expect(readerShadow().querySelector('.reader-history-panel')).not.toBeNull();
+  });
+}
+
 /**
  * Load a page into the shared jsdom document.
  *
@@ -283,6 +300,34 @@ describe('content script message handling', () => {
       expect(readerShadow().querySelector('.reader-title')?.textContent).toBe('On Reading Well');
     });
 
+    it('mounts exactly one reader when two enable messages overlap', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+
+      // Both messages are sent from one synchronous burst, so both are inside
+      // `enableReadingMode` at the same time — past the `state.isActive` guard,
+      // which is only set once the reader is mounted. Two readers mounting would
+      // mean the second removes the host the first root is bound to, leaving an
+      // overlay that is on screen, blank, and reported active twice.
+      let responses: unknown[];
+      await act(async () => {
+        responses = await Promise.all([
+          dispatch({ type: MESSAGE_TYPES.ENABLE_READING_MODE }),
+          dispatch({ type: MESSAGE_TYPES.ENABLE_READING_MODE }),
+        ]);
+      });
+
+      expect(responses).toEqual([
+        { success: true, isActive: true },
+        { success: true, isActive: true },
+      ]);
+      expect(document.querySelectorAll(`#${HOST_ID}`)).toHaveLength(1);
+      // The symptom that mattered: a live root bound to a detached mount node
+      // renders nothing at all, and no other assertion here would notice.
+      expect(readerShadow().querySelector('[data-reader-mount]')).not.toBeNull();
+      expect(readerShadow().querySelector('.reader-title')?.textContent).toBe('On Reading Well');
+    });
+
     it('reports state, including whether the page has enough text to extract', async () => {
       setPage('<p>tiny</p>');
       await loadContentScript();
@@ -397,6 +442,428 @@ describe('content script message handling', () => {
 
       expect(response).toEqual({ success: true });
       expect(local.set).not.toHaveBeenCalled();
+    });
+
+    // Regression: memory was moved to the new value and the write swallowed, so
+    // the DOM showed 30px while storage kept 19 — and the caller was told it
+    // worked. The next unrelated change then repainted to the "failed" value,
+    // and it silently reverted on the next page load.
+    it('rolls the reader back and reports the failure when storage refuses a setting', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      local.set.mockRejectedValueOnce(new Error('quota exceeded'));
+
+      const response = await dispatchInAct({
+        type: MESSAGE_TYPES.UPDATE_SETTINGS,
+        payload: { fontSize: 30 },
+      });
+
+      expect(response).toEqual({ success: false, error: 'quota exceeded' });
+
+      // Memory rolled back, so the reader goes back to what storage holds —
+      // otherwise the next repaint would restore the value that was lost.
+      const overlay = readerShadow().querySelector('.reader-overlay') as HTMLElement;
+      expect(overlay.style.getPropertyValue('--reader-font-size')).toBe('19px');
+
+      // And the user is told, rather than left to notice a setting that moved back.
+      expect(document.querySelector('[role="alert"]')).not.toBeNull();
+    });
+
+    it('still applies and persists a setting when the write succeeds', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      const response = await dispatchInAct({
+        type: MESSAGE_TYPES.UPDATE_SETTINGS,
+        payload: { fontSize: 30 },
+      });
+
+      expect(response).toEqual({ success: true });
+      const overlay = readerShadow().querySelector('.reader-overlay') as HTMLElement;
+      expect(overlay.style.getPropertyValue('--reader-font-size')).toBe('30px');
+      expect((local.store[STORAGE_KEYS.SETTINGS] as Record<string, unknown>).fontSize).toBe(30);
+    });
+
+    it('keeps later settings working after one was refused', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      local.set.mockRejectedValueOnce(new Error('quota exceeded'));
+      await dispatchInAct({
+        type: MESSAGE_TYPES.UPDATE_SETTINGS,
+        payload: { fontSize: 30 },
+      });
+
+      // A rejected write must not poison the ones behind it.
+      const response = await dispatchInAct({
+        type: MESSAGE_TYPES.UPDATE_SETTINGS,
+        payload: { fontSize: 24 },
+      });
+
+      expect(response).toEqual({ success: true });
+      const overlay = readerShadow().querySelector('.reader-overlay') as HTMLElement;
+      expect(overlay.style.getPropertyValue('--reader-font-size')).toBe('24px');
+      expect((local.store[STORAGE_KEYS.SETTINGS] as Record<string, unknown>).fontSize).toBe(24);
+    });
+
+    it('does not let a failed write roll back a concurrent one that succeeded', async () => {
+      // Sliders fire a change per step, so these genuinely overlap in the
+      // product. The first call's write is refused; while it is still in flight
+      // the second one lands and persists. Rolling back to the snapshot taken
+      // on entry would then undo the *successful* change too, leaving memory,
+      // DOM and storage disagreeing — the exact failure the rollback exists to
+      // prevent. The serial test above cannot reach this ordering.
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      let releaseFirstWrite!: () => void;
+      const firstWriteBlocked = new Promise<void>((resolve) => {
+        releaseFirstWrite = resolve;
+      });
+
+      // Keyed on call order, not payload: the second call's settings are merged
+      // over the first's, so it also carries fontSize 30 and a value-based
+      // predicate would refuse both.
+      const realSet = local.set.getMockImplementation()!;
+      let writes = 0;
+      local.set.mockImplementation(async (items: Record<string, unknown>) => {
+        writes += 1;
+        if (writes === 1) {
+          await firstWriteBlocked;
+          throw new Error('quota exceeded');
+        }
+        return realSet(items);
+      });
+
+      try {
+        const first = dispatchInAct({
+          type: MESSAGE_TYPES.UPDATE_SETTINGS,
+          payload: { fontSize: 30 },
+        });
+        const second = dispatchInAct({
+          type: MESSAGE_TYPES.UPDATE_SETTINGS,
+          payload: { lineHeight: 2 },
+        });
+        releaseFirstWrite();
+        await Promise.all([first, second]);
+
+        const overlay = readerShadow().querySelector('.reader-overlay') as HTMLElement;
+        // Settings are merged and written whole, so the accepted write also
+        // persists the font size the refused one had staged — that is correct,
+        // not a leak. The invariant under test is narrower: the late failure
+        // must not drag the accepted change back out with it.
+        expect(overlay.style.getPropertyValue('--reader-line-height')).toBe('2');
+        expect((local.store[STORAGE_KEYS.SETTINGS] as Record<string, unknown>).lineHeight).toBe(2);
+      } finally {
+        local.set.mockImplementation(realSet);
+      }
+    });
+
+    it('reports a settings write that rejects with something that is not an Error', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      // Chrome rejections are not guaranteed to be Error instances. A reporter
+      // that assumes they are throws inside its own catch and answers nothing,
+      // leaving the toolbar waiting on a response that never comes.
+      local.set.mockRejectedValueOnce('quota exceeded');
+
+      const response = await dispatchInAct({
+        type: MESSAGE_TYPES.UPDATE_SETTINGS,
+        payload: { fontSize: 30 },
+      });
+
+      expect(response).toEqual({ success: false, error: 'quota exceeded' });
+      const overlay = readerShadow().querySelector('.reader-overlay') as HTMLElement;
+      expect(overlay.style.getPropertyValue('--reader-font-size')).toBe('19px');
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Idempotence: messages that arrive when there is nothing to do    */
+  /* ---------------------------------------------------------------- */
+
+  describe('redundant reading-mode messages', () => {
+    it('does not remount the reader when reading mode is already on', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+      const host = readerHost();
+
+      // The second ENABLE must be a no-op, not a second mount over the first.
+      // Remounting drops the host the live React root is bound to, and the
+      // reader would go blank while still reporting itself active.
+      const response = await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      expect(response).toEqual({ success: true, isActive: true });
+      expect(readerHost()).toBe(host);
+      expect(document.querySelectorAll(`#${HOST_ID}`)).toHaveLength(1);
+      expect(readerShadow().querySelector('.reader-title')?.textContent).toBe('On Reading Well');
+    });
+
+    it('reports a disable that arrives before any enable instead of throwing', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+
+      const response = await dispatchInAct({ type: MESSAGE_TYPES.DISABLE_READING_MODE });
+
+      expect(response).toEqual({ success: true, isActive: false });
+      expect(readerHost()).toBeNull();
+    });
+
+    it('still shuts down cleanly when the page has already removed the reader host', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      // The shadow host is attached with `mode: 'open'`, so a page script can
+      // reach in and take it away. Disabling has to survive that: it is the
+      // only thing that releases the module-level root and the active flag.
+      readerHost()?.remove();
+
+      const response = await dispatchInAct({ type: MESSAGE_TYPES.DISABLE_READING_MODE });
+
+      expect(response).toEqual({ success: true, isActive: false });
+      expect(await dispatch({ type: MESSAGE_TYPES.GET_STATE })).toEqual({
+        isActive: false,
+        canExtract: true,
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* A page that fights the reader                                    */
+  /* ---------------------------------------------------------------- */
+
+  describe('hostile or stale host pages', () => {
+    it('replaces a stale reader host left in the page by an earlier run', async () => {
+      setPage(ARTICLE_HTML);
+      const stale = document.createElement('div');
+      stale.id = HOST_ID;
+      stale.textContent = 'left over from a previous visit';
+      document.body.appendChild(stale);
+      await loadContentScript();
+
+      const response = await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      expect(response).toEqual({ success: true, isActive: true });
+      // The stale node has to go, or its shadow-less body would swallow the
+      // mount and the reader would report itself open over nothing.
+      expect(document.querySelectorAll(`#${HOST_ID}`)).toHaveLength(1);
+      expect(readerHost()).not.toBe(stale);
+      expect(readerShadow().querySelector('.reader-title')?.textContent).toBe('On Reading Well');
+    });
+
+    it('keeps serving settings when the page has removed the reader mount', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+      // Same open shadow root: a page script can delete the mount node. A
+      // repaint that re-renders into a missing node would throw and take the
+      // whole settings message down with it.
+      readerShadow().querySelector('[data-reader-mount]')?.remove();
+
+      const response = await dispatchInAct({
+        type: MESSAGE_TYPES.UPDATE_SETTINGS,
+        payload: { fontSize: 28 },
+      });
+
+      expect(response).toEqual({ success: true });
+      expect((local.store[STORAGE_KEYS.SETTINGS] as Record<string, unknown>).fontSize).toBe(28);
+    });
+
+    // Regression: a disable that cannot unmount leaves the module-level root
+    // live while reporting the reader as off. The next enable then finds that
+    // stale root *and* the old host. If the host is removed without unmounting
+    // first, the root keeps rendering into a detached node and the reader is on
+    // screen, blank, and reported active.
+    it('replaces a stale host that still has a live root bound to it', async () => {
+      setPage(ARTICLE_HTML);
+
+      let unmountShouldThrow = false;
+      vi.doMock('react-dom/client', async () => {
+        const actual =
+          await vi.importActual<typeof import('react-dom/client')>('react-dom/client');
+        return {
+          ...actual,
+          createRoot: (container: Element) => {
+            const root = actual.createRoot(container);
+            return {
+              render: (node: unknown) => root.render(node as never),
+              unmount: () => {
+                if (unmountShouldThrow) throw new Error('unmount failed');
+                root.unmount();
+              },
+            };
+          },
+        };
+      });
+
+      try {
+        await loadContentScript();
+        await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+        expect(readerShadow().querySelector('.reader-title')).not.toBeNull();
+
+        unmountShouldThrow = true;
+        expect(await dispatchInAct({ type: MESSAGE_TYPES.DISABLE_READING_MODE })).toEqual({
+          success: true,
+          isActive: false,
+        });
+
+        unmountShouldThrow = false;
+        const response = await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+
+        expect(response).toEqual({ success: true, isActive: true });
+        // The symptom that mattered: a live root on a detached mount renders
+        // nothing, and no other assertion here would notice.
+        expect(readerShadow().querySelector('.reader-title')?.textContent).toBe('On Reading Well');
+      } finally {
+        vi.doUnmock('react-dom/client');
+        vi.resetModules();
+      }
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* canExtractContent on pages jsdom does not model                  */
+  /* ---------------------------------------------------------------- */
+
+  describe('text measurement guards', () => {
+    it('refuses to extract from a document that has no body at all', async () => {
+      await loadContentScript();
+      const body = Object.getOwnPropertyDescriptor(Document.prototype, 'body');
+      Object.defineProperty(document, 'body', { value: null, configurable: true });
+      try {
+        expect(await dispatch({ type: MESSAGE_TYPES.GET_STATE })).toEqual({
+          isActive: false,
+          canExtract: false,
+        });
+      } finally {
+        delete (document as unknown as Record<string, unknown>).body;
+        if (body) Object.defineProperty(Document.prototype, 'body', body);
+      }
+    });
+
+    it('reports no text when the body exposes none to measure', async () => {
+      await loadContentScript();
+      // `innerText` is a rendering-only property. A page that has replaced the
+      // body, or an environment without layout, leaves it undefined — which
+      // must read as "no text" rather than crashing the state query.
+      Object.defineProperty(document.body, 'innerText', {
+        configurable: true,
+        get: () => undefined,
+      });
+
+      expect(await dispatch({ type: MESSAGE_TYPES.GET_STATE })).toEqual({
+        isActive: false,
+        canExtract: false,
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* PDF hand-off                                                      */
+  /* ---------------------------------------------------------------- */
+
+  describe('PDF export', () => {
+    it('reports a hand-off that answered nothing', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+      chromeMock.runtime.sendMessage.mockResolvedValueOnce(undefined);
+
+      await clickInReader('[aria-label="导出 PDF"]');
+
+      // A resolved `undefined` is not a successful export. Answering `success`
+      // would put a toast in front of the user for a print page that was never
+      // opened.
+      await vi.waitFor(() => {
+        expect(readerShadow().textContent).toContain('No response');
+      });
+    });
+
+    it('reports a hand-off that rejects with something that is not an Error', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+      chromeMock.runtime.sendMessage.mockRejectedValueOnce('the worker is asleep');
+
+      await clickInReader('[aria-label="导出 PDF"]');
+
+      await vi.waitFor(() => {
+        expect(readerShadow().textContent).toContain('the worker is asleep');
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* History panel failures                                           */
+  /* ---------------------------------------------------------------- */
+
+  describe('history panel failures', () => {
+    it('keeps a record on screen when the delete write fails', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+      await vi.waitFor(() => {
+        expect(
+          local.set.mock.calls.some((call) => STORAGE_KEYS.READING_HISTORY in call[0])
+        ).toBe(true);
+      });
+      await openHistoryPanel();
+
+      local.set.mockRejectedValueOnce(new Error('storage write failed'));
+      const del = readerShadow().querySelector<HTMLButtonElement>(
+        '[aria-label^="删除《"]'
+      ) as HTMLButtonElement;
+      expect(del, 'the record should offer a delete button').not.toBeNull();
+      await act(async () => {
+        del.click();
+      });
+
+      // The delete is re-read from storage, never patched, so a refused write
+      // must leave the record visible. Dropping it here would show the user an
+      // entry they just removed and hide on reload.
+      await vi.waitFor(() => {
+        expect(readerShadow().textContent).toContain('删除失败，请重试');
+      });
+      expect(readerShadow().querySelectorAll('.reader-history-list li')).toHaveLength(1);
+    });
+
+    it('keeps every record on screen when the clear write fails', async () => {
+      setPage(ARTICLE_HTML);
+      await loadContentScript();
+      await dispatchInAct({ type: MESSAGE_TYPES.ENABLE_READING_MODE });
+      await vi.waitFor(() => {
+        expect(
+          local.set.mock.calls.some((call) => STORAGE_KEYS.READING_HISTORY in call[0])
+        ).toBe(true);
+      });
+      await openHistoryPanel();
+
+      local.set.mockRejectedValueOnce(new Error('storage write failed'));
+      // Erasing every record is destructive, so the panel asks first; the
+      // confirmation is where the actual write happens.
+      await clickInReader('.reader-history-clear');
+      const confirm = readerShadow().querySelector<HTMLButtonElement>(
+        '.reader-history-clear--danger'
+      ) as HTMLButtonElement;
+      expect(confirm, 'clearing should ask for confirmation first').not.toBeNull();
+      await act(async () => {
+        confirm.click();
+      });
+
+      await vi.waitFor(() => {
+        expect(readerShadow().textContent).toContain('清空失败，请重试');
+      });
+      expect(readerShadow().querySelectorAll('.reader-history-list li')).toHaveLength(1);
     });
   });
 });

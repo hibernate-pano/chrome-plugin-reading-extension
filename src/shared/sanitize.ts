@@ -50,6 +50,11 @@ const DANGEROUS_TAGS = new Set([
  * column and paints over the toolbar, `z-index` stacks a fake dialog on top.
  * `width`/`height` do the same thing without CSS. `class` and `id` are dropped
  * so page CSS (and page scripts watching the DOM) cannot reach into ours.
+ *
+ * `srcset`/`sizes` go because they let the page choose which pixels load and at
+ * what cost, which is the reader's decision to make, not the source page's. The
+ * print page therefore has no `srcset` to recover from — see the note on
+ * `LAZY_URL_ATTRS`, which is the only other source it may promote.
  */
 const STRIPPED_ATTRS = new Set([
   'style',
@@ -65,6 +70,25 @@ const STRIPPED_ATTRS = new Set([
 
 /** Attributes whose value is a URL and therefore needs a scheme check. */
 const URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'xlink:href', 'poster']);
+
+/**
+ * Attributes lazy-loading libraries park the real image URL in.
+ *
+ * They hold a URL but are spelled `data-*`, so `URL_ATTRS` never matched them
+ * and they reached the print page unchecked — where `resolveLazySrc` copied one
+ * straight into a live `src`, making the print path the only place in the
+ * pipeline where a page-controlled URL entered the document without a scheme
+ * check. They are checked as `src` because promotion into `src` is their only
+ * use, and `data:` is a legitimate value for a `src` but not for a promoted one.
+ */
+const LAZY_URL_ATTRS = new Set([
+  'data-src',
+  'data-original',
+  'data-lazy-src',
+  'data-actualsrc',
+  'data-echo',
+  'data-lazy',
+]);
 
 /** Schemes an article may point at. */
 const SAFE_SCHEMES = new Set(['http', 'https']);
@@ -161,6 +185,18 @@ function isSafeUrlValue(raw: string, attrName: string): boolean {
 }
 
 /**
+ * Decide whether a URL-bearing value may be kept, and hand back the value to use.
+ *
+ * Returns `raw` unchanged when it is safe and `null` when it is not. Exported so
+ * the one place a page-controlled URL becomes a live attribute decides its
+ * scheme — the print page promoting a lazy-load attribute into `src` included —
+ * instead of each path re-implementing the policy and drifting.
+ */
+export function sanitizeUrlValue(raw: string, attrName: string): string | null {
+  return isSafeUrlValue(raw, attrName) ? raw : null;
+}
+
+/**
  * Strip scripts, event handlers, hostile URLs and layout escapes from an
  * article HTML fragment.
  *
@@ -197,7 +233,12 @@ export function sanitizeArticleHtml(html: string): string {
         continue;
       }
 
-      if (URL_ATTRS.has(name) && !isSafeUrlValue(attr.value, name)) {
+      if (URL_ATTRS.has(name) && sanitizeUrlValue(attr.value, name) === null) {
+        element.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (LAZY_URL_ATTRS.has(name) && sanitizeUrlValue(attr.value, 'src') === null) {
         element.removeAttribute(attr.name);
       }
     }

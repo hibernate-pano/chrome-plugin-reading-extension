@@ -33,16 +33,18 @@ export default defineConfig({
         // just below the last measured value so the gate is real without
         // failing on a single newly-uncovered line:
         //
-        //   measured 2026-09-29 (all files, after excluding types.ts)
+        //   measured 2026-09-29 (all files, after excluding types.ts):
+        //   statements 97.05 · branches 92.93 · functions 96.95 · lines 97.98
         //
-        // Rounded down to whole numbers, leaving roughly 0.5pp of headroom.
+        // Rounded down to whole numbers, so each gate keeps only the sliver of
+        // headroom the rounding leaves behind — never more.
         // Raise them as coverage grows — a threshold nobody bumps is a
         // threshold that silently rots. CI enforces these via
         // `pnpm run test:coverage`.
-        statements: 92,
-        branches: 83,
-        functions: 93,
-        lines: 94,
+        statements: 97,
+        branches: 92,
+        functions: 96,
+        lines: 97,
       },
     },
   },

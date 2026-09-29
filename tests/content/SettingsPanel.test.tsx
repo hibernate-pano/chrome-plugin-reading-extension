@@ -148,6 +148,89 @@ describe('SettingsPanel — theme swatches', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Radiogroup keyboard semantics
+ *
+ * `role="radiogroup"` promises one tab stop plus arrow-key navigation. These
+ * pin that promise, which the swatches previously did not keep: all three
+ * carried `tabIndex={0}` and no arrow key was handled anywhere.
+ * ------------------------------------------------------------------ */
+
+describe('SettingsPanel — theme radiogroup keyboard', () => {
+  function swatch(name: string): HTMLElement {
+    return screen.getByRole('radio', { name });
+  }
+
+  it('is a single tab stop, on the selected theme', () => {
+    renderPanel({ theme: 'sepia' });
+
+    const stops = screen
+      .getAllByRole('radio')
+      .filter((el) => el.getAttribute('tabindex') === '0');
+
+    expect(stops).toHaveLength(1);
+    expect(stops[0]).toBe(swatch('护眼'));
+  });
+
+  it('moves selection and focus with ArrowRight, wrapping at the end', () => {
+    const { onChange } = renderPanel({ theme: 'light' });
+
+    fireEvent.keyDown(swatch('浅色'), { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'dark' });
+    expect(swatch('深色')).toHaveFocus();
+
+    fireEvent.keyDown(swatch('深色'), { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'sepia' });
+
+    // Past the last option a radio group cycles, not stops.
+    fireEvent.keyDown(swatch('护眼'), { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'light' });
+    expect(swatch('浅色')).toHaveFocus();
+  });
+
+  it('moves backwards with ArrowLeft, wrapping at the start', () => {
+    const { onChange } = renderPanel({ theme: 'light' });
+
+    fireEvent.keyDown(swatch('浅色'), { key: 'ArrowLeft' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'sepia' });
+    expect(swatch('护眼')).toHaveFocus();
+
+    fireEvent.keyDown(swatch('护眼'), { key: 'ArrowLeft' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'dark' });
+  });
+
+  it('jumps to the ends with Home and End', () => {
+    const { onChange } = renderPanel({ theme: 'dark' });
+
+    fireEvent.keyDown(swatch('深色'), { key: 'End' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'sepia' });
+
+    fireEvent.keyDown(swatch('护眼'), { key: 'Home' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'light' });
+  });
+
+  it('stops the arrow key from also scrolling the panel', () => {
+    renderPanel({ theme: 'light' });
+
+    const event = createEvent.keyDown(swatch('浅色'), { key: 'ArrowDown' });
+    fireEvent(swatch('浅色'), event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('leaves Enter and Space working alongside the arrows', () => {
+    // Regression guard for a real mistake: two `onKeyDown` props on one element
+    // leaves the second shadowing the first, silently killing activation.
+    const { onChange } = renderPanel({ theme: 'light' });
+
+    fireEvent.keyDown(swatch('浅色'), { key: ' ' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'light' });
+
+    fireEvent.keyDown(swatch('深色'), { key: 'Enter' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'dark' });
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * Sliders
  * ------------------------------------------------------------------ */
 
@@ -406,7 +489,13 @@ describe('SettingsPanel — focus trap', () => {
     expect(document.activeElement).toBe(middle);
   });
 
-  it('does not trap Tab when nothing is focused yet', () => {
+  it('pulls focus back in when it has dropped to the body', () => {
+    // Clicking non-focusable panel content — a heading, a paragraph, the
+    // padding — drops focus to <body>. The panel is still an open
+    // `aria-modal="true"` dialog at that point, so Tab must re-enter it rather
+    // than walk into the host page behind it. This used to assert the opposite
+    // (`defaultPrevented === false`), which pinned the escape as intended
+    // behaviour; the escape was the defect.
     renderPanel();
     (document.activeElement as HTMLElement | null)?.blur();
     expect(document.activeElement).toBe(document.body);
@@ -414,7 +503,22 @@ describe('SettingsPanel — focus trap', () => {
     const event = createEvent.keyDown(document.body, { key: 'Tab' });
     fireEvent(document.body, event);
 
-    expect(event.defaultPrevented).toBe(false);
+    expect(event.defaultPrevented, 'Tab must not escape an open modal').toBe(true);
+    expect(closeButton()).toHaveFocus();
+  });
+
+  it('re-enters from the last control on Shift+Tab after focus escapes', () => {
+    // Backwards entry has to land on the end of the group, not the start, or
+    // Shift+Tab from outside jumps the user past everything in the panel.
+    renderPanel();
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    const last = resetButton();
+    const event = createEvent.keyDown(document.body, { key: 'Tab', shiftKey: true });
+    fireEvent(document.body, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(last).toHaveFocus();
   });
 
   it('ignores keys other than Tab and Escape', () => {

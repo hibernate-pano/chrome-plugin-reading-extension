@@ -26,6 +26,9 @@ type MessageListener = (
   sendResponse: SendResponse
 ) => boolean | undefined;
 type ActionListener = (tab: { id?: number; url?: string }) => Promise<void>;
+type InstalledListener = (details: { reason: string }) => void;
+type UpdatedListener = (tabId: number, changeInfo: { url?: string; status?: string }) => void;
+type RemovedListener = (tabId: number) => void;
 
 /* ------------------------------------------------------------------ */
 /* Chrome mock                                                        */
@@ -61,6 +64,9 @@ let session: StorageArea;
 let local: StorageArea;
 let messageListener: MessageListener | undefined;
 let actionListener: ActionListener | undefined;
+let installedListener: InstalledListener | undefined;
+let updatedListener: UpdatedListener | undefined;
+let removedListener: RemovedListener | undefined;
 let onTabsSendMessage: (tabId: number, message: Message) => unknown;
 let tabsQueryResult: Array<{ id?: number; url?: string }>;
 let chromeMock: ReturnType<typeof createChromeMock>;
@@ -68,7 +74,11 @@ let chromeMock: ReturnType<typeof createChromeMock>;
 function createChromeMock() {
   return {
     runtime: {
-      onInstalled: { addListener: vi.fn() },
+      onInstalled: {
+        addListener: vi.fn((listener: InstalledListener) => {
+          installedListener = listener;
+        }),
+      },
       onMessage: {
         addListener: vi.fn((listener: MessageListener) => {
           messageListener = listener;
@@ -93,8 +103,16 @@ function createChromeMock() {
       ),
       create: vi.fn(() => Promise.resolve({ id: 99 })),
       sendMessage: vi.fn((tabId: number, message: Message) => onTabsSendMessage(tabId, message)),
-      onRemoved: { addListener: vi.fn() },
-      onUpdated: { addListener: vi.fn() },
+      onRemoved: {
+        addListener: vi.fn((listener: RemovedListener) => {
+          removedListener = listener;
+        }),
+      },
+      onUpdated: {
+        addListener: vi.fn((listener: UpdatedListener) => {
+          updatedListener = listener;
+        }),
+      },
     },
     scripting: { executeScript: vi.fn(() => Promise.resolve([])) },
     storage: { local, session },
@@ -104,6 +122,9 @@ function createChromeMock() {
 function installChromeMock(): void {
   messageListener = undefined;
   actionListener = undefined;
+  installedListener = undefined;
+  updatedListener = undefined;
+  removedListener = undefined;
   session = createStorageArea();
   local = createStorageArea();
   tabsQueryResult = [{ id: 42, url: 'https://example.com/article' }];
@@ -169,6 +190,41 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/**
+ * Model the real world for an injection race: the tab has no responder until
+ * `executeScript` has actually run, and answers every PING after that.
+ *
+ * A PING counter cannot stand in for this — it lets a second caller take the
+ * "a script is already there" path, which is a legitimate outcome and hides the
+ * very race the overlapping-caller tests are meant to provoke.
+ */
+let scriptHasRun = false;
+
+function installScriptArrivesOnInjection(): void {
+  scriptHasRun = false;
+  chromeMock.scripting.executeScript.mockImplementation(
+    () =>
+      // The injected script starts answering on a macrotask, so a second caller
+      // is still inside its own PING when the first injection lands — that is
+      // the window the race lives in. Flipping the flag synchronously (or on a
+      // microtask) would let the second caller take the "a script is already
+      // there" path instead, and the race would never be provoked.
+      new Promise((resolve) =>
+        setTimeout(() => {
+          scriptHasRun = true;
+          resolve([]);
+        }, 0)
+      )
+  );
+  onTabsSendMessage = (_tabId, message) => {
+    if (message.type === MESSAGE_TYPES.PING) {
+      if (!scriptHasRun) throw new Error('Receiving end does not exist');
+      return { pong: true };
+    }
+    return { success: true };
+  };
+}
+
 function articlePayload(overrides: Partial<PrintPayload> = {}): PrintPayload {
   return {
     title: 'On Reading Well',
@@ -183,6 +239,23 @@ function articlePayload(overrides: Partial<PrintPayload> = {}): PrintPayload {
 
 const stagedKeys = (): string[] =>
   Object.keys(session.store).filter((key) => key.startsWith(STORAGE_KEYS.PRINT_PAYLOAD));
+
+/** Every print token staged so far, in the order the sweep would see them. */
+
+/** Answer PING with `{ pong: true }` and every other message with a state. */
+function installLiveContentScript(): void {
+  onTabsSendMessage = (_tabId, message) =>
+    message.type === MESSAGE_TYPES.PING ? { pong: true } : { success: true, isActive: false };
+}
+
+/** Get the content script into the active tab and leave it memoized there. */
+async function injectOnce(): Promise<void> {
+  const response = await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT });
+  expect(response, 'setup: the first injection should succeed').toEqual({
+    success: true,
+    injected: true,
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* Tests                                                              */
@@ -499,6 +572,68 @@ describe('background service worker', () => {
         files: ['content.js'],
       });
     });
+
+    // Regression: an attempt spans tabs.get → PING → executeScript → a 100 ms
+    // settle → a second PING, and `injectedTabs` is only populated at the end.
+    // Two overlapping callers both saw an empty set, both found no responder,
+    // and both ran executeScript — leaving two copies of content.js in one tab,
+    // each with a permanent onMessage listener and its own module-level
+    // state/reactRoot, which then collide with the reader mount.
+    it('collapses two overlapping requests onto a single injection', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+
+      const [first, second] = await Promise.all([
+        dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT }),
+        dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT }),
+      ]);
+
+      // Both callers get the real answer, not a second guess.
+      expect(first).toEqual({ success: true, injected: true });
+      expect(second).toEqual({ success: true, injected: true });
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(1);
+    });
+
+    it('collapses an icon click racing a forwarded message onto one injection', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+      onTabsSendMessage = (_tabId, message) => {
+        if (message.type === MESSAGE_TYPES.PING) {
+          if (!scriptHasRun) throw new Error('Receiving end does not exist');
+          return { pong: true };
+        }
+        if (message.type === MESSAGE_TYPES.GET_STATE) return { isActive: false, canExtract: true };
+        return { success: true, isActive: true };
+      };
+
+      const [, forwarded] = await Promise.all([
+        actionListener?.({ id: 42 }),
+        dispatch({ type: MESSAGE_TYPES.ENABLE_READING_MODE }),
+      ]);
+
+      expect(forwarded).toEqual({ success: true, isActive: true });
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(1);
+    });
+
+    it('injects again in a tab whose first injection failed', async () => {
+      await loadWorker();
+      // Every PING fails, so the attempt reports `injected: false` and nothing is
+      // memoized — a later request has to be free to try again.
+      onTabsSendMessage = () => {
+        throw new Error('Receiving end does not exist');
+      };
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: false,
+      });
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: false,
+      });
+
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('icon click', () => {
@@ -543,6 +678,411 @@ describe('background service worker', () => {
       expect(isInjectableUrl('about:blank')).toBe(false);
       expect(isInjectableUrl('chrome-extension://abc/page.html')).toBe(false);
       expect(isInjectableUrl(undefined)).toBe(false);
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Injection cache lifecycle                                        */
+  /* ---------------------------------------------------------------- */
+
+  describe('injection cache invalidation', () => {
+    it('does not inject a second copy of the content script into the same tab', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+
+      await injectOnce();
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(1);
+
+      // Sequential, not overlapping: the second call lands after the first has
+      // memoized the tab, so this is the cache-hit path rather than the
+      // in-flight one. Running executeScript again would put a second content
+      // script — and a second onMessage listener — in the same tab.
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: true,
+      });
+      // `executeScript` alone cannot tell the two apart: once the script is
+      // live, a second injection attempt would find it by PING and skip the
+      // write anyway. `tabs.get` is the honest signal — a cache hit answers
+      // without ever looking the tab up.
+      expect(chromeMock.tabs.get).toHaveBeenCalledTimes(1);
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(1);
+    });
+
+    it('injects again in a tab that has navigated to a new url', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+      await injectOnce();
+
+      // Navigation tears the old content script down. Keeping the memoized entry
+      // would leave the worker believing a script that no longer exists is live,
+      // and the reader would never open.
+      updatedListener?.(42, { url: 'https://example.com/next' });
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: true,
+      });
+      // The entry was dropped, so this ENSURE had to look the tab up again.
+      expect(chromeMock.tabs.get).toHaveBeenCalledTimes(2);
+    });
+
+    it('injects again in a tab that is still loading after a reload', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+      await injectOnce();
+
+      // A reload reports `loading` without ever reporting a url, so the url half
+      // of the condition cannot be what catches it.
+      updatedListener?.(42, { status: 'loading' });
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: true,
+      });
+      expect(chromeMock.tabs.get).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the memoized injection through a change that is not a navigation', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+      await injectOnce();
+
+      // `faviconUrl` and a finished `complete` status say nothing about whether
+      // the content script survived, so the entry has to stay put.
+      updatedListener?.(42, { status: 'complete' });
+      updatedListener?.(42, {});
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: true,
+      });
+      expect(chromeMock.tabs.get).toHaveBeenCalledTimes(1);
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(1);
+    });
+
+    it('injects again in a tab that was closed and reopened as a new id', async () => {
+      await loadWorker();
+      let freshTabHasScript = false;
+      onTabsSendMessage = (tabId, message) => {
+        if (message.type !== MESSAGE_TYPES.PING) return { success: true };
+        if (tabId === 77 && !freshTabHasScript) throw new Error('Receiving end does not exist');
+        return { pong: true };
+      };
+      chromeMock.scripting.executeScript.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => {
+              freshTabHasScript = true;
+              resolve([]);
+            }, 0)
+          )
+      );
+      await injectOnce();
+
+      removedListener?.(42);
+      tabsQueryResult = [{ id: 77, url: 'https://example.com/fresh' }];
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: true,
+      });
+      // The new id is a different tab, so it has to be injected for itself.
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledWith({
+        target: { tabId: 77 },
+        files: ['content.js'],
+      });
+    });
+
+    it('forgets every memoized injection when the extension is updated', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+      await injectOnce();
+
+      installedListener?.({ reason: 'update' });
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: true,
+      });
+      // The update wiped the cache, so this ENSURE had to re-check the tab.
+      expect(chromeMock.tabs.get).toHaveBeenCalled();
+    });
+
+    it('announces a fresh install without touching the injection cache', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+      const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        await injectOnce();
+
+        installedListener?.({ reason: 'install' });
+
+        expect(log).toHaveBeenCalledWith('[Background] Extension installed');
+        // A fresh install has nothing to forget, so the live entry must survive.
+        expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+          success: true,
+          injected: true,
+        });
+        expect(chromeMock.tabs.get).toHaveBeenCalledTimes(1);
+      } finally {
+        log.mockRestore();
+      }
+    });
+
+    it('does nothing on an install reason it does not know', async () => {
+      await loadWorker();
+      installScriptArrivesOnInjection();
+      const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        await injectOnce();
+        log.mockClear();
+
+        installedListener?.({ reason: 'chrome_update' });
+
+        // `chrome_update` and `shared_module_update` are not ours: announcing an
+        // extension install for a browser update would be a lie, and there is
+        // nothing to clear.
+        expect(log).not.toHaveBeenCalled();
+        expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+          success: true,
+          injected: true,
+        });
+        expect(chromeMock.tabs.get).toHaveBeenCalledTimes(1);
+      } finally {
+        log.mockRestore();
+      }
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Injection: answers the worker cannot trust                       */
+  /* ---------------------------------------------------------------- */
+
+  describe('injection verification', () => {
+    it('still injects when the first PING is answered by something that is not a pong', async () => {
+      await loadWorker();
+      // A stale or unrelated listener in the tab can answer the PING with
+      // anything at all. Trusting that answer would skip the injection and
+      // leave the tab with no reader.
+      let pings = 0;
+      onTabsSendMessage = (_tabId, message) => {
+        if (message.type === MESSAGE_TYPES.PING) {
+          pings += 1;
+          return pings === 1 ? { unexpected: true } : { pong: true };
+        }
+        return { success: true };
+      };
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: true,
+      });
+      expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports the injection as failed when verification never gets a pong', async () => {
+      await loadWorker();
+      // executeScript resolved, but nothing in the tab answers afterwards — the
+      // script failed to take. Reporting success here would tell the toolbar
+      // the reader is available when no reader exists.
+      let pings = 0;
+      onTabsSendMessage = (_tabId, message) => {
+        if (message.type === MESSAGE_TYPES.PING) {
+          pings += 1;
+          if (pings === 1) throw new Error('Receiving end does not exist');
+          return { unexpected: true };
+        }
+        return { success: true };
+      };
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: true,
+        injected: false,
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Failure reporting                                                */
+  /* ---------------------------------------------------------------- */
+
+  describe('failures the worker cannot attribute to an Error', () => {
+    it('reports a non-Error storage rejection verbatim', async () => {
+      await loadWorker();
+      // Chrome API rejections are not guaranteed to be Error instances, and a
+      // reporter that assumes they are throws inside the catch and answers
+      // nothing at all — the content script would hang waiting for a response.
+      session.set.mockRejectedValueOnce('quota blown');
+
+      const response = (await dispatch({
+        type: MESSAGE_TYPES.EXPORT_PDF,
+        payload: articlePayload(),
+      })) as { success: boolean; error?: string };
+
+      expect(response).toEqual({ success: false, error: 'Failed to stage article: quota blown' });
+      expect(chromeMock.tabs.create).not.toHaveBeenCalled();
+    });
+
+    it('reports a non-Error tab-creation rejection verbatim', async () => {
+      await loadWorker();
+      chromeMock.tabs.create.mockRejectedValueOnce('no window');
+
+      const response = (await dispatch({
+        type: MESSAGE_TYPES.EXPORT_PDF,
+        payload: articlePayload(),
+      })) as { success: boolean; error?: string };
+
+      expect(response).toEqual({ success: false, error: 'Failed to open the print page: no window' });
+      expect(stagedKeys()).toEqual([]);
+    });
+
+    it('answers an export whose own hand-off blows up after the article is staged', async () => {
+      await loadWorker();
+      chromeMock.runtime.getURL.mockImplementationOnce(() => {
+        throw new Error('extension origin is gone');
+      });
+
+      const response = (await dispatch({
+        type: MESSAGE_TYPES.EXPORT_PDF,
+        payload: articlePayload(),
+      })) as { success: boolean; error?: string };
+
+      // `getURL` runs outside the staging try/catch, so this is the only thing
+      // standing between a failed hand-off and a content script waiting forever.
+      expect(response).toEqual({ success: false, error: 'extension origin is gone' });
+    });
+
+    it('answers an export whose hand-off rejects with a non-Error', async () => {
+      await loadWorker();
+      chromeMock.runtime.getURL.mockImplementationOnce(() => {
+        throw 'origin gone';
+      });
+
+      const response = (await dispatch({
+        type: MESSAGE_TYPES.EXPORT_PDF,
+        payload: articlePayload(),
+      })) as { success: boolean; error?: string };
+
+      expect(response).toEqual({ success: false, error: 'origin gone' });
+    });
+
+    it('reports a non-Error tab-query rejection on the ensure path', async () => {
+      await loadWorker();
+      chromeMock.tabs.query.mockRejectedValueOnce('window service is down');
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: false,
+        error: 'window service is down',
+      });
+    });
+
+    it('reports an Error tab-query rejection on the ensure path', async () => {
+      await loadWorker();
+      chromeMock.tabs.query.mockRejectedValueOnce(new Error('no current window'));
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: false,
+        error: 'no current window',
+      });
+    });
+
+    it('reports a non-Error tab-query rejection on the forwarding path', async () => {
+      await loadWorker();
+      chromeMock.tabs.query.mockRejectedValueOnce('window service is down');
+
+      expect(await dispatch({ type: MESSAGE_TYPES.GET_STATE })).toEqual({
+        success: false,
+        error: 'window service is down',
+      });
+    });
+
+    it('reports an Error tab-query rejection on the forwarding path', async () => {
+      await loadWorker();
+      chromeMock.tabs.query.mockRejectedValueOnce(new Error('no current window'));
+
+      expect(await dispatch({ type: MESSAGE_TYPES.GET_STATE })).toEqual({
+        success: false,
+        error: 'no current window',
+      });
+    });
+  });
+
+  describe('requests that have nowhere to go', () => {
+    it('reports "No active tab found" on the ensure path too', async () => {
+      await loadWorker();
+      tabsQueryResult = [];
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENSURE_CONTENT_SCRIPT })).toEqual({
+        success: false,
+        error: 'No active tab found',
+      });
+      expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('reports a forwarded message that could not be delivered', async () => {
+      await loadWorker();
+      // A restricted page refuses injection, so the message never reaches a
+      // content script. The worker must say so rather than answering with the
+      // `null` that `forwardToContentScript` returns.
+      tabsQueryResult = [{ id: 42, url: 'chrome://settings' }];
+
+      expect(await dispatch({ type: MESSAGE_TYPES.ENABLE_READING_MODE })).toEqual({
+        success: false,
+        error: 'No response from content script',
+      });
+      expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the clicked tab has no id', async () => {
+      await loadWorker();
+      installLiveContentScript();
+
+      // A tab with no id cannot be messaged at all; `chrome.tabs.sendMessage`
+      // would throw on `undefined`, and the toolbar click would do nothing but
+      // log.
+      await expect(actionListener?.({})).resolves.toBeUndefined();
+
+      expect(chromeMock.tabs.sendMessage).not.toHaveBeenCalled();
+      expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('leaves the page alone when the icon click cannot inject', async () => {
+      await loadWorker();
+      tabsQueryResult = [{ id: 42, url: 'chrome://settings' }];
+      onTabsSendMessage = () => ({ pong: true });
+
+      await actionListener?.({ id: 42 });
+
+      // No reading-mode message may be sent: the tab has no content script, so
+      // one would be lost, and the toolbar would appear to have done nothing.
+      expect(chromeMock.tabs.sendMessage).not.toHaveBeenCalled();
+      expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('staged payload bookkeeping cap', () => {
+    it('keeps the in-memory hand-off set finite', async () => {
+      await loadWorker();
+      await flush();
+
+      for (let i = 0; i < 9; i += 1) {
+        expect(
+          await dispatch({ type: MESSAGE_TYPES.EXPORT_PDF, payload: articlePayload() })
+        ).toEqual({ success: true });
+      }
+
+      // Nine live payloads: the cap is eight, so the oldest has been dropped
+      // from the in-memory set even though its print tab has not booted yet.
+      // The tenth export's sweep is the first one that can collect it.
+      const beforeSweep = stagedKeys();
+      expect(beforeSweep).toHaveLength(9);
+      const oldestKey = beforeSweep[0];
+
+      await dispatch({ type: MESSAGE_TYPES.EXPORT_PDF, payload: articlePayload() });
+
+      expect(stagedKeys()).not.toContain(oldestKey);
+      expect(stagedKeys()).toHaveLength(9);
     });
   });
 });

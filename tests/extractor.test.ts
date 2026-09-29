@@ -7,7 +7,7 @@
  * the assertions behind an `if (result.success)`.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   extractContent,
   clearCache,
@@ -343,6 +343,114 @@ describe('Content Extractor', () => {
       expect(cached.content).toBe(first.content);
       expect(cached.content).not.toMatch(/\son[a-z]+\s*=/i);
       expect(cached.content).not.toMatch(/javascript:/i);
+    });
+  });
+
+  describe('text that has no Latin words', () => {
+    it('should count a CJK article without reporting zero words', () => {
+      // The word count is two counters added together: `[a-zA-Z]+` matches for
+      // a Latin script and a CJK range match for the others. A page written
+      // entirely in one or the other exercises the half that finds nothing —
+      // and a `null` from `String.match` there has to read as zero, not crash.
+      const cjk = createTestDocument(
+        `<article><h1>读书笔记</h1><p>${'阅读是一种生活方式，也是一种修行。'.repeat(30)}</p></article>`,
+        '读书笔记'
+      );
+
+      const data = expectExtracted(
+        extractContent(cjk, 'https://example.com/cjk'),
+        'cjk article'
+      );
+
+      expect(data.wordCount).toBeGreaterThan(0);
+      // CJK characters are counted in pairs, so the count is about half the
+      // character total and a reading time is still derived from it.
+      expect(data.estimatedReadTime).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should still count the Latin words in a mixed-script article', () => {
+      const mixed = createTestDocument(
+        `<article><h1>Mixed</h1><p>${'阅读与写作。'.repeat(20)} The quick brown fox.</p></article>`,
+        'Mixed'
+      );
+
+      const data = expectExtracted(
+        extractContent(mixed, 'https://example.com/mixed'),
+        'mixed article'
+      );
+
+      expect(data.wordCount).toBeGreaterThanOrEqual(4);
+    });
+  });
+
+  describe('failures inside the extraction', () => {
+    it('should report a thrown Error with its message instead of a blank reader', () => {
+      // `cloneNode` is the first thing the extractor does with the document.
+      // If it throws, the whole extraction fails — and the reader has to say
+      // why, not report a page it could not read.
+      const exploding = {
+        body: {},
+        location: { href: 'https://example.com/boom' },
+        cloneNode: () => {
+          throw new Error('clone refused');
+        },
+      } as unknown as Document;
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        const result = extractContent(exploding);
+
+        expect(result.success).toBe(false);
+        if (result.success) throw new Error('a throwing clone should not extract');
+        expect(result.error).toBe('Content extraction failed: clone refused');
+        expect(errors).toHaveBeenCalled();
+      } finally {
+        errors.mockRestore();
+      }
+    });
+
+    it('should report a thrown non-Error rather than answering with undefined', () => {
+      // Chrome and Readability are not the only things in the try block, and
+      // a rejection that is not an Error must still produce a message the user
+      // can act on. Assuming `.message` exists yields `Content extraction
+      // failed: undefined`.
+      const exploding = {
+        body: {},
+        location: { href: 'https://example.com/boom2' },
+        cloneNode: () => {
+          throw 'a bare string';
+        },
+      } as unknown as Document;
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        const result = extractContent(exploding);
+
+        expect(result.success).toBe(false);
+        if (result.success) throw new Error('a throwing clone should not extract');
+        expect(result.error).toBe('Content extraction failed: a bare string');
+      } finally {
+        errors.mockRestore();
+      }
+    });
+
+    it('should not cache a document whose extraction blew up', () => {
+      const exploding = {
+        body: {},
+        location: { href: 'https://example.com/boom3' },
+        cloneNode: () => {
+          throw new Error('clone refused');
+        },
+      } as unknown as Document;
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        expect(extractContent(exploding).success).toBe(false);
+        expect(getCacheSize()).toBe(0);
+        expect(isCached('https://example.com/boom3')).toBe(false);
+      } finally {
+        errors.mockRestore();
+      }
     });
   });
 });

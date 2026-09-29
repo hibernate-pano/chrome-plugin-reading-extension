@@ -119,6 +119,111 @@ describe('buildDocument', () => {
     const doc = buildDocument(payload({ sourceUrl: 'data:text/html,<script>alert(1)</script>' }));
     expect(doc.querySelector('.p-footer a')).toBeNull();
   });
+
+  it('falls back to a generic title when the payload carries none', () => {
+    const doc = buildDocument(payload({ title: '' }));
+    expect(doc.querySelector('.p-title')?.textContent).toBe('Untitled');
+  });
+});
+
+describe('buildDocument language hints', () => {
+  it('highlights a bare inline code element', () => {
+    // A `<code>` outside a `<pre>` is a `<code>` in its own right: it has to be
+    // promoted to a block on its own, or it stays an unreadable inline run in
+    // the printed column.
+    const doc = buildDocument(
+      payload({ content: '<p>Call <code>print(1)</code> here.</p>' })
+    );
+
+    const block = doc.querySelector('.p-code pre');
+    expect(block).not.toBeNull();
+    expect(block?.textContent).toBe('print(1)');
+  });
+
+  it('reads the language off a pre that has no code child', () => {
+    // Hand-written markup often puts the text of a `<pre>` straight inside it.
+    // Reaching for a `<code>` child and giving up there would drop the block's
+    // text entirely.
+    const doc = buildDocument(payload({ content: '<pre>fn main() { let x = 1; }</pre>' }));
+
+    const block = doc.querySelector('.p-code pre');
+    expect(block).not.toBeNull();
+    expect(block?.textContent).toBe('fn main() { let x = 1; }');
+    // No child `<code>`, so the language comes from the text.
+    expect(block?.getAttribute('data-language')).toBe('rust');
+  });
+
+  it('detects the language from the text, because sanitizing runs first', () => {
+    // The sanitizer strips `class` from every element (it is in
+    // STRIPPED_ATTRS), and it runs before the code pass. So the `language-` /
+    // `lang-` hint `readLanguageHint` looks for is never present by the time
+    // the code blocks are rebuilt, and every block is detected from its text.
+    //
+    // This is pinned deliberately: the "declared" and "detected" languages
+    // agreeing here is coincidence — `js` and `python` are the two values a
+    // hint would most plausibly carry, and both are what the text says.
+    const doc = buildDocument(
+      payload({
+        content:
+          '<pre class="language-rust"><code class="lang-rs">fn main() { let x = 1; }</code></pre>' +
+          '<pre class="language-python"><code class="lang-py">def main():\n    return 1</code></pre>',
+      })
+    );
+
+    const languages = Array.from(doc.querySelectorAll('.p-code pre')).map((pre) =>
+      pre.getAttribute('data-language')
+    );
+    expect(languages).toEqual(['rust', 'python']);
+  });
+});
+
+describe('buildDocument image wrapping', () => {
+  it('wraps an image whose parent is not a paragraph or figure', () => {
+    // Readability wraps prose images in <p>, but an image in a <div> has to be
+    // wrapped in place — replacing the <div> would take its siblings with it.
+    const doc = buildDocument(
+      payload({ content: '<div><img src="https://example.com/a.png" alt="a"> tail</div>' })
+    );
+
+    const wrapper = doc.querySelector('.p-content div');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper?.querySelector('.p-figure img')?.getAttribute('src')).toBe(
+      'https://example.com/a.png'
+    );
+    expect(wrapper?.textContent).toContain('tail');
+  });
+
+  it('replaces the whole paragraph when the image is wrapped in one', () => {
+    const doc = buildDocument(
+      payload({ content: '<p><img src="https://example.com/a.png" alt="a"></p>' })
+    );
+
+    expect(doc.querySelector('.p-content p')).toBeNull();
+    expect(doc.querySelector('.p-content > .p-figure img')).not.toBeNull();
+  });
+
+  it('loses the caption of a figure it wraps, leaving the branch that styles it unreachable', () => {
+    // `processImage` builds a fresh <figure>, swaps it in for the old one, and
+    // then moves only the <img> across — the <figcaption> stays behind in the
+    // detached old figure. So `figure.querySelector('figcaption')` is always
+    // null and the `p-caption` styling below it can never be applied.
+    //
+    // Characterisation, not endorsement: this asserts what the code does today
+    // so a change here is a deliberate one, and so the loss is visible next to
+    // the dead branch it causes.
+    const doc = buildDocument(
+      payload({
+        content:
+          '<figure><img src="https://example.com/a.png" alt="a"><figcaption>图注</figcaption></figure>',
+      })
+    );
+
+    const figure = doc.querySelector('.p-content figure');
+    expect(figure?.className).toBe('p-figure');
+    expect(figure?.querySelector('img')).not.toBeNull();
+    expect(figure?.querySelector('figcaption')).toBeNull();
+    expect(doc.querySelector('.p-caption')).toBeNull();
+  });
 });
 
 describe('buildFilename', () => {

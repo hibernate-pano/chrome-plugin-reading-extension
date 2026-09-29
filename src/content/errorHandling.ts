@@ -132,7 +132,13 @@ export function handleError(error: unknown, context: ErrorContext = 'default'): 
 interface ErrorBoundaryProps {
   children: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  onRetry?: () => void;
+  /**
+   * Called when the user retries. May be async — a retry re-runs the work that
+   * failed, which in this extension means re-extracting the article — so its
+   * promise is absorbed here rather than discarded. The reporter that produced
+   * the rejection owns the user-facing message.
+   */
+  onRetry?: () => void | Promise<void>;
 }
 
 /**
@@ -164,7 +170,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   handleRetry = (): void => {
     this.setState({ hasError: false, error: null });
-    this.props.onRetry?.();
+    // `Promise.resolve` normalizes the sync/async callback. Dropping the promise
+    // instead would turn a failure the caller already reported into an
+    // unhandled rejection.
+    void Promise.resolve(this.props.onRetry?.()).catch(() => {});
   };
 
   render(): ReactNode {

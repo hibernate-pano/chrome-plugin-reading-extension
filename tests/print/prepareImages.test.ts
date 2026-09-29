@@ -4,6 +4,17 @@ import {
   eagerizeImages,
   waitForImages,
 } from '../../src/print/prepareImages';
+import { sanitizeArticleHtml } from '../../src/shared/sanitize';
+
+/**
+ * Report whether `srcset` survives the sanitizer the print page receives its
+ * markup from, so a test can prove which attributes the pipeline actually
+ * delivers rather than which ones this module would like to read.
+ */
+function srcsetSurvivesSanitizer(rawHtml: string): boolean {
+  const doc = new DOMParser().parseFromString(sanitizeArticleHtml(rawHtml), 'text/html');
+  return doc.querySelector('img')?.hasAttribute('srcset') ?? false;
+}
 
 function makeImage(attrs: Record<string, string>): HTMLImageElement {
   const img = document.createElement('img');
@@ -29,19 +40,14 @@ describe('resolveLazySrc', () => {
     expect(img.getAttribute('src')).toBe('https://example.com/real.png');
   });
 
-  it('promotes from srcset when no other attribute carries the URL', () => {
+  it('does not recover from srcset, which the sanitizer has already stripped', () => {
+    // `srcset` is in the sanitizer's STRIPPED_ATTRS, so an image whose only URL
+    // lives there is gone before this page ever sees it. The recovery used to
+    // claim otherwise in a comment while being unreachable.
     const img = makeImage({ src: TRANSPARENT_GIF, srcset: 'https://example.com/s.jpg 1x' });
-    expect(resolveLazySrc(img)).toBe(true);
-    expect(img.getAttribute('src')).toBe('https://example.com/s.jpg');
-  });
-
-  it('prefers the highest resolution candidate in srcset', () => {
-    const img = makeImage({
-      src: TRANSPARENT_GIF,
-      srcset: 'https://example.com/s.jpg 1x, https://example.com/l.jpg 2x',
-    });
-    resolveLazySrc(img);
-    expect(img.getAttribute('src')).toBe('https://example.com/l.jpg');
+    expect(srcsetSurvivesSanitizer(img.outerHTML)).toBe(false);
+    expect(resolveLazySrc(img)).toBe(false);
+    expect(img.getAttribute('src')).toBe(TRANSPARENT_GIF);
   });
 
   it('leaves a real src untouched', () => {
@@ -53,6 +59,40 @@ describe('resolveLazySrc', () => {
   it('does not promote a placeholder from another attribute', () => {
     const img = makeImage({ src: TRANSPARENT_GIF, 'data-src': TRANSPARENT_GIF });
     expect(resolveLazySrc(img)).toBe(false);
+  });
+
+  // Regression: a page-controlled `data-*` value was copied straight into a live
+  // `src` with no scheme check at all, so the print path walked past the
+  // `isSafeUrlValue` policy that every sanitized `src` goes through.
+  it.each([
+    ['javascript:alert(1)'],
+    ['file:///etc/passwd'],
+    ['data:text/html,<script>alert(1)</script>'],
+    ['  jAvAsCrIpT:alert(1)'],
+  ])('refuses to promote %j into src', (hostile) => {
+    const img = makeImage({ src: TRANSPARENT_GIF, 'data-src': hostile });
+    expect(resolveLazySrc(img)).toBe(false);
+    expect(img.getAttribute('src'), 'a rejected candidate must not reach src').toBe(TRANSPARENT_GIF);
+  });
+
+  it('keeps looking after a rejected attribute instead of giving up', () => {
+    const img = makeImage({
+      src: TRANSPARENT_GIF,
+      'data-src': 'javascript:alert(1)',
+      'data-original': 'https://example.com/real.png',
+    });
+    expect(resolveLazySrc(img)).toBe(true);
+    expect(img.getAttribute('src')).toBe('https://example.com/real.png');
+  });
+
+  it('accepts a relative value, which resolves against the page origin', () => {
+    const relative = makeImage({ src: TRANSPARENT_GIF, 'data-src': '/img/real.png' });
+    expect(resolveLazySrc(relative)).toBe(true);
+    expect(relative.getAttribute('src')).toBe('/img/real.png');
+
+    const protocolRelative = makeImage({ src: TRANSPARENT_GIF, 'data-src': '//cdn.example/x.png' });
+    expect(resolveLazySrc(protocolRelative)).toBe(true);
+    expect(protocolRelative.getAttribute('src')).toBe('//cdn.example/x.png');
   });
 });
 

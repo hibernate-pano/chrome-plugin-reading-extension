@@ -11,6 +11,20 @@ import { MESSAGE_TYPES, STORAGE_KEYS } from '../shared/constants';
 const injectedTabs = new Set<number>();
 
 /**
+ * Injection attempts currently running, keyed by tab id.
+ *
+ * `injectedTabs` is only populated once an attempt finishes, and an attempt
+ * spans `tabs.get` → PING → `executeScript` → a 100 ms settle → a second PING.
+ * Two overlapping callers — the icon click and a forwarded message, or two fast
+ * messages — both see an empty set, both find no PING responder, and both run
+ * `executeScript`. That leaves two copies of content.js in one tab, each with a
+ * permanent `chrome.runtime.onMessage` listener and its own module-level
+ * `state`/`reactRoot`, which then collide with the reader mount. Memoizing the
+ * attempt collapses concurrent callers onto a single injection.
+ */
+const injecting = new Map<number, Promise<boolean>>();
+
+/**
  * Upper bound on the article HTML we are willing to stage.
  *
  * chrome.storage.session caps the entire area at 10 MB (QUOTA_BYTES
@@ -142,6 +156,28 @@ async function injectContentScript(tabId: number): Promise<boolean> {
     return true;
   }
 
+  // Join the attempt already running for this tab. The map is populated with no
+  // await in between, so a second caller can never observe a gap.
+  const inFlight = injecting.get(tabId);
+  if (inFlight) return inFlight;
+
+  const attempt = runInjection(tabId);
+  injecting.set(tabId, attempt);
+  try {
+    return await attempt;
+  } finally {
+    injecting.delete(tabId);
+  }
+}
+
+/**
+ * One injection attempt for a tab: is it injectable, is a script already there,
+ * and if not, run `executeScript` and confirm it took.
+ *
+ * Never call this directly — `injectContentScript` owns the per-tab memoization
+ * that keeps two overlapping callers from running it twice.
+ */
+async function runInjection(tabId: number): Promise<boolean> {
   try {
     // Get tab info to check URL
     const tab = await chrome.tabs.get(tabId);
