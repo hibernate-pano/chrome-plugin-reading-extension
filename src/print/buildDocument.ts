@@ -3,40 +3,18 @@
  *
  * Turns a PrintPayload into a DOM tree styled for A4 paper.
  *
- * The article HTML arrives as a string from Readability. It is parsed in an
- * inert document (DOMParser) and then adopted node-by-node, so nothing in it
- * can execute — no <script> runs, no on* handler fires.
+ * The article HTML arrives as a string from Readability and is untrusted: the
+ * source page decides what is in it. It goes through the shared sanitizer
+ * before anything touches it. The sanitizer parses in an inert document
+ * (DOMParser) and returns a clean string; the result is then parsed again and
+ * the nodes adopted one by one, so nothing in it can execute — no <script>
+ * runs, no on* handler fires.
  */
 
 import type { PrintPayload } from '../shared/types';
 import { CODE_BLOCK_BREAK_THRESHOLD_LINES } from '../shared/constants';
 import { highlightCode, detectLanguage, normalizeLanguage } from '../shared/codeHighlight';
-
-/** Elements that carry no meaning once the page is on paper. */
-const DROPPED_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'FORM']);
-
-/** Attributes that only make sense on screen. */
-const DROPPED_ATTRS = new Set(['style', 'class', 'id', 'width', 'height', 'loading', 'srcset', 'sizes', 'decoding']);
-
-/**
- * Strip scripts, event handlers and presentational attributes from a parsed
- * article fragment. Mutates the given document in place.
- */
-function sanitize(article: HTMLElement): void {
-  for (const element of Array.from(article.querySelectorAll('*'))) {
-    if (DROPPED_TAGS.has(element.tagName)) {
-      element.remove();
-      continue;
-    }
-
-    for (const attr of Array.from(element.attributes)) {
-      const name = attr.name.toLowerCase();
-      if (name.startsWith('on') || DROPPED_ATTRS.has(name)) {
-        element.removeAttribute(attr.name);
-      }
-    }
-  }
-}
+import { sanitizeArticleHtml } from '../shared/sanitize';
 
 /**
  * Extract the human-readable source text from a URL for display.
@@ -195,15 +173,16 @@ export function buildDocument(payload: PrintPayload): HTMLElement {
   root.appendChild(header);
 
   // --- Body ---------------------------------------------------------------
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(payload.content, 'text/html');
+  // Sanitize the string first — this is the same sanitizer the reader view
+  // uses, so both paths agree on what survives.
+  const safeContent = sanitizeArticleHtml(payload.content);
+  const parsed = new DOMParser().parseFromString(safeContent, 'text/html');
   const article = document.createElement('div');
   article.className = 'p-content';
   // adoptNode moves nodes across documents without executing them.
   while (parsed.body.firstChild) {
     article.appendChild(document.adoptNode(parsed.body.firstChild));
   }
-  sanitize(article);
 
   for (const block of Array.from(article.querySelectorAll('pre, code'))) {
     // Skip <code> that lives inside a <pre> — the pre pass handles it.

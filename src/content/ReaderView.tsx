@@ -33,6 +33,13 @@ export function ReaderView({
   const contentRef = useRef<HTMLElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Read through a ref so `showToolbar` keeps a stable identity. If it
+  // depended on `showSettings`, opening the panel would tear down and
+  // re-arm the mousemove effect below — re-scheduling the initial hide and
+  // vanishing the toolbar while the panel is still open.
+  const showSettingsRef = useRef(showSettings);
+  showSettingsRef.current = showSettings;
+
   // Auto-hide toolbar after inactivity
   const showToolbar = useCallback(() => {
     setToolbarVisible(true);
@@ -40,18 +47,20 @@ export function ReaderView({
       clearTimeout(hideTimerRef.current);
     }
     // Don't hide if settings panel is open
-    if (!showSettings) {
+    if (!showSettingsRef.current) {
       hideTimerRef.current = setTimeout(() => {
         setToolbarVisible(false);
       }, 2500);
     }
-  }, [showSettings]);
+  }, []);
 
-  // Keep toolbar visible when settings is open
+  // Keep toolbar visible when settings is open, and cancel any hide already
+  // in flight — this is what stops a pending timer from firing underneath it.
   useEffect(() => {
     if (showSettings) {
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
       }
       setToolbarVisible(true);
     }
@@ -59,7 +68,7 @@ export function ReaderView({
 
   // Show toolbar on any mouse movement
   useEffect(() => {
-    document.addEventListener('mousemove', showToolbar);
+    document.addEventListener('mousemove', showToolbar, { passive: true });
     // Initial hide after 3s
     hideTimerRef.current = setTimeout(() => setToolbarVisible(false), 3000);
     return () => {
@@ -138,6 +147,19 @@ export function ReaderView({
   const themeClass = `reader-theme-${settings.theme}`;
   const toolbarClass = `reader-toolbar ${toolbarVisible ? 'reader-toolbar--visible' : 'reader-toolbar--hidden'}`;
 
+  // Meta is collected as a list and joined at render time. Laying out one
+  // branch per field meant each branch hard-coded its own trailing `·`, which
+  // is how a doubled or orphaned separator slips in whenever a field is
+  // missing. Here the separator is a function of position, so it is right for
+  // every combination of present/absent fields.
+  const metaItems = useMemo(() => {
+    const items: string[] = [];
+    if (content.siteName) items.push(content.siteName);
+    if (content.byline) items.push(content.byline);
+    items.push(`${content.estimatedReadTime} min read`);
+    return items;
+  }, [content.siteName, content.byline, content.estimatedReadTime]);
+
   const processedContent = useMemo(() => {
     return processContentWithCodeBlocks(content.content);
   }, [content.content]);
@@ -207,19 +229,14 @@ export function ReaderView({
         <header className="reader-header">
           <h1 className="reader-title" id="reader-title">{content.title}</h1>
           <div className="reader-meta" aria-label="Article info">
-            {content.siteName && (
-              <span className="reader-meta__item">{content.siteName}</span>
-            )}
-            {content.siteName && (content.byline || true) && (
-              <span className="reader-meta__separator" aria-hidden="true">·</span>
-            )}
-            {content.byline && (
-              <>
-                <span className="reader-meta__item">{content.byline}</span>
-                <span className="reader-meta__separator" aria-hidden="true">·</span>
-              </>
-            )}
-            <span className="reader-meta__item">{content.estimatedReadTime} min read</span>
+            {metaItems.map((item, index) => (
+              <React.Fragment key={`meta-${index}`}>
+                {index > 0 && (
+                  <span className="reader-meta__separator" aria-hidden="true">·</span>
+                )}
+                <span className="reader-meta__item">{item}</span>
+              </React.Fragment>
+            ))}
           </div>
         </header>
 
@@ -246,69 +263,144 @@ export function ReaderView({
   );
 }
 
+/** Code text plus the raw language hint found on the source element. */
+interface CodeBlockContent {
+  code: string;
+  /** Raw `language-x` / `lang-x` token — CodeBlock normalizes aliases itself. */
+  language: string;
+}
+
 /**
- * Process HTML content, replacing <pre><code> blocks with React components
+ * Elements that must become a <CodeBlock>: every <pre> (with or without a
+ * <code> child) plus every <code> that is not inside a <pre>.
+ *
+ * A Set, because `pre code, pre` counts a <pre><code> pair twice — the pair
+ * would otherwise be rendered twice, once with a <code> parent that has already
+ * been consumed. Descending per element kind instead means each is seen once.
+ */
+function collectCodeBlockElements(doc: Document): Set<Element> {
+  const elements = new Set<Element>();
+
+  doc.querySelectorAll('pre').forEach((pre) => elements.add(pre));
+  doc.querySelectorAll('code').forEach((code) => {
+    if (!code.closest('pre')) {
+      elements.add(code);
+    }
+  });
+
+  return elements;
+}
+
+/** Pull a `language-x` / `lang-x` token off a className. */
+function readLanguageHint(className: string | null | undefined): string {
+  const match = (className || '').match(/language-(\w+)|lang-(\w+)/);
+  return match ? match[1] || match[2] || '' : '';
+}
+
+/**
+ * Read the code out of a <pre> or a standalone <code>.
+ * A <pre> with no <code> child falls back to its own text.
+ */
+function readCodeBlock(element: Element): CodeBlockContent {
+  const source = element.tagName === 'PRE' ? element.querySelector('code') ?? element : element;
+
+  return {
+    code: source.textContent || '',
+    language: readLanguageHint(source.className) || readLanguageHint(element.className),
+  };
+}
+
+/** Serialize a body child for the raw-HTML run it belongs to. */
+function serializeNode(node: Node): string {
+  return node.nodeType === Node.ELEMENT_NODE ? (node as Element).outerHTML : node.nodeValue ?? '';
+}
+
+/**
+ * Turn the children of `parent` into React nodes, swapping every code block for
+ * a <CodeBlock>.
+ *
+ * Runs of ordinary nodes are accumulated and flushed as one raw-HTML fragment,
+ * so prose keeps its structure instead of being wrapped one node at a time.
+ * Elements that contain a code block are descended into, which means a code
+ * block nested in prose is picked up rather than being left behind as inert
+ * markup. The element that held it does not survive the split — an element
+ * cannot stay open across a React sibling boundary — so it is flattened away.
+ * Its other children are emitted in order, so only the wrapper is lost, never
+ * its content.
+ */
+function renderContentNodes(
+  parent: Node,
+  path: string,
+  codeBlocks: Set<Element>
+): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let pending = '';
+  let htmlIndex = 0;
+
+  const flush = (): void => {
+    if (pending.trim()) {
+      nodes.push(
+        <div key={`${path}-html-${htmlIndex++}`} dangerouslySetInnerHTML={{ __html: pending }} />
+      );
+    }
+    pending = '';
+  };
+
+  Array.from(parent.childNodes).forEach((node, index) => {
+    const childPath = `${path}.${index}`;
+    const element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : null;
+
+    if (element) {
+      if (codeBlocks.has(element)) {
+        flush();
+        const { code, language } = readCodeBlock(element);
+        nodes.push(<CodeBlock key={`${childPath}-code`} code={code} language={language} />);
+        return;
+      }
+
+      // Any <code> below sits either in a <pre> that would have matched
+      // already, or stands on its own — either way a code block lives inside.
+      if (element.querySelector('pre, code')) {
+        flush();
+        nodes.push(...renderContentNodes(element, childPath, codeBlocks));
+        return;
+      }
+    }
+
+    pending += serializeNode(node);
+  });
+
+  flush();
+
+  return nodes;
+}
+
+/**
+ * Process HTML content, replacing <pre> and standalone <code> blocks with React components.
+ *
+ * One traversal of the parsed document. Every node is either swapped for a
+ * <CodeBlock> node or accumulated into the raw-HTML fragment that precedes it —
+ * there is no third outcome, so nothing can fall through.
+ *
+ * This deliberately does not round-trip through an HTML string: the previous
+ * version re-serialized the body and located each placeholder with `indexOf`,
+ * which missed occurrences, could latch onto unrelated markup that happened to
+ * contain the same literal placeholder string, and left an entry with no
+ * placeholder at all when a node had no parent — in that last case the code was
+ * simply gone from the output.
  */
 function processContentWithCodeBlocks(htmlContent: string): React.ReactNode {
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlContent, 'text/html');
+  const codeBlocks = collectCodeBlockElements(doc);
 
-  const codeBlocks = doc.querySelectorAll('pre code, pre');
-  const codeBlockData: Array<{ id: string; code: string; language: string }> = [];
+  const segments = renderContentNodes(doc.body, '0', codeBlocks);
 
-  codeBlocks.forEach((block, index) => {
-    const id = `code-block-${index}`;
-    const codeElement = block.tagName === 'CODE' ? block : block.querySelector('code') || block;
-    const code = codeElement.textContent || '';
-
-    let language = '';
-    const classList = codeElement.className || block.className || '';
-    const langMatch = classList.match(/language-(\w+)|lang-(\w+)/);
-    if (langMatch) {
-      language = langMatch[1] || langMatch[2] || '';
-    }
-
-    codeBlockData.push({ id, code, language });
-
-    const placeholder = doc.createElement('div');
-    placeholder.setAttribute('data-code-block-id', id);
-
-    const preElement = block.tagName === 'PRE' ? block : block.parentElement;
-    if (preElement?.parentElement) {
-      preElement.parentElement.replaceChild(placeholder, preElement);
-    }
-  });
-
-  const processedHtml = doc.body.innerHTML;
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-
-  codeBlockData.forEach((blockData, index) => {
-    const placeholder = `<div data-code-block-id="${blockData.id}"></div>`;
-    const placeholderIndex = processedHtml.indexOf(placeholder, lastIndex);
-
-    if (placeholderIndex !== -1) {
-      const htmlBefore = processedHtml.slice(lastIndex, placeholderIndex);
-      if (htmlBefore.trim()) {
-        parts.push(
-          <div key={`html-${index}`} dangerouslySetInnerHTML={{ __html: htmlBefore }} />
-        );
-      }
-      parts.push(<CodeBlock key={blockData.id} code={blockData.code} language={blockData.language} />);
-      lastIndex = placeholderIndex + placeholder.length;
-    }
-  });
-
-  const remainingHtml = processedHtml.slice(lastIndex);
-  if (remainingHtml.trim()) {
-    parts.push(<div key="html-final" dangerouslySetInnerHTML={{ __html: remainingHtml }} />);
-  }
-
-  if (parts.length === 0) {
+  if (segments.length === 0) {
     return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
   }
 
-  return <>{parts}</>;
+  return <>{segments}</>;
 }
 
 function CloseIcon(): JSX.Element {

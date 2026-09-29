@@ -6,6 +6,7 @@
 import { Readability } from '@mozilla/readability';
 import type { ExtractedContent, ExtractionResult } from '../shared/types';
 import { READING_SPEED } from '../shared/constants';
+import { sanitizeArticleHtml } from '../shared/sanitize';
 
 /**
  * Simple in-memory cache for extracted content
@@ -24,15 +25,6 @@ function countWords(text: string): number {
   const cjkChars = text.match(/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]/g)?.length ?? 0;
   
   return latinWords + Math.ceil(cjkChars / 2);
-}
-
-/**
- * Strip inline style attributes from HTML so our reader CSS takes full control
- */
-function stripInlineStyles(html: string): string {
-  return html
-    .replace(/\s+style="[^"]*"/gi, '')
-    .replace(/\s+style='[^']*'/gi, '');
 }
 
 /**
@@ -129,8 +121,12 @@ export function extractContent(
       };
     }
 
-    // Strip inline styles — let our reader CSS handle all styling
-    const cleanContent = stripInlineStyles(article.content);
+    // Readability output is page-controlled, and this string is later handed
+    // to the reader view via dangerouslySetInnerHTML and to the print page —
+    // so sanitize it once, here, before it is cached or returned. This also
+    // replaces the old stripInlineStyles pass: the sanitizer drops `style`
+    // outright, so our reader CSS keeps full control of the layout.
+    const cleanContent = sanitizeArticleHtml(article.content);
     
     // Build extracted content object
     const textContent = article.textContent ?? '';

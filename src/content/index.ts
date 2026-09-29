@@ -14,7 +14,7 @@ import type {
   PrintPayload,
 } from '../shared/types';
 import { MESSAGE_TYPES, DEFAULT_SETTINGS } from '../shared/constants';
-import { getSettings, saveSettings } from '../shared/storage';
+import { getSettings, saveSettings, validateSettings } from '../shared/storage';
 import { extractContent, clearCache } from './extractor';
 import { ReaderView } from './ReaderView';
 import { ErrorBoundary, handleError } from './errorHandling';
@@ -33,11 +33,23 @@ let state: ContentScriptState = {
 let reactRoot: Root | null = null;
 let currentContent: ExtractedContent | null = null;
 
+/**
+ * Boot the content script.
+ *
+ * The message listener is registered first and synchronously. Loading settings is
+ * an async storage read; gating the listener on it would mean any failure before
+ * the `addListener` call leaves the script permanently deaf — no toolbar toggle,
+ * no PDF export, and nothing on screen to explain why.
+ */
 async function initialize(): Promise<void> {
+  chrome.runtime.onMessage.addListener(handleMessage);
+
   try {
     state.settings = await getSettings();
-    chrome.runtime.onMessage.addListener(handleMessage);
   } catch (error) {
+    // Settings are unreadable, but the script must stay responsive: fall back to
+    // defaults so reading mode still works, and surface the failure.
+    state.settings = { ...DEFAULT_SETTINGS };
     handleError(error, 'initialization');
   }
 }
@@ -111,6 +123,11 @@ async function enableReadingMode(): Promise<void> {
 
     currentContent = result.data;
 
+    // Refresh settings before recording history. Otherwise the record is written
+    // from the DEFAULT_SETTINGS bootstrap that is still in state on first run, and
+    // the user reopens a page they read with different font/theme settings.
+    state.settings = await getSettings();
+
     // Record reading history
     addToHistory(
       window.location.href,
@@ -126,8 +143,6 @@ async function enableReadingMode(): Promise<void> {
         fontSize: state.settings.fontSize,
       }
     );
-
-    state.settings = await getSettings();
 
     // Create isolated Shadow DOM container and mount React inside it
     const mount = createReaderContainer();
@@ -165,7 +180,10 @@ function disableReadingMode(): void {
 
 async function updateSettings(newSettings: Partial<Settings>): Promise<void> {
   try {
-    state.settings = { ...state.settings, ...newSettings };
+    // `state.settings` drives rendering immediately, before storage round-trips.
+    // Validate the merged result so out-of-range or wrong-typed values arriving
+    // over the message channel never reach the reader view.
+    state.settings = validateSettings({ ...state.settings, ...newSettings });
     await saveSettings(newSettings);
 
     if (state.isActive && currentContent) {
@@ -267,21 +285,8 @@ function renderReaderView(mount: HTMLElement): void {
   );
 }
 
-export function getState(): ContentScriptState {
-  return { ...state };
-}
-
-export function isReadingModeActive(): boolean {
-  return state.isActive;
-}
-
-initialize();
-
-export {
-  initialize,
-  enableReadingMode,
-  disableReadingMode,
-  updateSettings,
-  handleMessage,
-  canExtractContent,
-};
+// Side-effectful entry point: registers the message listener and loads settings.
+// `.catch()` keeps a boot failure from surfacing as an unhandled rejection.
+initialize().catch((error: unknown) => {
+  console.error('[Reader] Content script initialization failed:', error);
+});

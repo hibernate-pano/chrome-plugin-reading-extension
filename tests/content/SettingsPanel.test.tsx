@@ -1,0 +1,418 @@
+/**
+ * SettingsPanel — component tests.
+ *
+ * Rendered directly into jsdom's document rather than into a shadow root, so
+ * `panelRef.current.getRootNode()` is the Document. That is the same shape the
+ * component sees in production minus the retargeting, and it is what makes the
+ * focus trap and the click-outside listener observable here.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, createEvent } from '@testing-library/react';
+import { SettingsPanel } from '../../src/content/SettingsPanel';
+import { SETTINGS_CONSTRAINTS, DEFAULT_SETTINGS } from '../../src/shared/constants';
+import { READER_THEMES } from '../../src/shared/readerThemes';
+import type { Settings } from '../../src/shared/types';
+
+/* ------------------------------------------------------------------ *
+ * Helpers
+ * ------------------------------------------------------------------ */
+
+const BASE: Settings = { ...DEFAULT_SETTINGS };
+
+/** Order `getFocusableElements` sees: close button, 3 swatches, 3 sliders. */
+const CLOSE_LABEL = '关闭设置';
+const WIDTH_LABEL = '行宽';
+
+function renderPanel(overrides: Partial<Settings> = {}) {
+  const onChange = vi.fn();
+  const onClose = vi.fn();
+  const settings: Settings = { ...BASE, ...overrides };
+  const utils = render(
+    <SettingsPanel settings={settings} onChange={onChange} onClose={onClose} />
+  );
+  return { ...utils, onChange, onClose, settings };
+}
+
+const slider = (label: string): HTMLInputElement =>
+  screen.getByLabelText(label) as HTMLInputElement;
+
+const closeButton = (): HTMLElement => screen.getByRole('button', { name: CLOSE_LABEL });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+/* ------------------------------------------------------------------ *
+ * Shell
+ * ------------------------------------------------------------------ */
+
+describe('SettingsPanel — dialog shell', () => {
+  it('is a labelled modal dialog', () => {
+    renderPanel();
+    const panel = screen.getByRole('dialog', { name: 'Reading settings' });
+    expect(panel).toHaveAttribute('aria-modal', 'true');
+    expect(panel).toHaveClass('reader-settings-panel');
+  });
+
+  it('moves focus to the close button on mount', () => {
+    renderPanel();
+    expect(document.activeElement).toBe(closeButton());
+  });
+
+  it('renders exactly one swatch per theme and three sliders', () => {
+    renderPanel();
+    expect(screen.getAllByRole('radio')).toHaveLength(READER_THEMES.length);
+    expect(screen.getByLabelText('字号')).toHaveAttribute('type', 'range');
+    expect(screen.getByLabelText('行高')).toHaveAttribute('type', 'range');
+    expect(screen.getByLabelText(WIDTH_LABEL)).toHaveAttribute('type', 'range');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Theme swatches
+ * ------------------------------------------------------------------ */
+
+describe('SettingsPanel — theme swatches', () => {
+  it('groups the swatches in a radiogroup labelled by the theme label', () => {
+    renderPanel();
+    const group = screen.getByRole('radiogroup', { name: '主题' });
+    expect(group).toHaveClass('reader-theme-grid');
+    expect(group.querySelectorAll('.reader-theme-swatch')).toHaveLength(
+      READER_THEMES.length
+    );
+  });
+
+  it('marks only the current theme as checked and active', () => {
+    renderPanel({ theme: 'sepia' });
+
+    const byId = new Map(
+      READER_THEMES.map((theme) => [theme.id, screen.getByRole('radio', { name: theme.name })])
+    );
+
+    for (const theme of READER_THEMES) {
+      const swatch = byId.get(theme.id)!;
+      if (theme.id === 'sepia') {
+        expect(swatch, theme.id).toHaveAttribute('aria-checked', 'true');
+        expect(swatch, theme.id).toHaveClass('reader-theme-swatch--active');
+      } else {
+        expect(swatch, theme.id).toHaveAttribute('aria-checked', 'false');
+        expect(swatch, theme.id).not.toHaveClass('reader-theme-swatch--active');
+      }
+    }
+  });
+
+  it('calls onChange with the clicked theme id and nothing else', () => {
+    const { onChange } = renderPanel({ theme: 'light' });
+
+    fireEvent.click(screen.getByRole('radio', { name: '深色' }));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith({ theme: 'dark' });
+  });
+
+  it('reports every swatch id it is given', () => {
+    const { onChange, unmount } = renderPanel();
+
+    for (const theme of READER_THEMES) {
+      fireEvent.click(screen.getByRole('radio', { name: theme.name }));
+      expect(onChange, theme.id).toHaveBeenLastCalledWith({ theme: theme.id });
+    }
+    expect(onChange).toHaveBeenCalledTimes(READER_THEMES.length);
+    unmount();
+  });
+
+  it('is operable from the keyboard', () => {
+    const { onChange } = renderPanel();
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: '护眼' }), {
+      key: 'Enter',
+    });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'sepia' });
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: '护眼' }), { key: ' ' });
+    expect(onChange).toHaveBeenLastCalledWith({ theme: 'sepia' });
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: '护眼' }), { key: 'a' });
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Sliders
+ * ------------------------------------------------------------------ */
+
+describe('SettingsPanel — sliders', () => {
+  it('parses font size with parseInt', () => {
+    const { onChange } = renderPanel({ fontSize: 19 });
+
+    fireEvent.change(slider('字号'), { target: { value: '21' } });
+
+    expect(onChange).toHaveBeenCalledWith({ fontSize: 21 });
+    expect(onChange.mock.calls[0][0].fontSize).toBe(21);
+  });
+
+  it('parses line height with parseFloat, keeping the fraction', () => {
+    const { onChange } = renderPanel({ lineHeight: 1.75 });
+
+    fireEvent.change(slider('行高'), { target: { value: '1.5' } });
+
+    expect(onChange).toHaveBeenCalledWith({ lineHeight: 1.5 });
+    expect(typeof onChange.mock.calls[0][0].lineHeight).toBe('number');
+    expect(onChange.mock.calls[0][0].lineHeight).not.toBe(1);
+  });
+
+  it('parses page width with parseInt', () => {
+    const { onChange } = renderPanel({ pageWidth: 680 });
+
+    fireEvent.change(slider(WIDTH_LABEL), { target: { value: '800' } });
+
+    expect(onChange).toHaveBeenCalledWith({ pageWidth: 800 });
+  });
+
+  it('sends only the slider that moved', () => {
+    const { onChange } = renderPanel();
+
+    fireEvent.change(slider('字号'), { target: { value: '16' } });
+    fireEvent.change(slider('行高'), { target: { value: '2' } });
+    fireEvent.change(slider(WIDTH_LABEL), { target: { value: '1000' } });
+
+    expect(onChange.mock.calls.map(([arg]) => arg)).toEqual([
+      { fontSize: 16 },
+      { lineHeight: 2 },
+      { pageWidth: 1000 },
+    ]);
+  });
+
+  it('bounds every slider by SETTINGS_CONSTRAINTS', () => {
+    renderPanel();
+
+    const cases: Array<[string, keyof typeof SETTINGS_CONSTRAINTS, number | undefined]> = [
+      ['字号', 'fontSize', 1],
+      ['行高', 'lineHeight', 0.1],
+      [WIDTH_LABEL, 'pageWidth', 50],
+    ];
+
+    for (const [label, key, step] of cases) {
+      const input = slider(label);
+      const { min, max } = SETTINGS_CONSTRAINTS[key];
+      expect(input, label).toHaveAttribute('min', String(min));
+      expect(input, label).toHaveAttribute('max', String(max));
+      expect(input, label).toHaveAttribute('step', String(step));
+      expect(input, label).toHaveAttribute('aria-valuemin', String(min));
+      expect(input, label).toHaveAttribute('aria-valuemax', String(max));
+    }
+  });
+
+  it('accepts the constraint extremes without clamping them away', () => {
+    const { onChange } = renderPanel();
+
+    fireEvent.change(slider('字号'), {
+      target: { value: String(SETTINGS_CONSTRAINTS.fontSize.min) },
+    });
+    fireEvent.change(slider('字号'), {
+      target: { value: String(SETTINGS_CONSTRAINTS.fontSize.max) },
+    });
+    fireEvent.change(slider('行高'), {
+      target: { value: String(SETTINGS_CONSTRAINTS.lineHeight.min) },
+    });
+    fireEvent.change(slider(WIDTH_LABEL), {
+      target: { value: String(SETTINGS_CONSTRAINTS.pageWidth.max) },
+    });
+
+    expect(onChange.mock.calls.map(([arg]) => arg)).toEqual([
+      { fontSize: SETTINGS_CONSTRAINTS.fontSize.min },
+      { fontSize: SETTINGS_CONSTRAINTS.fontSize.max },
+      { lineHeight: SETTINGS_CONSTRAINTS.lineHeight.min },
+      { pageWidth: SETTINGS_CONSTRAINTS.pageWidth.max },
+    ]);
+  });
+
+  it('mirrors the current settings into the DOM', () => {
+    renderPanel({ fontSize: 22, lineHeight: 1.6, pageWidth: 900 });
+
+    expect(slider('字号')).toHaveAttribute('aria-valuenow', '22');
+    expect(slider('字号')).toHaveAttribute('aria-valuetext', '22 像素');
+    expect(slider('行高')).toHaveAttribute('aria-valuenow', '1.6');
+    expect(slider('行高')).toHaveAttribute('aria-valuetext', '1.6');
+    expect(slider(WIDTH_LABEL)).toHaveAttribute('aria-valuenow', '900');
+
+    expect(screen.getByText('22px')).toBeInTheDocument();
+    expect(screen.getByText('1.6')).toBeInTheDocument();
+    expect(screen.getByText('900px')).toBeInTheDocument();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Closing
+ * ------------------------------------------------------------------ */
+
+describe('SettingsPanel — closing', () => {
+  it('calls onClose from the close button', () => {
+    const { onClose } = renderPanel();
+    fireEvent.click(closeButton());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose from Enter and Space on the close button', () => {
+    const { onClose } = renderPanel();
+
+    fireEvent.keyDown(closeButton(), { key: 'Enter' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(closeButton(), { key: ' ' });
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores other keys on the close button', () => {
+    const { onClose } = renderPanel();
+    fireEvent.keyDown(closeButton(), { key: 'a' });
+    fireEvent.keyDown(closeButton(), { key: 'Tab' });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('calls onClose on Escape and swallows the event', () => {
+    const { onClose } = renderPanel();
+    const panel = screen.getByRole('dialog');
+
+    const event = createEvent.keyDown(panel, { key: 'Escape' });
+    // jsdom clears the stop-propagation flag once dispatch finishes, so the
+    // two calls are observed here and their observable consequence in the
+    // test below.
+    const preventDefault = vi.spyOn(event, 'preventDefault');
+    const stopPropagation = vi.spyOn(event, 'stopPropagation');
+
+    fireEvent(panel, event);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented, 'the default action was cancelled').toBe(true);
+  });
+
+  it('keeps the Escape key from reaching a listener further down the tree', () => {
+    const { onClose } = renderPanel();
+    const downstream = vi.fn();
+    document.addEventListener('keydown', downstream);
+
+    try {
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(downstream, 'the reader behind the panel must not close too').not.toHaveBeenCalled();
+    } finally {
+      document.removeEventListener('keydown', downstream);
+    }
+  });
+
+  it('closes on a mousedown outside the panel', () => {
+    const { onClose } = renderPanel();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays open for a mousedown inside the panel', () => {
+    const { onClose } = renderPanel();
+
+    fireEvent.mouseDown(slider(WIDTH_LABEL));
+    fireEvent.mouseDown(closeButton());
+    fireEvent.mouseDown(screen.getByRole('dialog', { name: 'Reading settings' }));
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('ignores a mousedown on the settings gear that opened it', () => {
+    const { onClose } = renderPanel();
+    const gear = document.createElement('button');
+    gear.className = 'reader-settings-btn';
+    document.body.appendChild(gear);
+
+    try {
+      fireEvent.mouseDown(gear);
+      expect(onClose, 'toggling via the gear is not a dismissal').not.toHaveBeenCalled();
+    } finally {
+      gear.remove();
+    }
+  });
+
+  it('detaches both listeners on unmount', () => {
+    const { onClose, unmount } = renderPanel();
+    unmount();
+
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    fireEvent.mouseDown(document.body);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Focus trap
+ * ------------------------------------------------------------------ */
+
+describe('SettingsPanel — focus trap', () => {
+  it('wraps forward from the last focusable element to the first', () => {
+    renderPanel();
+    const first = closeButton();
+    const last = slider(WIDTH_LABEL);
+
+    expect(READER_THEMES.length + 4).toBe(document.querySelectorAll(
+      '.reader-settings-panel button, .reader-settings-panel input'
+    ).length);
+
+    last.focus();
+    expect(document.activeElement).toBe(last);
+
+    fireEvent.keyDown(last, { key: 'Tab' });
+
+    expect(document.activeElement, 'Tab on the last element wraps to the first').toBe(first);
+  });
+
+  it('wraps backward from the first focusable element to the last', () => {
+    renderPanel();
+    const first = closeButton();
+    const last = slider(WIDTH_LABEL);
+
+    first.focus();
+    expect(document.activeElement).toBe(first);
+
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+
+    expect(document.activeElement, 'Shift+Tab on the first element wraps to the last').toBe(last);
+  });
+
+  it('leaves focus alone in the middle of the cycle', () => {
+    renderPanel();
+    const middle = screen.getByRole('radio', { name: '护眼' });
+
+    middle.focus();
+    fireEvent.keyDown(middle, { key: 'Tab' });
+    expect(document.activeElement).toBe(middle);
+
+    middle.focus();
+    fireEvent.keyDown(middle, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(middle);
+  });
+
+  it('does not trap Tab when nothing is focused yet', () => {
+    renderPanel();
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(document.activeElement).toBe(document.body);
+
+    const event = createEvent.keyDown(document.body, { key: 'Tab' });
+    fireEvent(document.body, event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('ignores keys other than Tab and Escape', () => {
+    renderPanel();
+    const last = slider(WIDTH_LABEL);
+    last.focus();
+
+    fireEvent.keyDown(last, { key: 'ArrowRight' });
+
+    expect(document.activeElement).toBe(last);
+  });
+});
