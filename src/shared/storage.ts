@@ -17,6 +17,18 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * Whether a value is a number clamp() can actually work with.
+ *
+ * `typeof NaN === 'number'` and every comparison against NaN is false, so
+ * `clamp(NaN, ...)` returns NaN and a corrupt stored value would render the
+ * reader with `font-size: NaNpx`. Infinities are still accepted on purpose:
+ * they clamp to the nearest bound.
+ */
+function isClampable(value: unknown): value is number {
+  return typeof value === 'number' && !Number.isNaN(value);
+}
+
+/**
  * Validate and normalize settings object
  * Returns a complete Settings object with all invalid values replaced by defaults.
  * Unknown / deprecated fields from older versions are silently dropped.
@@ -26,15 +38,15 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     ? (settings.theme as Theme)
     : DEFAULT_SETTINGS.theme;
 
-  const fontSize = typeof settings.fontSize === 'number'
+  const fontSize = isClampable(settings.fontSize)
     ? clamp(settings.fontSize, SETTINGS_CONSTRAINTS.fontSize.min, SETTINGS_CONSTRAINTS.fontSize.max)
     : DEFAULT_SETTINGS.fontSize;
 
-  const lineHeight = typeof settings.lineHeight === 'number'
+  const lineHeight = isClampable(settings.lineHeight)
     ? clamp(settings.lineHeight, SETTINGS_CONSTRAINTS.lineHeight.min, SETTINGS_CONSTRAINTS.lineHeight.max)
     : DEFAULT_SETTINGS.lineHeight;
 
-  const pageWidth = typeof settings.pageWidth === 'number'
+  const pageWidth = isClampable(settings.pageWidth)
     ? clamp(settings.pageWidth, SETTINGS_CONSTRAINTS.pageWidth.min, SETTINGS_CONSTRAINTS.pageWidth.max)
     : DEFAULT_SETTINGS.pageWidth;
 
@@ -78,24 +90,6 @@ export async function saveSettings(settings: Partial<Settings>): Promise<void> {
     console.error('[Reader] Failed to save settings:', error);
     throw error;
   }
-}
-
-/**
- * Get a single setting value
- */
-export async function getSetting<K extends keyof Settings>(key: K): Promise<Settings[K]> {
-  const settings = await getSettings();
-  return settings[key];
-}
-
-/**
- * Save a single setting value
- */
-export async function saveSetting<K extends keyof Settings>(
-  key: K,
-  value: Settings[K]
-): Promise<void> {
-  await saveSettings({ [key]: value });
 }
 
 /**

@@ -46,7 +46,6 @@ export const STORAGE_KEYS = {
   PRINT_SETTINGS: 'print_settings',
   /** Prefix for one-shot payloads handed to the print page */
   PRINT_PAYLOAD: 'print_payload_',
-  LAST_SYNC: 'last_sync_time',
 } as const;
 
 /**

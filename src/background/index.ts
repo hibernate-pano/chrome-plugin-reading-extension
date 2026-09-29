@@ -11,6 +11,82 @@ import { MESSAGE_TYPES, STORAGE_KEYS } from '../shared/constants';
 const injectedTabs = new Set<number>();
 
 /**
+ * Upper bound on the article HTML we are willing to stage.
+ *
+ * chrome.storage.session caps the entire area at 10 MB (QUOTA_BYTES
+ * 10485760), shared by every article staged in this browser session. Counting
+ * UTF-16 code units is a conservative proxy for the serialized byte size: a
+ * CJK article costs up to three bytes per character once JSON-encoded. At this
+ * ceiling the worst case still leaves headroom, and a genuine article is
+ * measured in hundreds of kilobytes — two million characters is roughly a
+ * million-word novel. Rejecting here gives the reader a real reason instead of
+ * an opaque quota rejection from deep inside Chrome.
+ */
+const MAX_PRINT_PAYLOAD_CHARS = 2_000_000;
+
+/**
+ * Keys this worker instance has staged and not yet handed off, kept in memory
+ * so a sweep can tell a live payload from a stranded one.
+ *
+ * The set dies with the worker, which is the correct lifetime: a payload
+ * staged by an earlier worker is collectible by the next sweep, and that is
+ * precisely what a restart sweep is for. The window where that is wrong — a
+ * print tab still booting across a worker restart — is a few milliseconds,
+ * because staging and tabs.create share one event loop turn and the print page
+ * reads immediately on boot.
+ */
+const stagedPayloadKeys = new Set<string>();
+
+/**
+ * Drop the oldest bookkeeping entries so the set cannot grow without bound.
+ * Exports are user-initiated and a worker lives minutes at a time, so eight
+ * covers any realistic overlap; the cap is here to make that obviously finite.
+ */
+function trimStagedPayloadKeys(): void {
+  while (stagedPayloadKeys.size > 8) {
+    const oldest = stagedPayloadKeys.values().next();
+    if (oldest.done) return;
+    stagedPayloadKeys.delete(oldest.value);
+  }
+}
+
+/**
+ * Remove print payloads that nothing will read again.
+ *
+ * The print page deletes its own key only on the success path, so a tab closed
+ * before it boots — or a read that throws — strands the article for the rest of
+ * the session. Session storage caps at 10 MB, so a handful of abandoned exports
+ * is enough to make every later export fail.
+ *
+ * Must run BEFORE staging, never after: afterwards it would race the hand-off
+ * the very next lines perform. `keepKey` is belt and braces for the token this
+ * call is about to write; stagedPayloadKeys covers exports that staged
+ * moments earlier and are still handing off.
+ */
+async function sweepStalePrintPayloads(keepKey?: string): Promise<void> {
+  try {
+    const entries = await chrome.storage.session.get(null);
+    const stale = Object.keys(entries).filter(
+      (key) =>
+        key.startsWith(STORAGE_KEYS.PRINT_PAYLOAD) &&
+        key !== keepKey &&
+        !stagedPayloadKeys.has(key)
+    );
+    if (stale.length > 0) {
+      await chrome.storage.session.remove(stale);
+    }
+  } catch (error) {
+    // A sweep that fails must never block an export.
+    console.warn('[Background] Payload sweep failed:', error);
+  }
+}
+
+// Sweep on every worker startup. A worker is torn down after roughly 30s idle,
+// so this fires repeatedly within a session and is where payloads stranded by
+// an earlier worker get collected.
+void sweepStalePrintPayloads();
+
+/**
  * Initialize extension on install/update
  */
 chrome.runtime.onInstalled.addListener((details) => {
@@ -155,18 +231,45 @@ async function handleExportPdf(payload: unknown): Promise<{ success: boolean; er
     return { success: false, error: 'Nothing to export' };
   }
 
+  if (article.content.length > MAX_PRINT_PAYLOAD_CHARS) {
+    return {
+      success: false,
+      error:
+        `Article is too large to export: ${article.content.length} characters, ` +
+        `limit ${MAX_PRINT_PAYLOAD_CHARS}`,
+    };
+  }
+
   const token = crypto.randomUUID().replace(/-/g, '');
   const key = `${STORAGE_KEYS.PRINT_PAYLOAD}${token}`;
 
+  // Sweep first. After the write it would race the hand-off just below.
+  await sweepStalePrintPayloads(key);
+
   try {
     await chrome.storage.session.set({ [key]: article });
+    stagedPayloadKeys.add(key);
+    trimStagedPayloadKeys();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: `Failed to stage article: ${message}` };
   }
 
   const page = await chrome.runtime.getURL('print.html');
-  await chrome.tabs.create({ url: `${page}#${token}`, active: true });
+  try {
+    await chrome.tabs.create({ url: `${page}#${token}`, active: true });
+  } catch (error) {
+    // No tab means no reader. Drop the payload now instead of leaving it for
+    // the next sweep to collect.
+    stagedPayloadKeys.delete(key);
+    try {
+      await chrome.storage.session.remove(key);
+    } catch {
+      // Nothing further to do — a later sweep still collects it.
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `Failed to open the print page: ${message}` };
+  }
 
   return { success: true };
 }

@@ -4,7 +4,7 @@
  * Requirements: 4.1, 4.2, 4.3, 6.5
  */
 
-import React, { useState, useCallback, useMemo, type JSX } from 'react';
+import { useState, useCallback, useMemo, type JSX } from 'react';
 import { highlightCode, detectLanguage, normalizeLanguage } from '../shared/codeHighlight';
 
 interface CodeBlockProps {
@@ -41,28 +41,24 @@ export function CodeBlock({ code, language, filename }: CodeBlockProps): JSX.Ele
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      // Fallback for older browsers
+    } catch {
+      // Fallback for older browsers. execCommand can throw, and the
+      // textarea must not survive it — hence finally, not a bare call.
       const textarea = document.createElement('textarea');
       textarea.value = code;
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+      try {
+        textarea.select();
+        document.execCommand('copy');
+      } finally {
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   }, [code]);
-
-  // Handle keyboard activation for copy button
-  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleCopy();
-    }
-  }, [handleCopy]);
 
   // Display language name
   const displayLanguage = filename || detectedLanguage;
@@ -76,11 +72,9 @@ export function CodeBlock({ code, language, filename }: CodeBlockProps): JSX.Ele
         <button
           className={`reader-code-block__copy ${copied ? 'reader-code-block__copy--copied' : ''}`}
           onClick={handleCopy}
-          onKeyDown={handleKeyDown}
           aria-label={copied ? 'Copied to clipboard' : 'Copy code to clipboard'}
           aria-live="polite"
           type="button"
-          tabIndex={0}
         >
           {copied ? (
             <>
@@ -146,5 +140,3 @@ function CopyCheckIcon(): JSX.Element {
     </svg>
   );
 }
-
-export default CodeBlock;

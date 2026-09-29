@@ -1,99 +1,46 @@
 /**
  * SettingsPanel Component
  * Floating settings panel — four essential controls only:
- * theme, font size, line height, page width.
+ * theme, font size, line height, page width, plus a way back to the defaults.
  */
 
-import React, { useCallback, useEffect, useRef, type JSX } from 'react';
+import React, { useCallback, useEffect, useRef, useState, type JSX } from 'react';
 import type { Settings, Theme } from '../shared/types';
 import { SETTINGS_CONSTRAINTS } from '../shared/constants';
 import { READER_THEMES } from '../shared/readerThemes';
+import { usePanelDismiss } from './usePanelDismiss';
 
 interface SettingsPanelProps {
   settings: Settings;
   onChange: (settings: Partial<Settings>) => void;
+  /** Restore every setting to its default. Rejects if storage refuses the write. */
+  onReset: () => Promise<void>;
   onClose: () => void;
 }
 
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  const selector = [
-    'button:not([disabled])',
-    'input:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])',
-    'a[href]',
-    'select:not([disabled])',
-    'textarea:not([disabled])',
-  ].join(', ');
-
-  return Array.from(container.querySelectorAll<HTMLElement>(selector));
-}
-
-export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProps): JSX.Element {
+export function SettingsPanel({ settings, onChange, onReset, onClose }: SettingsPanelProps): JSX.Element {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetStatus, setResetStatus] = useState<{ text: string; failed: boolean } | null>(
+    null
+  );
 
   // Focus close button on mount
   useEffect(() => {
     closeButtonRef.current?.focus();
   }, []);
 
-  // Click outside to close — must listen on shadow root, not document.
-  // Document-level events retarget into the shadow host, breaking contains().
-  useEffect(() => {
-    function handleClickOutside(event: Event) {
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      if (panelRef.current && !panelRef.current.contains(target)) {
-        if (target.closest?.('.reader-settings-btn')) return;
-        onClose();
-      }
-    }
-
-    const root = panelRef.current?.getRootNode() ?? document;
-    root.addEventListener('mousedown', handleClickOutside);
-    return () => root.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
-
-  // Escape to close + focus trap
-  useEffect(() => {
-    function handleKeyDown(event: Event) {
-      const keyboardEvent = event as KeyboardEvent;
-      if (keyboardEvent.key === 'Escape') {
-        keyboardEvent.preventDefault();
-        keyboardEvent.stopPropagation();
-        onClose();
-        return;
-      }
-
-      if (keyboardEvent.key === 'Tab' && panelRef.current) {
-        const focusableElements = getFocusableElements(panelRef.current);
-        if (focusableElements.length === 0) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-        const root = panelRef.current.getRootNode() as ShadowRoot | Document;
-        const active = root.activeElement;
-
-        if (keyboardEvent.shiftKey) {
-          if (active === firstElement) {
-            keyboardEvent.preventDefault();
-            lastElement.focus();
-          }
-        } else {
-          if (active === lastElement) {
-            keyboardEvent.preventDefault();
-            firstElement.focus();
-          }
-        }
-      }
-    }
-
-    const root = panelRef.current?.getRootNode() ?? document;
-    root.addEventListener('keydown', handleKeyDown, true);
-    return () => root.removeEventListener('keydown', handleKeyDown, true);
-  }, [onClose]);
+  // Escape, focus trap and click-outside — shared with HistoryPanel so the two
+  // panels cannot drift apart on keyboard behaviour.
+  usePanelDismiss({
+    panelRef,
+    onClose,
+    ignoreOutsideSelector: '.reader-settings-btn',
+  });
 
   const handleThemeChange = useCallback((theme: Theme) => {
+    setResetStatus(null);
     onChange({ theme });
   }, [onChange]);
 
@@ -101,6 +48,7 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
     key: K,
     parse: (raw: string) => Settings[K]
   ) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setResetStatus(null);
     onChange({ [key]: parse(event.target.value) });
   }, [onChange]);
 
@@ -113,6 +61,31 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
       action();
     }
   }, []);
+
+  /**
+   * Restore the defaults.
+   *
+   * Unlike clearing history this needs no confirmation step: it only rewrites
+   * four values the user can put back with the sliders above, so the cost of a
+   * misclick is one drag. The outcome is announced in the status line rather
+   * than left to be inferred from the sliders quietly moving.
+   */
+  const handleReset = useCallback(async () => {
+    if (resetting) return;
+    setResetting(true);
+    setResetStatus(null);
+    try {
+      await onReset();
+      setResetStatus({ text: '已恢复默认设置', failed: false });
+    } catch (error) {
+      setResetStatus({
+        text: error instanceof Error ? error.message : '恢复默认设置失败',
+        failed: true,
+      });
+    } finally {
+      setResetting(false);
+    }
+  }, [onReset, resetting]);
 
   return (
     <div
@@ -240,6 +213,26 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
           <span className="reader-slider-value" aria-hidden="true">{settings.pageWidth}px</span>
         </div>
       </div>
+
+      {/* Restore defaults */}
+      <div className="reader-settings-footer">
+        <button
+          className="reader-settings-reset"
+          onClick={handleReset}
+          disabled={resetting}
+          type="button"
+        >
+          {resetting ? '恢复中…' : '恢复默认设置'}
+        </button>
+        {/* Always in the DOM: a live region inserted together with its text is
+            not reliably announced by every screen reader. */}
+        <p
+          className={`reader-settings-status${resetStatus?.failed ? ' reader-settings-status--failed' : ''}`}
+          role="status"
+        >
+          {resetStatus?.text ?? ''}
+        </p>
+      </div>
     </div>
   );
 }
@@ -261,5 +254,3 @@ function CloseIcon(): JSX.Element {
     </svg>
   );
 }
-
-export default SettingsPanel;

@@ -2,6 +2,87 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.5.0] - 2026-09-29
+
+### Added
+
+- 🕘 **阅读历史面板**
+  - 工具栏新增时钟图标，浮层列出最近读过的文章：标题、域名、相对时间、预计阅读时长
+  - 点标题在新标签页重开；地址不是 http(s) 的记录降级为纯文本，不会变成可点击链接
+  - 每条可单独删除；「清空全部」需二次确认并回显条数；没有记录时显示空状态
+  - 面板打开时才读存储，不在每次进入阅读模式时多付一次 IO
+  - 此前 `getReadingHistory` / `deleteFromHistory` / `clearHistory` 全部零调用方：
+    扩展在静默收集最多 200 条浏览记录，用户既看不见也删不掉
+- ♻️ 设置面板新增「恢复默认设置」，一键回到出厂值（`resetSettings` 此前同样是死代码）
+
+### Changed
+
+- 测试 523 → 601（22 个文件），语句覆盖率 **24.79% → 93.15%**；
+  `vitest.config.ts` 的阈值改为 ratchet 并由 CI 强制执行
+- 依赖 43 → 27。运行时 18 → 3，只剩 `@mozilla/readability` / `react` / `react-dom`；
+  移除 8 个 `@radix-ui/*`、`zustand`、`clsx`、`tailwind-merge`、
+  `class-variance-authority`、`turndown`、`lucide-react` 与直接依赖的 `esbuild`
+- dev 依赖 25 → 24：移除 `fast-check`、`eslint-plugin-react-hooks`、
+  `eslint-plugin-react-refresh`、`@types/turndown`、`tailwindcss`，
+  新增 `prettier` / `husky` / `lint-staged` / `@testing-library/dom`
+- 语法高亮补上按语言区分的 `#` 行注释（python / yaml / bash / ruby / perl），
+  YAML 里的 `https://` 不再被当成注释
+- CI 增加 `type-check` 步骤，以及 package.json / public/manifest.json / dist
+  三方版本一致性校验
+- 恢复 pre-commit（husky + lint-staged + prettier），prettier 覆盖 markdown
+- manifest 补 `minimum_chrome_version: 102`（`chrome.storage.session` 的起始版本）
+- 补 `LICENSE`（MIT）、重写 `AGENTS.md`、修正 README 与 PDF 设计文档的漂移
+
+### Removed
+
+- **Tailwind**：配置存在但完全失效（全仓 0 处 `@tailwind` / `@apply`），
+  移除后 `dist/` 产物字节不变；`postcss.config.js` 只剩 autoprefixer
+- `package-lock.json`：与 pnpm 锁文件并存且停留在 `ai-reading-extension@2.9.0`，
+  项目是 pnpm-only
+- **manifest 的 `web_accessible_resources`**：整段删除。原声明把 `print.html` 对
+  `<all_urls>` 开放，且指向从未被构建出来的 `content.css`；打印页由扩展自己
+  `chrome.tabs.create` 打开，不需要对网页暴露
+- 死代码：空的 `src/shared/index.ts` barrel、`build.sh`、`public/vite.svg`、
+  `.github/instructions/` 样板
+
+### Fixed
+
+- 💥 **语法高亮产出的是非法 HTML**：`highlightCode` 对同一字符串串行执行 6 次
+  `replace`，前面几轮刚写回 `<span class="token-comment">`，后面几轮就把这些
+  自生成的标签再高亮一遍，产出 `<span <span class=…>` 这种无法解析的标记——
+  阅读页与打印页的**每一个**代码块都是坏的。改为单遍扫描，每个字符最多被一条规则消费
+- **阅读页没有消毒，打印页有**：Readability 实测会原样保留 `onerror`。抽出共享消毒器
+  `src/shared/sanitize.ts`，两端走同一条路。当前不构成权限提升（内容来自用户正在看的
+  页面），但两端行为不一致本身就是隐患
+- **内容脚本可能永久失聪**：`initialize()` 先 await 设置再注册监听器，任一环节抛错
+  就再也收不到消息，此后点图标、导出 PDF 全部无响应且无任何提示。改为先注册监听器
+- **阅读时长把词数又除了一次 6**：入参本就是词数，2000 词的文章算出 2 分钟而不是 10 分钟
+- **会话存储里的打印载荷只删不漏**：只在读成功时删除，关掉标签页就残留到会话结束。
+  补上启动时与导出前的清扫（含并发导出的竞态保护）与体积上限
+- **5 秒上限时仍在加载的图片不计入任何一桶**：图片服务器无响应时打印出一片空白框，
+  工具条却不吭声。现在 `failed` / `pending` 分开统计并如实播报
+- **历史记录写入的是刷新前的旧设置**：`addToHistory` 用的 `state.settings` 早于刷新
+- `generateId` 的正负号碰撞：`Math.abs` 把 hash 5 与 -5 映射到同一个 id，
+  两篇不同文章会合并成一条。改用 `>>> 0`
+- `validateSettings` 放过 `NaN`：`typeof NaN === 'number'`，会渲染出 `font-size: NaNpx`
+- `ReaderView` 元信息分隔符是恒真表达式 `(content.byline || true)`
+- `processContentWithCodeBlocks` 把 `<pre><code>` 匹配两次，再靠 `indexOf` 字符串
+  回查占位符——文章里出现同样字面量就会切错位置。改为单次遍历
+- `getErrorMessage('toString')` 返回的是 `Object.prototype` 上的函数，会被当文案渲染
+- CodeBlock 复制失败时 `execCommand` 抛错，跳过 `removeChild` 留下 textarea
+- 设置面板打开后工具栏仍在 3 秒后自动隐藏：`showToolbar` 依赖导致 effect 重建，
+  又挂上无条件的隐藏定时器
+
+### Notes
+
+- 阅读历史只写入 `chrome.storage.local`，不与任何账号或服务同步；
+  可在历史面板逐条删除或一次性清空
+
+### Verification
+
+tsc 零错误 · eslint（`--max-warnings 0`）零警告 · vitest 601/601 通过（22 文件）·
+语句覆盖率 93.15%（高于 ratchet 阈值）· 三套 vite 配置构建产物正常
+
 ## [3.4.0] - 2026-09-29
 
 ### Added
@@ -61,6 +142,7 @@ All notable changes to this project will be documented in this file.
 ### Removed
 
 以下模块均未接入主流程，或已被现有实现取代：
+
 - popup 整套 UI（`src/popup/`）
 - TTS 语音朗读、收藏夹、夜间模式自动切换、自定义主题系统
 - 导出（Markdown/HTML/PDF）、高对比度、阅读进度、文本划选
@@ -180,4 +262,5 @@ tsc 零错误 · eslint 零警告 · vitest 9/9 通过 · 构建产物正常输�
 
 ---
 
-*Previous changelog available in CHANGELOG_v1.9.0.md*
+_3.0.0 之前（含 v1.9.0）的记录不在本文件中，可从 git 历史取回：
+`git show 14250e8:CHANGELOG_v1.9.0.md`。该文件在 v3.1.3 时被删除。_

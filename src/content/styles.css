@@ -143,7 +143,9 @@
   font-family: ui-serif, Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif;
   font-size: var(--reader-font-size, 19px);
   line-height: var(--reader-line-height, 1.75);
-  transition: font-size 0.15s ease, line-height 0.15s ease;
+  transition:
+    font-size 0.15s ease,
+    line-height 0.15s ease;
 }
 
 body.reader-mode-active {
@@ -165,8 +167,9 @@ body.reader-mode-active {
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
   background: linear-gradient(to bottom, var(--reader-bg) 60%, transparent);
-  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              background 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
@@ -205,10 +208,11 @@ body.reader-mode-active {
   border-radius: 8px;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reader-close-btn:hover {
@@ -242,10 +246,11 @@ body.reader-mode-active {
   border-radius: 8px;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reader-settings-btn:hover,
@@ -266,6 +271,45 @@ body.reader-mode-active {
 }
 
 /* ============================================
+   History Button (toolbar right side)
+   ============================================ */
+
+.reader-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--reader-border);
+  border-radius: 8px;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reader-history-btn:hover,
+.reader-history-btn--active {
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text);
+  border-color: var(--reader-text-muted);
+  transform: scale(1.05);
+}
+
+.reader-history-btn:active {
+  transform: scale(0.95);
+}
+
+.reader-history-btn:focus-visible {
+  outline: 2px solid var(--reader-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ============================================
    Export PDF Button
    ============================================ */
 
@@ -280,10 +324,11 @@ body.reader-mode-active {
   border-radius: 8px;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .reader-export-btn:hover:not(:disabled) {
@@ -402,12 +447,26 @@ body.reader-mode-active {
   letter-spacing: -0.01em;
 }
 
-.reader-content h1 { font-size: 1.75em; }
-.reader-content h2 { font-size: 1.4em; }
-.reader-content h3 { font-size: 1.2em; }
-.reader-content h4 { font-size: 1.05em; }
-.reader-content h5 { font-size: 1em; }
-.reader-content h6 { font-size: 0.9em; font-weight: 600; color: var(--reader-text-muted); }
+.reader-content h1 {
+  font-size: 1.75em;
+}
+.reader-content h2 {
+  font-size: 1.4em;
+}
+.reader-content h3 {
+  font-size: 1.2em;
+}
+.reader-content h4 {
+  font-size: 1.05em;
+}
+.reader-content h5 {
+  font-size: 1em;
+}
+.reader-content h6 {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--reader-text-muted);
+}
 
 .reader-content p {
   margin-top: 0;
@@ -426,7 +485,9 @@ body.reader-mode-active {
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
   text-decoration-color: transparent;
-  transition: text-decoration-color 0.2s ease, color 0.2s ease;
+  transition:
+    text-decoration-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .reader-content a:hover {
@@ -508,7 +569,9 @@ body.reader-mode-active {
   display: block;
   margin: 1.75em auto;
   border-radius: 6px;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
 }
 
 .reader-content figure {
@@ -659,29 +722,66 @@ body.reader-mode-active {
    Syntax Highlighting
    ============================================ */
 
-.reader-code-block .token-keyword { color: #d73a49; }
-.reader-theme-dark .reader-code-block .token-keyword { color: #ff7b72; }
-.reader-theme-sepia .reader-code-block .token-keyword { color: #a0522d; }
+.reader-code-block .token-keyword {
+  color: #d73a49;
+}
+.reader-theme-dark .reader-code-block .token-keyword {
+  color: #ff7b72;
+}
+.reader-theme-sepia .reader-code-block .token-keyword {
+  color: #a0522d;
+}
 
-.reader-code-block .token-string { color: #032f62; }
-.reader-theme-dark .reader-code-block .token-string { color: #a5d6ff; }
-.reader-theme-sepia .reader-code-block .token-string { color: #6b4423; }
+.reader-code-block .token-string {
+  color: #032f62;
+}
+.reader-theme-dark .reader-code-block .token-string {
+  color: #a5d6ff;
+}
+.reader-theme-sepia .reader-code-block .token-string {
+  color: #6b4423;
+}
 
-.reader-code-block .token-comment { color: #6a737d; font-style: italic; }
-.reader-theme-dark .reader-code-block .token-comment { color: #8b949e; }
-.reader-theme-sepia .reader-code-block .token-comment { color: #8b7355; }
+.reader-code-block .token-comment {
+  color: #6a737d;
+  font-style: italic;
+}
+.reader-theme-dark .reader-code-block .token-comment {
+  color: #8b949e;
+}
+.reader-theme-sepia .reader-code-block .token-comment {
+  color: #8b7355;
+}
 
-.reader-code-block .token-number { color: #005cc5; }
-.reader-theme-dark .reader-code-block .token-number { color: #79c0ff; }
-.reader-theme-sepia .reader-code-block .token-number { color: #8b4513; }
+.reader-code-block .token-number {
+  color: #005cc5;
+}
+.reader-theme-dark .reader-code-block .token-number {
+  color: #79c0ff;
+}
+.reader-theme-sepia .reader-code-block .token-number {
+  color: #8b4513;
+}
 
-.reader-code-block .token-function { color: #6f42c1; }
-.reader-theme-dark .reader-code-block .token-function { color: #d2a8ff; }
-.reader-theme-sepia .reader-code-block .token-function { color: #704214; }
+.reader-code-block .token-function {
+  color: #6f42c1;
+}
+.reader-theme-dark .reader-code-block .token-function {
+  color: #d2a8ff;
+}
+.reader-theme-sepia .reader-code-block .token-function {
+  color: #704214;
+}
 
-.reader-code-block .token-operator { color: #d73a49; }
-.reader-theme-dark .reader-code-block .token-operator { color: #ff7b72; }
-.reader-theme-sepia .reader-code-block .token-operator { color: #a0522d; }
+.reader-code-block .token-operator {
+  color: #d73a49;
+}
+.reader-theme-dark .reader-code-block .token-operator {
+  color: #ff7b72;
+}
+.reader-theme-sepia .reader-code-block .token-operator {
+  color: #a0522d;
+}
 
 /* ============================================
    Settings Panel
@@ -699,8 +799,10 @@ body.reader-mode-active {
   background-color: var(--reader-bg);
   border: 1px solid var(--reader-border);
   border-radius: 12px;
-  box-shadow: 0 8px 28px var(--reader-shadow), 0 2px 8px var(--reader-shadow),
-              0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  box-shadow:
+    0 8px 28px var(--reader-shadow),
+    0 2px 8px var(--reader-shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   animation: reader-slide-down 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -737,7 +839,9 @@ body.reader-mode-active {
   border-radius: 5px;
   color: var(--reader-text-muted);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .reader-settings-panel__close:hover {
@@ -779,7 +883,9 @@ body.reader-mode-active {
   border-radius: 8px;
   border: 1.5px solid var(--swatch-border, rgba(0, 0, 0, 0.1));
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
   padding: 0;
 }
 
@@ -845,7 +951,9 @@ body.reader-mode-active {
   background-color: var(--reader-accent);
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
   box-shadow: 0 2px 4px rgba(26, 86, 219, 0.25);
 }
 
@@ -865,7 +973,9 @@ body.reader-mode-active {
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
   box-shadow: 0 2px 4px rgba(26, 86, 219, 0.25);
 }
 
@@ -928,6 +1038,371 @@ body.reader-mode-active {
 
 .reader-toggle-btn svg {
   flex-shrink: 0;
+}
+
+/* ============================================
+   Settings Panel Footer (restore defaults)
+   ============================================ */
+
+.reader-settings-footer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--reader-border);
+}
+
+.reader-settings-reset {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background-color: transparent;
+  border: 1px solid var(--reader-border);
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.reader-settings-reset:hover:not(:disabled) {
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text);
+  border-color: var(--reader-text-muted);
+}
+
+.reader-settings-reset:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* Always reserves one line so the panel does not jump when a message lands
+   in it — and so the live region exists before it has anything to say. */
+.reader-settings-status {
+  min-height: 1.15em;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.15em;
+  color: var(--reader-text-muted);
+}
+
+.reader-settings-status--failed {
+  color: #a1222b;
+}
+
+.reader-theme-dark .reader-settings-status--failed {
+  color: #f28b82;
+}
+
+/* ============================================
+   History Panel
+   ============================================ */
+
+.reader-history-panel {
+  position: fixed;
+  top: 56px;
+  right: 1rem;
+  z-index: 2147483002;
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  /* The body scrolls, not the panel: `overflow: hidden` here plus a flex body
+     with `min-height: 0` keeps the header and the clear-all row pinned. */
+  max-height: calc(100vh - 76px);
+  overflow: hidden;
+  padding: 1rem;
+  background-color: var(--reader-bg);
+  border: 1px solid var(--reader-border);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 28px var(--reader-shadow),
+    0 2px 8px var(--reader-shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  animation: reader-slide-down 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.reader-history-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--reader-border);
+}
+
+.reader-history-panel__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--reader-text);
+  letter-spacing: 0.01em;
+}
+
+.reader-history-panel__count {
+  margin-right: auto;
+  font-size: 0.72rem;
+  color: var(--reader-text-muted);
+}
+
+.reader-history-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.reader-history-panel__close:hover {
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text);
+}
+
+.reader-history-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--reader-border) transparent;
+}
+
+.reader-history-panel__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reader-history-panel__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.reader-history-panel__body::-webkit-scrollbar-thumb {
+  background: var(--reader-border);
+  border-radius: 3px;
+}
+
+.reader-history-panel__body::-webkit-scrollbar-thumb:hover {
+  background: var(--reader-text-muted);
+}
+
+.reader-history-status,
+.reader-history-empty {
+  padding: 1.5rem 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--reader-text-muted);
+}
+
+.reader-history-error {
+  margin-top: 0.75rem;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #a1222b;
+  background: var(--reader-code-bg);
+  border-radius: 6px;
+}
+
+.reader-theme-dark .reader-history-error {
+  color: #f28b82;
+}
+
+/* Records */
+.reader-history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reader-history-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.25rem;
+  border-bottom: 1px solid var(--reader-border);
+}
+
+.reader-history-item:last-child {
+  border-bottom: none;
+}
+
+.reader-history-item:hover {
+  background-color: var(--reader-code-bg);
+}
+
+.reader-history-item__main {
+  min-width: 0;
+}
+
+.reader-history-item__title {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--reader-text);
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.reader-history-item__title:hover {
+  color: var(--reader-accent);
+}
+
+/* A record whose URL is not a safe http(s) link. It is still listed — hiding
+   it would hide the fact that it exists — but it is not actionable. */
+.reader-history-item__title--inert {
+  cursor: default;
+  color: var(--reader-text-muted);
+}
+
+.reader-history-item__title--inert:hover {
+  color: var(--reader-text-muted);
+}
+
+.reader-history-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--reader-text-muted);
+}
+
+.reader-history-item__site {
+  overflow-wrap: anywhere;
+}
+
+.reader-history-item__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Only a pointer can hover, so only a pointer gets the hidden-until-hover
+   treatment. On touch and for keyboard users the control stays visible —
+   a hover-only button is unreachable by keyboard and invisible on a phone. */
+@media (hover: hover) {
+  .reader-history-item__delete {
+    opacity: 0;
+  }
+
+  .reader-history-item:hover .reader-history-item__delete,
+  .reader-history-item__delete:focus-visible {
+    opacity: 1;
+  }
+}
+
+.reader-history-item__delete:hover {
+  background-color: var(--reader-bg);
+  color: #a1222b;
+}
+
+.reader-theme-dark .reader-history-item__delete:hover {
+  color: #f28b82;
+}
+
+/* Footer */
+.reader-history-panel__footer {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--reader-border);
+}
+
+.reader-history-privacy {
+  margin-bottom: 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--reader-text-muted);
+}
+
+.reader-history-clear {
+  padding: 0.45rem 0.75rem;
+  background-color: transparent;
+  border: 1px solid var(--reader-border);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--reader-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.reader-history-clear:hover:not(:disabled) {
+  background-color: var(--reader-code-bg);
+  color: var(--reader-text);
+  border-color: var(--reader-text-muted);
+}
+
+.reader-history-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reader-history-clear--danger {
+  color: #a1222b;
+  border-color: #a1222b;
+}
+
+.reader-history-clear--danger:hover:not(:disabled) {
+  color: #a1222b;
+  border-color: #a1222b;
+  background-color: var(--reader-code-bg);
+}
+
+.reader-theme-dark .reader-history-clear--danger {
+  color: #f28b82;
+  border-color: #f28b82;
+}
+
+.reader-theme-dark .reader-history-clear--danger:hover:not(:disabled) {
+  color: #f28b82;
+  border-color: #f28b82;
+}
+
+/* Clear-all confirmation */
+.reader-history-confirm__text {
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--reader-text);
+}
+
+.reader-history-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 /* ============================================
@@ -996,12 +1471,18 @@ body.reader-mode-active {
     font-size: 1.5em;
   }
 
-  .reader-settings-panel {
+  .reader-settings-panel,
+  .reader-history-panel {
     top: auto;
     bottom: 1rem;
     right: 1rem;
     left: 1rem;
     width: auto;
+  }
+
+  /* A full-width sheet has no width budget left for a 56px top offset. */
+  .reader-history-panel {
+    max-height: calc(100vh - 6rem);
   }
 }
 
@@ -1032,6 +1513,7 @@ body.reader-mode-active {
 
   .reader-toolbar,
   .reader-settings-panel,
+  .reader-history-panel,
   .reader-skip-link,
   .reader-export-error {
     display: none;
@@ -1054,12 +1536,14 @@ body.reader-mode-active {
 @media (prefers-reduced-motion: reduce) {
   .reader-overlay,
   .reader-settings-panel,
+  .reader-history-panel,
   .reader-toolbar {
     animation: none;
     transition: none;
   }
 
-  .reader-slider::-webkit-slider-thumb {
+  .reader-slider::-webkit-slider-thumb,
+  .reader-history-item__delete {
     transition: none;
   }
 }

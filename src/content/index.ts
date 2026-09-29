@@ -14,11 +14,12 @@ import type {
   PrintPayload,
 } from '../shared/types';
 import { MESSAGE_TYPES, DEFAULT_SETTINGS } from '../shared/constants';
-import { getSettings, saveSettings } from '../shared/storage';
+import { getSettings, saveSettings, resetSettings, validateSettings } from '../shared/storage';
 import { extractContent, clearCache } from './extractor';
 import { ReaderView } from './ReaderView';
 import { ErrorBoundary, handleError } from './errorHandling';
-import { addToHistory } from '../shared/history';
+import { addToHistory, getReadingHistory, deleteFromHistory, clearHistory } from '../shared/history';
+import type { ReadingRecord } from '../shared/history';
 
 // Import CSS as a string — injected into Shadow DOM, not the page
 import readerCSS from './styles.css?inline';
@@ -33,11 +34,23 @@ let state: ContentScriptState = {
 let reactRoot: Root | null = null;
 let currentContent: ExtractedContent | null = null;
 
+/**
+ * Boot the content script.
+ *
+ * The message listener is registered first and synchronously. Loading settings is
+ * an async storage read; gating the listener on it would mean any failure before
+ * the `addListener` call leaves the script permanently deaf — no toolbar toggle,
+ * no PDF export, and nothing on screen to explain why.
+ */
 async function initialize(): Promise<void> {
+  chrome.runtime.onMessage.addListener(handleMessage);
+
   try {
     state.settings = await getSettings();
-    chrome.runtime.onMessage.addListener(handleMessage);
   } catch (error) {
+    // Settings are unreadable, but the script must stay responsive: fall back to
+    // defaults so reading mode still works, and surface the failure.
+    state.settings = { ...DEFAULT_SETTINGS };
     handleError(error, 'initialization');
   }
 }
@@ -111,6 +124,11 @@ async function enableReadingMode(): Promise<void> {
 
     currentContent = result.data;
 
+    // Refresh settings before recording history. Otherwise the record is written
+    // from the DEFAULT_SETTINGS bootstrap that is still in state on first run, and
+    // the user reopens a page they read with different font/theme settings.
+    state.settings = await getSettings();
+
     // Record reading history
     addToHistory(
       window.location.href,
@@ -126,8 +144,6 @@ async function enableReadingMode(): Promise<void> {
         fontSize: state.settings.fontSize,
       }
     );
-
-    state.settings = await getSettings();
 
     // Create isolated Shadow DOM container and mount React inside it
     const mount = createReaderContainer();
@@ -165,14 +181,12 @@ function disableReadingMode(): void {
 
 async function updateSettings(newSettings: Partial<Settings>): Promise<void> {
   try {
-    state.settings = { ...state.settings, ...newSettings };
+    // `state.settings` drives rendering immediately, before storage round-trips.
+    // Validate the merged result so out-of-range or wrong-typed values arriving
+    // over the message channel never reach the reader view.
+    state.settings = validateSettings({ ...state.settings, ...newSettings });
     await saveSettings(newSettings);
-
-    if (state.isActive && currentContent) {
-      const host = document.getElementById(READER_HOST_ID);
-      const mount = host?.shadowRoot?.querySelector<HTMLElement>('[data-reader-mount]');
-      if (mount) renderReaderView(mount);
-    }
+    repaintReader();
   } catch (error) {
     handleError(error, 'storage');
   }
@@ -206,6 +220,65 @@ async function exportToPdf(): Promise<{ success: boolean; error?: string }> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };
+  }
+}
+
+/**
+ * Read the stored reading records for the history panel.
+ */
+async function loadHistory(): Promise<ReadingRecord[]> {
+  return getReadingHistory();
+}
+
+/**
+ * Drop one reading record and report what storage still holds.
+ *
+ * The result is re-read rather than patched: `deleteFromHistory` does the
+ * filtering and the writing itself, so storage is the only authority on what
+ * is left, and the panel never has to guess. A failed delete resolves as a
+ * rejection carrying the record still in place — showing the user an entry
+ * they just deleted would be a lie.
+ */
+async function deleteHistoryEntry(recordId: string): Promise<ReadingRecord[]> {
+  const deleted = await deleteFromHistory(recordId);
+  if (!deleted) {
+    throw new Error('删除失败，请重试');
+  }
+  return getReadingHistory();
+}
+
+/**
+ * Erase every reading record. Same contract as `deleteHistoryEntry`.
+ */
+async function clearReadingHistory(): Promise<ReadingRecord[]> {
+  const cleared = await clearHistory();
+  if (!cleared) {
+    throw new Error('清空失败，请重试');
+  }
+  return getReadingHistory();
+}
+
+/**
+ * Restore the built-in reading settings and repaint.
+ *
+ * `resetSettings` throws when storage refuses the write; that rejection is
+ * deliberately left to reach the panel, which reports it rather than pretending
+ * the settings moved back.
+ */
+async function resetReaderSettings(): Promise<void> {
+  await resetSettings();
+  state.settings = await getSettings();
+  repaintReader();
+}
+
+/**
+ * Re-render the mounted reader, if one is on screen.
+ */
+function repaintReader(): void {
+  if (state.isActive && currentContent) {
+    const host = document.getElementById(READER_HOST_ID);
+    const mount = host?.shadowRoot?.querySelector<HTMLElement>('[data-reader-mount]');
+    if (mount) renderReaderView(mount);
   }
 }
 
@@ -261,27 +334,18 @@ function renderReaderView(mount: HTMLElement): void {
           onClose: disableReadingMode,
           onSettingsChange: updateSettings,
           onExportPdf: exportToPdf,
+          onResetSettings: resetReaderSettings,
+          onLoadHistory: loadHistory,
+          onDeleteHistory: deleteHistoryEntry,
+          onClearHistory: clearReadingHistory,
         }),
       }
     )
   );
 }
 
-export function getState(): ContentScriptState {
-  return { ...state };
-}
-
-export function isReadingModeActive(): boolean {
-  return state.isActive;
-}
-
-initialize();
-
-export {
-  initialize,
-  enableReadingMode,
-  disableReadingMode,
-  updateSettings,
-  handleMessage,
-  canExtractContent,
-};
+// Side-effectful entry point: registers the message listener and loads settings.
+// `.catch()` keeps a boot failure from surfacing as an unhandled rejection.
+initialize().catch((error: unknown) => {
+  console.error('[Reader] Content script initialization failed:', error);
+});

@@ -265,10 +265,17 @@ async function main(): Promise<void> {
   // blocks and tables break across pages instead of stranding blank space.
   markOversizedBlocks(elements.sheet);
 
-  if (result.failed > 0) {
-    setStatus(
-      `${result.loaded} 张图片已加载，${result.failed} 张未能加载（可能是防盗链或已失效）。仍可继续打印。`
-    );
+  // Report only what went wrong. A clean sweep says nothing — announcing
+  // "N images loaded" is noise on a page the user never asked about. But an
+  // image that never answered is `pending`, and staying silent about it is
+  // how a dead image host ends up printing blank frames.
+  const problems: string[] = [];
+  if (result.failed > 0) problems.push(`${result.failed} 张未能加载（可能是防盗链或已失效）`);
+  if (result.pending > 0) problems.push(`${result.pending} 张仍在加载（图片服务器可能无响应）`);
+
+  if (problems.length > 0) {
+    const loaded = result.loaded > 0 ? `${result.loaded} 张图片已加载，` : '';
+    setStatus(`${loaded}${problems.join('，')}。仍可继续打印。`);
   } else {
     clearStatus();
   }

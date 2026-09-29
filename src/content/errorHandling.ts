@@ -42,7 +42,11 @@ interface ToastOptions {
  * Get user-friendly error message for a given context
  */
 export function getErrorMessage(context: ErrorContext): string {
-  return ERROR_MESSAGES[context] ?? ERROR_MESSAGES.default;
+  // `??` is not enough: an inherited key such as 'toString' resolves to a
+  // function off Object.prototype, which would be rendered as the message.
+  return Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, context)
+    ? ERROR_MESSAGES[context]
+    : ERROR_MESSAGES.default;
 }
 
 /**
@@ -109,12 +113,11 @@ export function showToast(options: ToastOptions): void {
  * Handle an error with logging and user notification
  */
 export function handleError(error: unknown, context: ErrorContext = 'default'): void {
-  // Extract error message
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  
-  // Log to console for debugging
-  console.error(`[Reader] ${context}:`, errorMessage);
-  
+  // Log to console for debugging. Pass the error itself, not just its
+  // message — the stack is the only thing that locates the failure, and the
+  // toast below is a fixed localized string regardless of the error.
+  console.error(`[Reader] ${context}:`, error);
+
   // Show user-friendly toast notification
   showToast({
     type: 'error',
@@ -290,37 +293,4 @@ export function ErrorFallback({ error, onRetry }: ErrorFallbackProps): JSX.Eleme
         '重试'
       )
   );
-}
-
-/**
- * Wrap an async function with error handling
- */
-export function withErrorHandling<T extends unknown[], R>(
-  fn: (...args: T) => Promise<R>,
-  context: ErrorContext = 'default'
-): (...args: T) => Promise<R | undefined> {
-  return async (...args: T): Promise<R | undefined> => {
-    try {
-      return await fn(...args);
-    } catch (error) {
-      handleError(error, context);
-      return undefined;
-    }
-  };
-}
-
-/**
- * Safe execution wrapper that catches errors
- */
-export function safeExecute<T>(
-  fn: () => T,
-  context: ErrorContext = 'default',
-  fallback?: T
-): T | undefined {
-  try {
-    return fn();
-  } catch (error) {
-    handleError(error, context);
-    return fallback;
-  }
 }
