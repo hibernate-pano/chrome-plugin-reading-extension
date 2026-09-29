@@ -11,11 +11,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup, within } from '@testing-library/react';
 import { ReaderView } from '../../src/content/ReaderView';
 import { DEFAULT_SETTINGS } from '../../src/shared/constants';
 import { detectLanguage } from '../../src/shared/codeHighlight';
 import type { ExtractedContent, Settings } from '../../src/shared/types';
+import type { ReadingRecord } from '../../src/shared/history';
 
 /* ------------------------------------------------------------------ *
  * Helpers
@@ -34,6 +35,37 @@ const BASE_CONTENT: ExtractedContent = {
 
 type ExportResult = { success: boolean; error?: string };
 
+/** A stored record, as `addToHistory` would have written it. */
+function record(overrides: Partial<ReadingRecord> = {}): ReadingRecord {
+  return {
+    id: 'r-1',
+    url: 'https://example.com/article',
+    title: 'A Read Article',
+    excerpt: '',
+    byline: '',
+    siteName: 'example.com',
+    length: 1200,
+    readingTime: 6,
+    theme: 'light',
+    fontSize: 19,
+    createdAt: Date.now() - 86_400_000,
+    lastReadAt: Date.now() - 3_600_000,
+    readCount: 1,
+    ...overrides,
+  };
+}
+
+/**
+ * The chrome-API callbacks `content/index.ts` owns and hands down. ReaderView
+ * must route every one of them; none of them may be called on its own.
+ */
+interface HistoryHandlers {
+  onResetSettings: () => Promise<void>;
+  onLoadHistory: () => Promise<ReadingRecord[]>;
+  onDeleteHistory: (recordId: string) => Promise<ReadingRecord[]>;
+  onClearHistory: () => Promise<ReadingRecord[]>;
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -47,13 +79,22 @@ function deferred<T>() {
 function renderReader(
   contentOverrides: Partial<ExtractedContent> = {},
   settingsOverrides: Partial<Settings> = {},
-  onExportPdf: () => Promise<ExportResult> = () => Promise.resolve({ success: true })
+  onExportPdf: () => Promise<ExportResult> = () => Promise.resolve({ success: true }),
+  historyOverrides: Partial<HistoryHandlers> = {}
 ) {
   const content: ExtractedContent = { ...BASE_CONTENT, ...contentOverrides };
   const settings: Settings = { ...DEFAULT_SETTINGS, ...settingsOverrides };
   const onClose = vi.fn();
   const onSettingsChange = vi.fn();
   const onExportPdfSpy = vi.fn(onExportPdf);
+
+  const handlers: HistoryHandlers = {
+    onResetSettings: vi.fn(() => Promise.resolve()),
+    onLoadHistory: vi.fn(() => Promise.resolve([])),
+    onDeleteHistory: vi.fn(() => Promise.resolve([])),
+    onClearHistory: vi.fn(() => Promise.resolve([])),
+    ...historyOverrides,
+  };
 
   const utils = render(
     <ReaderView
@@ -62,6 +103,7 @@ function renderReader(
       onClose={onClose}
       onSettingsChange={onSettingsChange}
       onExportPdf={onExportPdfSpy}
+      {...handlers}
     />
   );
 
@@ -78,7 +120,18 @@ function renderReader(
   const codeBlocks = (): HTMLElement[] =>
     Array.from(utils.container.querySelectorAll('.reader-code-block'));
 
-  return { ...utils, content, settings, onClose, onSettingsChange, onExportPdf: onExportPdfSpy, toolbar, article, codeBlocks };
+  return {
+    ...utils,
+    content,
+    settings,
+    onClose,
+    onSettingsChange,
+    onExportPdf: onExportPdfSpy,
+    ...handlers,
+    toolbar,
+    article,
+    codeBlocks,
+  };
 }
 
 type NavigatorWithClipboard = Navigator & {
@@ -560,6 +613,86 @@ describe('ReaderView — toolbar visibility', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Toolbar — mousemove throttling
+ * ------------------------------------------------------------------ */
+
+describe('ReaderView — toolbar mousemove throttling', () => {
+  it('asks for at most one hide re-arm per frame', () => {
+    vi.useFakeTimers();
+    const { toolbar } = renderReader();
+    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame');
+
+    act(() => {
+      // A pointer sweep delivers far more events than one frame can show.
+      for (let i = 0; i < 20; i += 1) {
+        fireEvent.mouseMove(document);
+      }
+    });
+
+    expect(rafSpy, '20 mousemoves in a single frame').toHaveBeenCalledTimes(1);
+    expect(toolbar(), 'the toolbar is shown immediately, not on the next frame').toHaveClass(
+      'reader-toolbar--visible'
+    );
+  });
+
+  it('does not latch: movement on a later frame arms again', () => {
+    vi.useFakeTimers();
+    const { toolbar } = renderReader();
+    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame');
+
+    act(() => {
+      fireEvent.mouseMove(document);
+    });
+    expect(rafSpy).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(20);
+      fireEvent.mouseMove(document);
+    });
+    expect(rafSpy, 'a new frame is a new re-arm').toHaveBeenCalledTimes(2);
+
+    // Throttling must not shift the deadline: the toolbar hides 2500ms after
+    // the *last* movement, measured from the event rather than from the frame
+    // that armed the timer. (That movement was 20ms ago when this act block
+    // opened, so the deadline lands 2500ms from here, not from the frame.)
+    act(() => {
+      vi.advanceTimersByTime(2499);
+    });
+    expect(toolbar(), 'still visible just before the idle deadline').toHaveClass(
+      'reader-toolbar--visible'
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(toolbar()).toHaveClass('reader-toolbar--hidden');
+  });
+
+  it('arms no hide at all while a panel is open, however much the mouse moves', async () => {
+    vi.useFakeTimers();
+    const { toolbar } = renderReader();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+
+    for (let i = 0; i < 5; i += 1) {
+      act(() => {
+        vi.advanceTimersByTime(20);
+        fireEvent.mouseMove(document);
+      });
+    }
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(toolbar(), 'no hide can fire underneath an open panel').toHaveClass(
+      'reader-toolbar--visible'
+    );
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * Settings panel
  * ------------------------------------------------------------------ */
 
@@ -617,6 +750,239 @@ describe('ReaderView — settings panel', () => {
     });
 
     expect(document.activeElement).toBe(gear);
+  });
+
+  it('routes restore-defaults to the callback the content script owns', async () => {
+    const onResetSettings = vi.fn(() => Promise.resolve());
+    renderReader({}, {}, undefined, { onResetSettings });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open settings' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '恢复默认设置' }));
+    });
+
+    expect(onResetSettings).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * History panel
+ * ------------------------------------------------------------------ */
+
+describe('ReaderView — history panel', () => {
+  const openHistory = async (): Promise<ReturnType<typeof renderReader>> => {
+    const utils = renderReader();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    return utils;
+  };
+
+  it('toggles the panel from the clock and flips aria-expanded', async () => {
+    const { onLoadHistory } = renderReader();
+
+    const closed = screen.getByRole('button', { name: 'Open reading history' });
+    expect(closed).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(closed);
+    });
+
+    const open = screen.getByRole('button', { name: 'Close reading history' });
+    expect(open).toHaveAttribute('aria-expanded', 'true');
+    expect(open).toHaveClass('reader-history-btn--active');
+    expect(screen.getByRole('dialog', { name: '阅读历史' })).toBeInTheDocument();
+    expect(onLoadHistory).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(open);
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('does not read storage until the panel is actually opened', () => {
+    const { onLoadHistory } = renderReader();
+    expect(onLoadHistory, 'reading on mount would be a read per article').not.toHaveBeenCalled();
+  });
+
+  it('shows a loading state until the records arrive', async () => {
+    const pending = deferred<ReadingRecord[]>();
+    renderReader({}, {}, undefined, { onLoadHistory: () => pending.promise });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    expect(screen.getByText('正在加载阅读记录…')).toBeInTheDocument();
+    expect(screen.queryByText('还没有阅读记录')).not.toBeInTheDocument();
+
+    await act(async () => {
+      pending.resolve([record({ title: 'Loaded Article' })]);
+      await pending.promise;
+    });
+
+    expect(screen.getByText('Loaded Article')).toBeInTheDocument();
+  });
+
+  it('shows the empty state when storage has nothing', async () => {
+    await openHistory();
+    expect(screen.getByText('还没有阅读记录')).toBeInTheDocument();
+  });
+
+  it('re-reads on every open so a record erased elsewhere stops being shown', async () => {
+    const onLoadHistory = vi.fn(() => Promise.resolve([record({ title: 'Still here' })]));
+    renderReader({}, {}, undefined, { onLoadHistory });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close reading history' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+
+    expect(onLoadHistory).toHaveBeenCalledTimes(2);
+  });
+
+  it('forwards a delete and renders what storage says is left', async () => {
+    const onDeleteHistory = vi.fn(() => Promise.resolve([]));
+    renderReader(
+      {},
+      {},
+      undefined,
+      { onLoadHistory: () => Promise.resolve([record({ title: 'Doomed' })]), onDeleteHistory }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '删除《Doomed》的阅读记录' }));
+    });
+
+    expect(onDeleteHistory).toHaveBeenCalledTimes(1);
+    expect(onDeleteHistory).toHaveBeenCalledWith('r-1');
+    expect(screen.queryByText('Doomed')).not.toBeInTheDocument();
+    expect(screen.getByText('还没有阅读记录')).toBeInTheDocument();
+  });
+
+  it('reports a failed delete and keeps showing the record', async () => {
+    renderReader(
+      {},
+      {},
+      undefined,
+      {
+        onLoadHistory: () => Promise.resolve([record({ title: 'Sticky' })]),
+        onDeleteHistory: () => Promise.reject(new Error('删除失败，请重试')),
+      }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '删除《Sticky》的阅读记录' }));
+    });
+
+    expect(screen.getByText('Sticky')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('删除失败，请重试');
+  });
+
+  it('erases the history only after the panel confirms', async () => {
+    const onClearHistory = vi.fn(() => Promise.resolve([]));
+    renderReader(
+      {},
+      {},
+      undefined,
+      { onLoadHistory: () => Promise.resolve([record({ title: 'Wiped' })]), onClearHistory }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '清空全部' }));
+    });
+    expect(onClearHistory, 'one click must not wipe 200 records').not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '确认清空' }));
+    });
+    expect(onClearHistory).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('还没有阅读记录')).toBeInTheDocument();
+  });
+
+  it('never opens a stored javascript: record, because the panel never renders one', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    renderReader(
+      {},
+      {},
+      undefined,
+      {
+        onLoadHistory: () =>
+          Promise.resolve([record({ title: 'Hostile', url: 'javascript:alert(1)' })]),
+      }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+
+    const panel = screen.getByRole('dialog', { name: '阅读历史' });
+    expect(within(panel).queryByRole('link')).not.toBeInTheDocument();
+    expect(panel.querySelector('a')).toBeNull();
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('and the settings panel and the history panel are never both open', async () => {
+    await openHistory();
+    expect(screen.getByRole('dialog', { name: '阅读历史' })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open settings' }));
+    });
+    expect(screen.queryByRole('dialog', { name: '阅读历史' })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Reading settings' })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    expect(screen.queryByRole('dialog', { name: 'Reading settings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '阅读历史' })).toBeInTheDocument();
+  });
+
+  it('keeps the toolbar visible for as long as the history panel is open', async () => {
+    vi.useFakeTimers();
+    const { toolbar } = await openHistory();
+
+    expect(toolbar()).toHaveClass('reader-toolbar--visible');
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(toolbar(), 'the toolbar must not hide underneath it').toHaveClass(
+      'reader-toolbar--visible'
+    );
+  });
+
+  it('closes the panel — not the reader — on Escape, then returns focus', async () => {
+    const { onClose } = await openHistory();
+    const clock = screen.getByRole('button', { name: 'Close reading history' });
+
+    fireEvent.keyDown(screen.getByRole('dialog', { name: '阅读历史' }), { key: 'Escape' });
+
+    expect(onClose, 'Escape belongs to the panel first').not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open reading history' }));
+    expect(clock).toBeInTheDocument();
+
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

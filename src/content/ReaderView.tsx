@@ -5,9 +5,19 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef, type JSX } from 'react';
 import type { Settings, ExtractedContent } from '../shared/types';
+import type { ReadingRecord } from '../shared/history';
 import { SettingsPanel } from './SettingsPanel';
+import { HistoryPanel } from './HistoryPanel';
 import { CodeBlock } from './CodeBlock';
 import { getReaderThemeById } from '../shared/readerThemes';
+
+/** Which floating panel, if any, is open. They are mutually exclusive. */
+type ActivePanel = 'settings' | 'history' | null;
+
+/** Idle window before the auto-hiding toolbar goes away, after a mouse move. */
+const TOOLBAR_IDLE_MS = 2500;
+/** Slightly longer window for the initial hide, before any mouse move at all. */
+const TOOLBAR_INITIAL_IDLE_MS = 3000;
 
 interface ReaderViewProps {
   content: ExtractedContent;
@@ -16,6 +26,14 @@ interface ReaderViewProps {
   onSettingsChange: (settings: Partial<Settings>) => void;
   /** Hand the article to the background, which opens the print page. */
   onExportPdf: () => Promise<{ success: boolean; error?: string }>;
+  /** Restore the built-in defaults. Rejects if storage refuses the write. */
+  onResetSettings: () => Promise<void>;
+  /** Read the stored reading records. */
+  onLoadHistory: () => Promise<ReadingRecord[]>;
+  /** Drop one record; resolves with what storage still holds. */
+  onDeleteHistory: (recordId: string) => Promise<ReadingRecord[]>;
+  /** Drop every record; resolves with what storage still holds (empty). */
+  onClearHistory: () => Promise<ReadingRecord[]>;
 }
 
 export function ReaderView({
@@ -24,69 +42,97 @@ export function ReaderView({
   onClose,
   onSettingsChange,
   onExportPdf,
+  onResetSettings,
+  onLoadHistory,
+  onDeleteHistory,
+  onClearHistory,
 }: ReaderViewProps): JSX.Element {
-  const [showSettings, setShowSettings] = useState(false);
+  const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<ReadingRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
+  const historyBtnRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const lastMoveRef = useRef(0);
 
   // Read through a ref so `showToolbar` keeps a stable identity. If it
-  // depended on `showSettings`, opening the panel would tear down and
-  // re-arm the mousemove effect below — re-scheduling the initial hide and
-  // vanishing the toolbar while the panel is still open.
-  const showSettingsRef = useRef(showSettings);
-  showSettingsRef.current = showSettings;
+  // depended on the active panel, opening one would tear down and re-arm the
+  // mousemove effect below — re-scheduling the initial hide and vanishing the
+  // toolbar while the panel is still open.
+  const panelOpenRef = useRef(activePanel !== null);
+  panelOpenRef.current = activePanel !== null;
 
   // Auto-hide toolbar after inactivity
   const showToolbar = useCallback(() => {
     setToolbarVisible(true);
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-    }
-    // Don't hide if settings panel is open
-    if (!showSettingsRef.current) {
-      hideTimerRef.current = setTimeout(() => {
-        setToolbarVisible(false);
-      }, 2500);
-    }
+    // A pointer sweep delivers mousemove far faster than the toolbar can
+    // visibly react, so the re-arm is coalesced to one per frame. The deadline
+    // is measured from the *latest* event rather than from the frame that
+    // armed the timer, so throttling never shortens (or extends) the window.
+    lastMoveRef.current = Date.now();
+    if (frameRef.current !== null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+      // Don't hide if a panel is open
+      if (!panelOpenRef.current) {
+        const elapsed = Date.now() - lastMoveRef.current;
+        const remaining = Math.max(0, TOOLBAR_IDLE_MS - elapsed);
+        hideTimerRef.current = setTimeout(() => {
+          setToolbarVisible(false);
+        }, remaining);
+      }
+    });
   }, []);
 
-  // Keep toolbar visible when settings is open, and cancel any hide already
+  // Keep toolbar visible when a panel is open, and cancel any hide already
   // in flight — this is what stops a pending timer from firing underneath it.
   useEffect(() => {
-    if (showSettings) {
+    if (activePanel) {
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current);
         hideTimerRef.current = null;
       }
       setToolbarVisible(true);
     }
-  }, [showSettings]);
+  }, [activePanel]);
 
   // Show toolbar on any mouse movement
   useEffect(() => {
     document.addEventListener('mousemove', showToolbar, { passive: true });
     // Initial hide after 3s
-    hideTimerRef.current = setTimeout(() => setToolbarVisible(false), 3000);
+    hideTimerRef.current = setTimeout(
+      () => setToolbarVisible(false),
+      TOOLBAR_INITIAL_IDLE_MS
+    );
     return () => {
       document.removeEventListener('mousemove', showToolbar);
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
     };
   }, [showToolbar]);
 
-  // Escape key to close reader (if settings not open)
+  // Escape key to close reader (if no panel is open)
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !showSettings) {
+      if (event.key === 'Escape' && !activePanel) {
         onClose();
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, showSettings]);
+  }, [onClose, activePanel]);
 
   // Lock body scroll
   useEffect(() => {
@@ -97,7 +143,11 @@ export function ReaderView({
   }, []);
 
   const toggleSettings = useCallback(() => {
-    setShowSettings((prev) => !prev);
+    setActivePanel((prev) => (prev === 'settings' ? null : 'settings'));
+  }, []);
+
+  const toggleHistory = useCallback(() => {
+    setActivePanel((prev) => (prev === 'history' ? null : 'history'));
   }, []);
 
   const handleExportPdf = useCallback(async () => {
@@ -124,9 +174,65 @@ export function ReaderView({
   }, [exportError]);
 
   const closeSettings = useCallback(() => {
-    setShowSettings(false);
+    setActivePanel(null);
     settingsBtnRef.current?.focus();
   }, []);
+
+  const closeHistory = useCallback(() => {
+    setActivePanel(null);
+    historyBtnRef.current?.focus();
+  }, []);
+
+  // History is read when the panel opens rather than on mount: most readers
+  // never open it, and a storage read for nothing is a read per article.
+  // Re-read on every open so a record deleted from another tab is not shown
+  // as still present.
+  useEffect(() => {
+    if (activePanel !== 'history') return;
+
+    let cancelled = false;
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    onLoadHistory()
+      .then((records) => {
+        if (!cancelled) setHistoryRecords(records);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setHistoryError(error instanceof Error ? error.message : '读取阅读历史失败');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanel, onLoadHistory]);
+
+  const handleDeleteHistory = useCallback(
+    (recordId: string) => {
+      setHistoryError(null);
+      onDeleteHistory(recordId)
+        .then(setHistoryRecords)
+        .catch((error: unknown) => {
+          setHistoryError(error instanceof Error ? error.message : '删除失败，请重试');
+        });
+    },
+    [onDeleteHistory]
+  );
+
+  const handleClearHistory = useCallback(() => {
+    setHistoryError(null);
+    onClearHistory()
+      .then(setHistoryRecords)
+      .catch((error: unknown) => {
+        setHistoryError(error instanceof Error ? error.message : '清空失败，请重试');
+      });
+  }, [onClearHistory]);
+
 
   // CSS custom properties — keep this list to the four things the user can adjust.
   const containerStyle = useMemo(() => {
@@ -204,11 +310,22 @@ export function ReaderView({
           </button>
 
           <button
+            ref={historyBtnRef}
+            className={`reader-history-btn${activePanel === 'history' ? ' reader-history-btn--active' : ''}`}
+            onClick={toggleHistory}
+            aria-label={activePanel === 'history' ? 'Close reading history' : 'Open reading history'}
+            aria-expanded={activePanel === 'history'}
+            type="button"
+          >
+            <HistoryIcon />
+          </button>
+
+          <button
             ref={settingsBtnRef}
-            className={`reader-settings-btn${showSettings ? ' reader-settings-btn--active' : ''}`}
+            className={`reader-settings-btn${activePanel === 'settings' ? ' reader-settings-btn--active' : ''}`}
             onClick={toggleSettings}
-            aria-label={showSettings ? 'Close settings' : 'Open settings'}
-            aria-expanded={showSettings}
+            aria-label={activePanel === 'settings' ? 'Close settings' : 'Open settings'}
+            aria-expanded={activePanel === 'settings'}
             type="button"
           >
             <SettingsIcon />
@@ -251,12 +368,25 @@ export function ReaderView({
         </article>
       </div>
 
-      {/* Settings Panel */}
-      {showSettings && (
+      {/* Floating panels — mutually exclusive, so the overlay only ever has
+          one modal on screen and Escape has one meaning at a time. */}
+      {activePanel === 'settings' && (
         <SettingsPanel
           settings={settings}
           onChange={onSettingsChange}
+          onReset={onResetSettings}
           onClose={closeSettings}
+        />
+      )}
+
+      {activePanel === 'history' && (
+        <HistoryPanel
+          records={historyRecords}
+          loading={historyLoading}
+          error={historyError}
+          onDelete={handleDeleteHistory}
+          onClear={handleClearHistory}
+          onClose={closeHistory}
         />
       )}
     </div>
@@ -433,6 +563,15 @@ function SpinnerIcon(): JSX.Element {
       <line x1="18" y1="12" x2="22" y2="12" />
       <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
       <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+    </svg>
+  );
+}
+
+function HistoryIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15.5 14" />
     </svg>
   );
 }

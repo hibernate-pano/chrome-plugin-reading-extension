@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, createEvent } from '@testing-library/react';
+import { render, screen, fireEvent, createEvent, act } from '@testing-library/react';
 import { SettingsPanel } from '../../src/content/SettingsPanel';
 import { SETTINGS_CONSTRAINTS, DEFAULT_SETTINGS } from '../../src/shared/constants';
 import { READER_THEMES } from '../../src/shared/readerThemes';
@@ -20,24 +20,32 @@ import type { Settings } from '../../src/shared/types';
 
 const BASE: Settings = { ...DEFAULT_SETTINGS };
 
-/** Order `getFocusableElements` sees: close button, 3 swatches, 3 sliders. */
+/** Order `getFocusableElements` sees: close button, 3 swatches, 3 sliders, reset. */
 const CLOSE_LABEL = '关闭设置';
 const WIDTH_LABEL = '行宽';
+const RESET_LABEL = '恢复默认设置';
 
 function renderPanel(overrides: Partial<Settings> = {}) {
   const onChange = vi.fn();
   const onClose = vi.fn();
+  const onReset = vi.fn().mockResolvedValue(undefined);
   const settings: Settings = { ...BASE, ...overrides };
   const utils = render(
-    <SettingsPanel settings={settings} onChange={onChange} onClose={onClose} />
+    <SettingsPanel
+      settings={settings}
+      onChange={onChange}
+      onReset={onReset}
+      onClose={onClose}
+    />
   );
-  return { ...utils, onChange, onClose, settings };
+  return { ...utils, onChange, onClose, onReset, settings };
 }
 
 const slider = (label: string): HTMLInputElement =>
   screen.getByLabelText(label) as HTMLInputElement;
 
 const closeButton = (): HTMLElement => screen.getByRole('button', { name: CLOSE_LABEL });
+const resetButton = (): HTMLElement => screen.getByRole('button', { name: RESET_LABEL });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -60,12 +68,13 @@ describe('SettingsPanel — dialog shell', () => {
     expect(document.activeElement).toBe(closeButton());
   });
 
-  it('renders exactly one swatch per theme and three sliders', () => {
+  it('renders exactly one swatch per theme, three sliders and the reset action', () => {
     renderPanel();
     expect(screen.getAllByRole('radio')).toHaveLength(READER_THEMES.length);
     expect(screen.getByLabelText('字号')).toHaveAttribute('type', 'range');
     expect(screen.getByLabelText('行高')).toHaveAttribute('type', 'range');
     expect(screen.getByLabelText(WIDTH_LABEL)).toHaveAttribute('type', 'range');
+    expect(resetButton()).toBeInTheDocument();
   });
 });
 
@@ -355,9 +364,11 @@ describe('SettingsPanel — focus trap', () => {
   it('wraps forward from the last focusable element to the first', () => {
     renderPanel();
     const first = closeButton();
-    const last = slider(WIDTH_LABEL);
+    // The reset action was appended after the sliders, so it — not the last
+    // slider — is what the trap wraps from now.
+    const last = resetButton();
 
-    expect(READER_THEMES.length + 4).toBe(document.querySelectorAll(
+    expect(READER_THEMES.length + 5).toBe(document.querySelectorAll(
       '.reader-settings-panel button, .reader-settings-panel input'
     ).length);
 
@@ -372,7 +383,7 @@ describe('SettingsPanel — focus trap', () => {
   it('wraps backward from the first focusable element to the last', () => {
     renderPanel();
     const first = closeButton();
-    const last = slider(WIDTH_LABEL);
+    const last = resetButton();
 
     first.focus();
     expect(document.activeElement).toBe(first);
@@ -408,11 +419,147 @@ describe('SettingsPanel — focus trap', () => {
 
   it('ignores keys other than Tab and Escape', () => {
     renderPanel();
-    const last = slider(WIDTH_LABEL);
+    const last = resetButton();
     last.focus();
 
     fireEvent.keyDown(last, { key: 'ArrowRight' });
 
     expect(document.activeElement).toBe(last);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Restore defaults
+ * ------------------------------------------------------------------ */
+
+describe('SettingsPanel — restore defaults', () => {
+  it('calls onReset from the reset button', async () => {
+    const { onReset } = renderPanel();
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('confirms the outcome in a live region instead of leaving the user to guess', async () => {
+    renderPanel();
+    // The status region has to exist before it has anything to announce.
+    expect(document.querySelector('.reader-settings-status')).toHaveAttribute(
+      'role',
+      'status'
+    );
+    expect(document.querySelector('.reader-settings-status')).toHaveTextContent('');
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+
+    expect(document.querySelector('.reader-settings-status')).toHaveTextContent(
+      '已恢复默认设置'
+    );
+  });
+
+  it('does not call onChange — resetting is the parent\'s job, not a local edit', async () => {
+    const { onChange } = renderPanel();
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('disables the button while the write is in flight', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onReset = vi.fn(() => pending);
+    render(
+      <SettingsPanel
+        settings={{ ...BASE }}
+        onChange={vi.fn()}
+        onReset={onReset}
+        onClose={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+
+    // The button's label changes while the write is in flight, so it can no
+    // longer be found by the label it is going to have afterwards.
+    const inFlight = document.querySelector('.reader-settings-reset') as HTMLButtonElement;
+    expect(inFlight).toBeDisabled();
+    expect(inFlight).toHaveTextContent('恢复中…');
+
+    await act(async () => {
+      release();
+      await pending;
+    });
+
+    expect(resetButton()).toBeEnabled();
+    expect(resetButton()).toHaveTextContent(RESET_LABEL);
+  });
+
+  it('reports a failed reset and leaves the button usable for a retry', async () => {
+    const onReset = vi.fn().mockRejectedValue(new Error('存储空间不足'));
+    render(
+      <SettingsPanel
+        settings={{ ...BASE }}
+        onChange={vi.fn()}
+        onReset={onReset}
+        onClose={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+
+    const status = document.querySelector('.reader-settings-status') as HTMLElement;
+    expect(status).toHaveTextContent('存储空间不足');
+    expect(status).toHaveClass('reader-settings-status--failed');
+    expect(resetButton()).toBeEnabled();
+  });
+
+  it('falls back to a default message when the failure carries none', async () => {
+    const onReset = vi.fn().mockRejectedValue(new Error(''));
+    render(
+      <SettingsPanel
+        settings={{ ...BASE }}
+        onChange={vi.fn()}
+        onReset={onReset}
+        onClose={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+
+    // `new Error('')` has an empty message, not a missing one.
+    expect(document.querySelector('.reader-settings-status')).not.toHaveTextContent(
+      '已恢复默认设置'
+    );
+    expect(resetButton()).toBeEnabled();
+  });
+
+  it('clears the outcome message once the user edits a setting again', async () => {
+    renderPanel();
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+    expect(document.querySelector('.reader-settings-status')).toHaveTextContent(
+      '已恢复默认设置'
+    );
+
+    fireEvent.change(slider('字号'), { target: { value: '21' } });
+
+    expect(document.querySelector('.reader-settings-status')).toHaveTextContent('');
   });
 });

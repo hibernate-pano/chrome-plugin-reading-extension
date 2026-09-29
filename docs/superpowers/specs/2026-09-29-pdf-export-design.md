@@ -18,13 +18,13 @@
 
 ## 2. 关键决策
 
-| 决策 | 选择 | 理由 |
-|---|---|---|
-| PDF 生成方式 | 借用 Chrome 打印引擎 | 自建方案（jsPDF/html2canvas）会把文字栅格化：5 万字文章体积从 300KB 涨到 15-40MB，文字不可选中，中文渲染有风险，跨域图片直接失败。借用引擎零依赖且质量最好。 |
-| 排版样式 | 全新 `print.css`，不复用 `styles.css` | 现有 985 行样式是屏幕专用（px 单位、固定定位覆盖层、悬浮工具栏）。硬复用需要大量 `@media print` 补丁。打印用 pt（印刷单位）。 |
-| 主题 | 浅色 / 护眼两档，默认浅色 | 排除深色。复用 `readerThemes.ts` 已有配色，保持产品一致性。 |
-| 预览形态 | 连续滚动，标注「A4 宽度」 | 见 §6。 |
-| 阅读模式触发 | 保持手动触发 | 已在 v3.3.0 确定。阅读模式有损，自动启用会碍事。 |
+| 决策         | 选择                                  | 理由                                                                                                                                                         |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PDF 生成方式 | 借用 Chrome 打印引擎                  | 自建方案（jsPDF/html2canvas）会把文字栅格化：5 万字文章体积从 300KB 涨到 15-40MB，文字不可选中，中文渲染有风险，跨域图片直接失败。借用引擎零依赖且质量最好。 |
+| 排版样式     | 全新 `print.css`，不复用 `styles.css` | 现有 1,466 行样式是屏幕专用（px 单位、固定定位覆盖层、悬浮工具栏）。硬复用需要大量 `@media print` 补丁。打印用 pt（印刷单位）。                              |
+| 主题         | 浅色 / 护眼两档，默认浅色             | 排除深色。复用 `readerThemes.ts` 已有配色，保持产品一致性。                                                                                                  |
+| 预览形态     | 连续滚动，标注「A4 宽度」             | 见 §6。                                                                                                                                                      |
+| 阅读模式触发 | 保持手动触发                          | 已在 v3.3.0 确定。阅读模式有损，自动启用会碍事。                                                                                                             |
 
 ## 3. 架构
 
@@ -36,14 +36,21 @@
    │
    ├─ Background Service Worker
    │     1. storage.session.set({ [token]: payload })   ← 必须落盘
-   │     2. chrome.tabs.create({ url: `print.html?token=${token}` })
+   │     2. chrome.tabs.create({ url: `print.html#${token}` })
    │
    └─ Print Page (扩展页面, chrome-extension://)
-         1. 读 storage.session[token] → 立即删除（防残留）
+         1. 从 URL fragment 读 token → 立即删除（防残留）
          2. buildDocument() → 渲染 DOM
          3. prepareImages() → 等待图片解码
          4. 用户调主题/字号 → 点「打印」→ window.print()
 ```
+
+> **实现与初稿的偏差（有意为之）**：token 走 `#` fragment 而不是 `?` query，理由见下。
+
+### 为什么 token 用 fragment 而不是 query
+
+fragment 不会被浏览器放进 HTTP 请求，因此不进入任何服务器日志，也不进入 `Referer`。
+这个 token 只需要在两个扩展上下文之间传递，本来就不该走会被发送出去的 query 串。
 
 ### 为什么数据必须经过 Background
 
@@ -60,12 +67,12 @@ Service Worker 随时可能被 Chrome 回收。若 Content Script 直接写 stor
 ```
 src/
 ├── print/                        # 新增
-│   ├── index.html                # 扩展页面骨架
 │   ├── main.ts                   # 入口：读数据 → 渲染 → 接线
 │   ├── print.css                 # @page A4 + pt 排版（打印生效）
 │   ├── preview.css               # 屏幕预览：工具条 + A4 宽度提示（打印时不生效）
 │   ├── buildDocument.ts          # ExtractedContent → DOM 节点
-│   └── prepareImages.ts          # 懒加载图片修复 + 就绪等待
+│   ├── prepareImages.ts          # 懒加载图片修复 + 就绪等待
+│   └── markBreaks.ts             # 图片加载后按实测高度改判代码块/表格能否跨页
 ├── shared/
 │   ├── codeHighlight.ts          # 从 CodeBlock.tsx 抽出的 tokenizer
 │   ├── types.ts                  # + PrintSettings / PrintPayload
@@ -75,12 +82,22 @@ src/
     ├── index.ts                  # + EXPORT_PDF 处理
     └── ReaderView.tsx            # + 工具栏按钮
 
-print.html                        # 根目录，vite 多入口
+print.html                        # 根目录，独立的 HTML 入口
 ```
 
-构建：`vite.config.ts` 增加 `print` 入口（HTML 页面，ES module，React 插件）。
+> **与初稿的偏差**：`index.html` 最初设想放在 `src/print/` 下。实际放在**项目根目录**——
+> 入口在 `src/` 里的话 Vite 会输出 `dist/src/print/index.html`，而 background 需要一个
+> 稳定路径去 `chrome.runtime.getURL()`，根目录的 `print.html` 正好产出 `dist/print.html`。
+
+构建：**独立配置** `vite.print.config.ts`（而非在 `vite.config.ts` 里加入口）。
+打印页既不是 service worker 也不是 content script，它是一个带 ES module 脚本的普通扩展
+页面，产出格式和另两套都不同，塞进任一套都会让那一套的配置开始为它妥协。
 `package.json` 的 `build` 脚本串联三个 config。
-`manifest.json` 的 `web_accessible_resources` 增加 `print.html`。
+
+`manifest.json` **不**需要为打印页增加任何声明。3.4.0 曾加过
+`web_accessible_resources`（`print.html` 对 `<all_urls>` 开放），v3.5.0 已整段删除：
+那个键是给「网页主动请求扩展资源」用的，而打印页只由扩展自己
+`chrome.tabs.create()` 打开；同一声明里还带了一个从未被构建出来的 `content.css`。
 
 ## 5. A4 排版规范
 
@@ -97,16 +114,20 @@ print.html                        # 根目录，vite 多入口
 
 ### 分页控制
 
-| 元素 | 规则 | 原因 |
-|---|---|---|
-| h1–h4 | `break-after: avoid` | 标题不单独留在页底 |
-| p, li | `orphans: 3; widows: 3` | 避免页尾孤行 |
-| pre（短，< 30 行） | `break-inside: avoid` | 短代码不拆开 |
-| pre（长，≥ 30 行） | 允许跨页 | **超长代码强制避页会溢出丢内容** |
-| figure, img | `break-inside: avoid` + `max-height: 150mm` | 不跨页切断；上限约束"整图推下页"造成的留白 |
-| table | `width: 100%` + 超半页高允许跨页（渲染后实测） | 宽表格压进 174mm 不横向溢出，长表格不强制整块留白 |
+| 元素               | 规则                                                                           | 原因                                              |
+| ------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------- |
+| h1–h4              | `break-after: avoid`                                                           | 标题不单独留在页底                                |
+| p, li              | `orphans: 3; widows: 3`                                                        | 避免页尾孤行                                      |
+| pre（短，< 30 行） | `break-inside: avoid`                                                          | 短代码不拆开                                      |
+| pre（长，≥ 30 行） | 允许跨页                                                                       | **超长代码强制避页会溢出丢内容**                  |
+| figure, img        | `break-inside: avoid` + `max-height: 150mm`（大）/ `110mm`（中）/ `75mm`（小） | 不跨页切断；上限约束"整图推下页"造成的留白        |
+| table              | `width: 100%` + 超半页高允许跨页（渲染后实测）                                 | 宽表格压进 174mm 不横向溢出，长表格不强制整块留白 |
 
 > 代码块按行数分档是本设计中最容易被忽略的细节。绝大多数实现会无脑写 `break-inside: avoid`，遇到 200 行代码块时浏览器会强行挤在一页内，底部内容直接被裁掉。
+
+> 图片高度上限在 3.4.0 拆成三档（大 / 中 / 小，默认大），选择被持久化。
+> 缩小图片同时减小"整图推下页"造成的留白——比单纯收紧一个固定上限更有用，
+> 因为留白的实际大小取决于文章里图片有多高。
 
 ### 元素处理
 
@@ -139,6 +160,7 @@ print.html                        # 根目录，vite 多入口
 两个真实陷阱：
 
 **陷阱一：懒加载。** Readability 抽出的 HTML 里，图片可能是：
+
 - `src` 为透明占位图（1×1 GIF / base64）
 - 真实地址在 `data-src` / `data-original` / `data-lazy-src` / `data-actualsrc`
 - 仅 `srcset` 有值
@@ -147,20 +169,29 @@ print.html                        # 根目录，vite 多入口
 
 **陷阱二：打印时未解码。** `loading="lazy"` 的图片在视口外不会加载，直接打印会得到一片空白框。
 
-处理：移除所有 `loading` 属性 → 等待 `img.decode()` 或 `load` 事件 → 最多等 5 秒 → 超时照样打印（不卡死），并在工具条提示「N 张图片未加载」。
+处理：移除所有 `loading` 属性 → 等待 `img.decode()` 或 `load` 事件 → 最多等 5 秒 → 超时照样打印（不卡死），并在工具条如实播报。播报分三桶：`N 张未能加载`（防盗链 / 已失效）、`N 张仍在加载`（图片服务器无响应）、以及成功的 `N 张图片已加载`。
+
+> **与初稿的偏差**：初稿只打算报「未加载」。但 5 秒上限触发时，图片往往既没加载完也
+> 没失败，把它算进「失败」是误报，算进「成功」是漏报——一个已经死掉或无响应的图片
+> 服务器会印出一片空白框而工具条一声不吭。v3.5.0 把它拆成 `failed` / `pending` 两桶分别播报。
+> 全部成功时保持沉默——没人要求在一页看说明。
 
 跨域说明：`<img>` 渲染不受 CORS 限制，无需 `crossorigin` 属性。仅在需要 canvas 读取像素时才受限——本方案不用 canvas，故不涉及。
 
 ## 8. 错误处理
 
-| 情况 | 处理 |
-|---|---|
-| 图片加载失败 | 工具条提示数量，仍允许打印 |
-| 直接打开 print.html（无 token） | 友好空状态 + 「返回文章页」按钮 |
-| 同一文章重复导出 | 每次独立 token，互不覆盖 |
-| 超长单图（> A4 高） | `max-height: 240mm` 缩放，不裁切 |
-| 标题含非法文件名字符 | 清理 `/ : * ? " < > \|`，截断至 80 字符，兜底用 hostname |
-| storage 读取失败 | 空状态 + 错误详情 |
+| 情况                            | 处理                                                     |
+| ------------------------------- | -------------------------------------------------------- |
+| 图片加载失败                    | 工具条提示数量，仍允许打印                               |
+| 直接打开 print.html（无 token） | 友好空状态 + 「返回文章页」按钮                          |
+| 同一文章重复导出                | 每次独立 token，互不覆盖                                 |
+| 超长单图（> A4 高）             | `max-height: 150mm` 缩放，不裁切                         |
+| 标题含非法文件名字符            | 清理 `/ : * ? " < > \|`，截断至 80 字符，兜底用 hostname |
+| storage 读取失败                | 空状态 + 错误详情                                        |
+
+> **与初稿的偏差**：超长单图的上限从 240mm 收紧到 **150mm**。240mm 几乎占满整页，
+> 一张放不下的图会把整页内容推走、留下一大片空白；150mm 换来的留白在可接受范围内。
+> §5 的分页表里写的就是 150mm，本节的 240mm 是漏改的旧值。
 
 ## 9. 测试策略
 
