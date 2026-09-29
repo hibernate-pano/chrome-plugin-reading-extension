@@ -42,7 +42,11 @@ src-old/
 Thumbs.db
 
 # Archives
+# Release artifacts at the repo root stay ignored; the ones we actually ship
+# live under docs/releases/ and are tracked. The `/**` matters — a bare
+# `!docs/releases/` does not re-include files inside the directory.
 *.zip
+!docs/releases/**
 
 # AI/Editor specific directories
 .roomodes
@@ -55,8 +59,10 @@ Thumbs.db
 .trae/
 .gemini/
 
-# Documentation files (optional, remove if you want to track these)
-AGENTS.md
+# Agent-specific instruction files. AGENTS.md is tracked on purpose: it is the
+# contract every agent works against, and hiding it is how it silently drifted
+# out of date (documenting scripts and directory layouts that no longer exist).
+# CLAUDE.md stays local.
 CLAUDE.md
 
 # Task files (optional, remove if you want to track these)
@@ -64,7 +70,6 @@ CLAUDE.md
 # tasks/
 
 .kiro/
-.husky/
 .playwright-mcp/
 .sisyphus/
 .mimosa/

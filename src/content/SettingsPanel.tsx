@@ -261,5 +261,3 @@ function CloseIcon(): JSX.Element {
     </svg>
   );
 }
-
-export default SettingsPanel;

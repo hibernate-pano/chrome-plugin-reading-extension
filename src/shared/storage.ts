@@ -93,24 +93,6 @@ export async function saveSettings(settings: Partial<Settings>): Promise<void> {
 }
 
 /**
- * Get a single setting value
- */
-export async function getSetting<K extends keyof Settings>(key: K): Promise<Settings[K]> {
-  const settings = await getSettings();
-  return settings[key];
-}
-
-/**
- * Save a single setting value
- */
-export async function saveSetting<K extends keyof Settings>(
-  key: K,
-  value: Settings[K]
-): Promise<void> {
-  await saveSettings({ [key]: value });
-}
-
-/**
  * Reset all settings to defaults
  */
 export async function resetSettings(): Promise<void> {

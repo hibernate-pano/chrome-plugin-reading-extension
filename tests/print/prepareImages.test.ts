@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   resolveLazySrc,
   eagerizeImages,
+  waitForImages,
 } from '../../src/print/prepareImages';
 
 function makeImage(attrs: Record<string, string>): HTMLImageElement {
@@ -68,5 +69,180 @@ describe('eagerizeImages', () => {
     expect(a.getAttribute('loading')).toBe('eager');
     expect(b.getAttribute('loading')).toBe('eager');
     expect(b.getAttribute('decoding')).toBe('sync');
+  });
+});
+
+describe('waitForImages', () => {
+  let root: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    root = document.createElement('div');
+    document.body.appendChild(root);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * jsdom never fetches an image, so `complete` and `naturalWidth` are
+   * declared outright rather than waited for. `complete: true` with a positive
+   * `naturalWidth` is a decoded bitmap; `complete: true` with zero is the
+   * browser's way of saying it already failed.
+   */
+  function image(
+    attrs: Record<string, string>,
+    state: { complete: boolean; naturalWidth: number }
+  ): HTMLImageElement {
+    const img = document.createElement('img');
+    for (const [key, value] of Object.entries(attrs)) {
+      img.setAttribute(key, value);
+    }
+    Object.defineProperty(img, 'complete', { value: state.complete, configurable: true });
+    Object.defineProperty(img, 'naturalWidth', { value: state.naturalWidth, configurable: true });
+    root.appendChild(img);
+    return img;
+  }
+
+  function decoded(src: string): HTMLImageElement {
+    return image({ src }, { complete: true, naturalWidth: 800 });
+  }
+
+  function broken(src: string): HTMLImageElement {
+    return image({ src }, { complete: true, naturalWidth: 0 });
+  }
+
+  function pending(src: string): HTMLImageElement {
+    return image({ src }, { complete: false, naturalWidth: 0 });
+  }
+
+  it('resolves with zeroes when the page has no images at all', async () => {
+    await expect(waitForImages(root, 5000)).resolves.toEqual({ loaded: 0, failed: 0, pending: 0 });
+  });
+
+  it('counts an image that is already decoded as loaded', async () => {
+    decoded('https://example.com/a.png');
+    decoded('https://example.com/b.png');
+    vi.useFakeTimers();
+
+    const promise = waitForImages(root, 5000);
+
+    await expect(promise).resolves.toEqual({ loaded: 2, failed: 0, pending: 0 });
+    // The ceiling was cleared; nothing is left holding the page open.
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('counts an already-complete image with no bitmap as failed', async () => {
+    // A 404 leaves the element complete with nothing decoded — indistinguishable
+    // here from a success unless naturalWidth is consulted.
+    broken('https://example.com/gone.png');
+    vi.useFakeTimers();
+
+    await expect(waitForImages(root, 5000)).resolves.toEqual({ loaded: 0, failed: 1, pending: 0 });
+  });
+
+  it('counts an image with no src attribute as failed without waiting for events', async () => {
+    root.appendChild(document.createElement('img'));
+    vi.useFakeTimers();
+
+    await expect(waitForImages(root, 5000)).resolves.toEqual({ loaded: 0, failed: 1, pending: 0 });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('settles each image as its load or error event arrives', async () => {
+    const good = pending('https://example.com/good.png');
+    const bad = pending('https://example.com/bad.png');
+    vi.useFakeTimers();
+
+    const promise = waitForImages(root, 5000);
+    good.dispatchEvent(new Event('load'));
+    bad.dispatchEvent(new Event('error'));
+
+    await expect(promise).resolves.toEqual({ loaded: 1, failed: 1, pending: 0 });
+  });
+
+  it('resolves as soon as the last image reports in, without reaching for the ceiling', async () => {
+    const first = pending('https://example.com/a.png');
+    const second = pending('https://example.com/b.png');
+    vi.useFakeTimers();
+
+    const promise = waitForImages(root, 5000);
+    first.dispatchEvent(new Event('load'));
+    second.dispatchEvent(new Event('load'));
+
+    await expect(promise).resolves.toEqual({ loaded: 2, failed: 0, pending: 0 });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('keeps waiting while an image is still loading', async () => {
+    pending('https://example.com/slow.png');
+    vi.useFakeTimers();
+
+    let settled = false;
+    const promise = waitForImages(root, 5000).then((result) => {
+      settled = true;
+      return result;
+    });
+
+    vi.advanceTimersByTime(4999);
+    await Promise.resolve();
+    expect(settled, 'a print that starts before images settle yields blanks').toBe(false);
+
+    vi.advanceTimersByTime(1);
+    // The ceiling fires and the still-loading image surfaces as `pending`.
+    await expect(promise).resolves.toEqual({ loaded: 0, failed: 0, pending: 1 });
+  });
+
+  it('counts only the images that answered before the ceiling', async () => {
+    // A dead image host: the first image is already in hand, the second never
+    // answers. The ceiling resolves with what it has — and `pending` is what
+    // separates "arrived" from "never arrived" for the caller.
+    const answered = pending('https://example.com/ok.png');
+    pending('https://example.com/hang.png');
+    vi.useFakeTimers();
+
+    const promise = waitForImages(root, 5000);
+    answered.dispatchEvent(new Event('load'));
+    vi.advanceTimersByTime(5000);
+
+    const result = await promise;
+    expect(result).toEqual({ loaded: 1, failed: 0, pending: 1 });
+    // Every image lands in exactly one bucket, so the counts always sum to
+    // the number of images — no image can fall through unreported.
+    expect(result.loaded + result.failed + result.pending).toBe(2);
+  });
+
+  it('reports a never-answering image as pending, not failed', async () => {
+    pending('https://example.com/hang.png');
+    pending('https://example.com/also-hangs.png');
+    vi.useFakeTimers();
+
+    const promise = waitForImages(root, 5000);
+    vi.advanceTimersByTime(5000);
+
+    // Not counted as failed: nothing failed, it simply never arrived. But it
+    // is NOT silently dropped either — a caller reading only `failed` would
+    // otherwise print blank frames without a warning.
+    await expect(promise).resolves.toEqual({ loaded: 0, failed: 0, pending: 2 });
+  });
+
+  it('defaults the ceiling to five seconds', async () => {
+    pending('https://example.com/hang.png');
+    vi.useFakeTimers();
+
+    let settled = false;
+    const promise = waitForImages(root).then((result) => {
+      settled = true;
+      return result;
+    });
+
+    vi.advanceTimersByTime(4999);
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    vi.advanceTimersByTime(1);
+    await promise;
+    expect(settled).toBe(true);
   });
 });

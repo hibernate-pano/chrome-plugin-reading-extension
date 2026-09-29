@@ -16,17 +16,33 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     globals: true,
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'tests/**/*.property.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.ts', 'src/**/*.tsx'],
-      exclude: ['src/**/*.d.ts', 'src/**/.gitkeep'],
+      exclude: [
+        'src/**/*.d.ts',
+        'src/**/.gitkeep',
+        // Type declarations only — no runtime code to execute, so reporting
+        // 0% for it would be noise that drags the real numbers down.
+        'src/shared/types.ts',
+      ],
       thresholds: {
-        statements: 70,
-        branches: 70,
-        functions: 70,
-        lines: 70,
+        // Coverage ratchet. These are NOT aspirational targets — they are set
+        // just below the last measured value so the gate is real without
+        // failing on a single newly-uncovered line:
+        //
+        //   measured 2026-09-29 (all files, after excluding types.ts)
+        //
+        // Rounded down to whole numbers, leaving roughly 0.5pp of headroom.
+        // Raise them as coverage grows — a threshold nobody bumps is a
+        // threshold that silently rots. CI enforces these via
+        // `pnpm run test:coverage`.
+        statements: 92,
+        branches: 83,
+        functions: 93,
+        lines: 94,
       },
     },
   },

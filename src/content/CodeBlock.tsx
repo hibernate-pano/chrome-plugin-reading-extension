@@ -140,5 +140,3 @@ function CopyCheckIcon(): JSX.Element {
     </svg>
   );
 }
-
-export default CodeBlock;

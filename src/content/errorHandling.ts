@@ -294,36 +294,3 @@ export function ErrorFallback({ error, onRetry }: ErrorFallbackProps): JSX.Eleme
       )
   );
 }
-
-/**
- * Wrap an async function with error handling
- */
-export function withErrorHandling<T extends unknown[], R>(
-  fn: (...args: T) => Promise<R>,
-  context: ErrorContext = 'default'
-): (...args: T) => Promise<R | undefined> {
-  return async (...args: T): Promise<R | undefined> => {
-    try {
-      return await fn(...args);
-    } catch (error) {
-      handleError(error, context);
-      return undefined;
-    }
-  };
-}
-
-/**
- * Safe execution wrapper that catches errors
- */
-export function safeExecute<T>(
-  fn: () => T,
-  context: ErrorContext = 'default',
-  fallback?: T
-): T | undefined {
-  try {
-    return fn();
-  } catch (error) {
-    handleError(error, context);
-    return fallback;
-  }
-}

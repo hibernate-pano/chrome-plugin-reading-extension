@@ -445,5 +445,3 @@ function SettingsIcon(): JSX.Element {
     </svg>
   );
 }
-
-export default ReaderView;

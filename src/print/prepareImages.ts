@@ -82,20 +82,27 @@ export function eagerizeImages(root: HTMLElement): number {
 interface ImageWaitResult {
   loaded: number;
   failed: number;
+  /** Still unanswered when the ceiling fired — neither loaded nor failed. */
+  pending: number;
 }
 
 /**
  * Wait for every image under `root` to finish decoding.
  *
  * Resolves after `timeoutMs` no matter what — a print must remain possible
- * even when an image host is dead. Failures are counted and reported so the
+ * even when an image host is dead. Outcomes are counted and reported so the
  * toolbar can say so plainly instead of the user discovering blanks on paper.
+ *
+ * Images that never answer are reported as `pending` rather than folded into
+ * `failed`: they may still arrive, and calling them failures would misreport
+ * a slow host as a dead one. The caller must treat `pending` as a warning —
+ * counting it as success is how a dead image host ends up printing blank.
  */
 export function waitForImages(root: HTMLElement, timeoutMs = 5000): Promise<ImageWaitResult> {
   const images = Array.from(root.querySelectorAll('img'));
 
   if (images.length === 0) {
-    return Promise.resolve({ loaded: 0, failed: 0 });
+    return Promise.resolve({ loaded: 0, failed: 0, pending: 0 });
   }
 
   return new Promise((resolve) => {
@@ -104,10 +111,11 @@ export function waitForImages(root: HTMLElement, timeoutMs = 5000): Promise<Imag
     let failed = 0;
 
     const finish = () => {
-      resolve({ loaded, failed });
+      resolve({ loaded, failed, pending: images.length - settled });
     };
 
-    // Hard ceiling: stop waiting, report whatever we have.
+    // Hard ceiling: stop waiting, report whatever we have. Whatever has not
+    // answered by now is counted as pending.
     const timer = setTimeout(finish, timeoutMs);
 
     const settleOne = (ok: boolean) => {
@@ -132,8 +140,8 @@ export function waitForImages(root: HTMLElement, timeoutMs = 5000): Promise<Imag
         continue;
       }
 
-    image.addEventListener('load', () => settleOne(true), { once: true });
-    image.addEventListener('error', () => settleOne(false), { once: true });
+      image.addEventListener('load', () => settleOne(true), { once: true });
+      image.addEventListener('error', () => settleOne(false), { once: true });
     }
   });
 }

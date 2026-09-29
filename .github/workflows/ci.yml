@@ -34,22 +34,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Type check
+        run: pnpm run type-check
+
       - name: Lint
         run: pnpm run lint
 
       - name: Test
-        # Use --run (no coverage gate). Coverage is reported separately as
-        # a metric, not a build-blocking check, until coverage reaches
-        # the 70% threshold defined in vitest.config.ts.
-        run: pnpm exec vitest --run
-
-      - name: Coverage report
-        # Generates coverage/ for artifact upload and PR insights, but
-        # tolerates the < 70% threshold so legacy gaps don't block CI.
-        run: pnpm exec vitest --run --coverage || true
+        # Enforces the coverage ratchet in vitest.config.ts. No `|| true`:
+        # a coverage regression fails the build like any other test failure.
+        run: pnpm run test:coverage
 
       - name: Build
-        run: pnpm run build:prod
+        run: pnpm run build
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
@@ -67,8 +64,8 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  # Optional: verify the extension manifest is well-formed before release.
-  # Chrome MV3 manifest must declare manifest_version: 3 and reference files that exist in dist/.
+  # Verify the extension manifest is well-formed and that its version matches
+  # the repo's version of record before anything gets published.
   manifest-check:
     name: Manifest sanity check
     runs-on: ubuntu-latest
@@ -107,4 +104,46 @@ jobs:
               }
             }
             console.log("manifest references OK");
+          '
+
+      - name: Verify version consistency
+        # package.json is the version of record. public/manifest.json is what
+        # actually ships; dist/manifest.json is the copy the build produced.
+        # All three must agree, or the Chrome Web Store gets a version nobody
+        # can trace back to a commit.
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+
+            const fail = (msg) => { console.error(`version check FAILED: ${msg}`); process.exit(1); };
+
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const src = JSON.parse(fs.readFileSync(path.join("public", "manifest.json"), "utf8"));
+            const dist = JSON.parse(fs.readFileSync(path.join("dist", "manifest.json"), "utf8"));
+
+            // Chrome accepts 1-4 dot-separated integers, each 0-65535.
+            const VERSION_RE = /^\d{1,5}(\.\d{1,5}){0,3}$/;
+
+            const sources = [
+              ["package.json", pkg.version],
+              ["public/manifest.json", src.version],
+              ["dist/manifest.json", dist.version],
+            ];
+
+            for (const [label, value] of sources) {
+              if (typeof value !== "string" || !VERSION_RE.test(value)) {
+                fail(`${label} version ${JSON.stringify(value)} is not a valid Chrome extension version`);
+              }
+            }
+
+            if (src.version !== pkg.version) {
+              fail(`public/manifest.json is "${src.version}" but package.json is "${pkg.version}" - bump both together`);
+            }
+            if (dist.version !== pkg.version) {
+              fail(`dist/manifest.json is "${dist.version}" but package.json is "${pkg.version}" - dist is stale, rebuild`);
+            }
+
+            console.log(`version consistency OK: ${pkg.version}`);
           '

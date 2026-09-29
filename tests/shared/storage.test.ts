@@ -12,8 +12,6 @@ import {
   validateSettings,
   getSettings,
   saveSettings,
-  getSetting,
-  saveSetting,
   resetSettings,
 } from '../../src/shared/storage';
 import { DEFAULT_SETTINGS, SETTINGS_CONSTRAINTS, STORAGE_KEYS } from '../../src/shared/constants';
@@ -436,72 +434,6 @@ describe('saveSettings', () => {
       lineHeight: 1.4,
       pageWidth: 640,
     });
-  });
-});
-
-describe('getSetting', () => {
-  beforeEach(() => {
-    resetMockStorage();
-  });
-
-  it('returns a single field', async () => {
-    await saveSettings({ theme: 'dark', fontSize: 21, lineHeight: 1.5, pageWidth: 800 });
-
-    expect(await getSetting('theme')).toBe('dark');
-    expect(await getSetting('fontSize')).toBe(21);
-    expect(await getSetting('lineHeight')).toBe(1.5);
-    expect(await getSetting('pageWidth')).toBe(800);
-  });
-
-  it('returns the default when nothing is stored', async () => {
-    for (const key of ['theme', 'fontSize', 'lineHeight', 'pageWidth'] as const) {
-      expect(await getSetting(key)).toBe(DEFAULT_SETTINGS[key]);
-    }
-  });
-
-  it('returns a normalized value for a corrupt store', async () => {
-    await chrome.storage.local.set({ [STORAGE_KEYS.SETTINGS]: { fontSize: 9999 } });
-    expect(await getSetting('fontSize')).toBe(fontSize.max);
-  });
-});
-
-describe('saveSetting', () => {
-  beforeEach(() => {
-    resetMockStorage();
-  });
-
-  it('persists a single field and leaves the rest alone', async () => {
-    await saveSettings({ theme: 'sepia', fontSize: 21, lineHeight: 1.5, pageWidth: 800 });
-
-    await saveSetting('fontSize', 25);
-
-    expect(await getSettings()).toEqual({
-      theme: 'sepia',
-      fontSize: 25,
-      lineHeight: 1.5,
-      pageWidth: 800,
-    });
-  });
-
-  it('works on an empty store', async () => {
-    await saveSetting('theme', 'dark');
-    expect(await getSettings()).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });
-  });
-
-  it('validates the value it is given', async () => {
-    await saveSetting('fontSize', 1000);
-    expect(await getSetting('fontSize')).toBe(fontSize.max);
-
-    await saveSetting('theme', 'neon' as never);
-    expect(await getSetting('theme')).toBe(DEFAULT_SETTINGS.theme);
-  });
-
-  it('re-throws when the write fails', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(chrome.storage.local.set).mockRejectedValueOnce(new Error('quota exceeded'));
-
-    await expect(saveSetting('fontSize', 20)).rejects.toThrow('quota exceeded');
-    vi.restoreAllMocks();
   });
 });
 

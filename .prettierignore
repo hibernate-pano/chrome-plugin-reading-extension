@@ -1,0 +1,20 @@
+# Build output
+dist/
+dist-ssr/
+build/
+
+# Dependencies
+node_modules/
+
+# Test coverage
+coverage/
+
+# Agent-local state — never formatted, never committed
+.husky/_/
+.mimosa/
+.video_agent/
+
+# Lockfiles and generated bundles
+pnpm-lock.yaml
+package-lock.json
+*.zip
