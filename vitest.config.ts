@@ -34,7 +34,7 @@ export default defineConfig({
         // failing on a single newly-uncovered line:
         //
         //   measured 2026-09-29 (all files, after excluding types.ts):
-        //   statements 97.05 · branches 92.93 · functions 96.95 · lines 97.98
+        //   statements 97.04 · branches 92.65 · functions 97.13 · lines 98.27
         //
         // Rounded down to whole numbers, so each gate keeps only the sliver of
         // headroom the rounding leaves behind — never more.
@@ -43,8 +43,8 @@ export default defineConfig({
         // `pnpm run test:coverage`.
         statements: 97,
         branches: 92,
-        functions: 96,
-        lines: 97,
+        functions: 97,
+        lines: 98,
       },
     },
   },

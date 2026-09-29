@@ -11,11 +11,20 @@
 
 /* ============================================
    Page geometry
+
+   The margin is 0 because each `.p-sheet` is a complete 210x297mm page with
+   the margins built in as its own padding. That is what makes the on-screen
+   preview the printed result rather than a guess at it: one sheet, one page,
+   no re-fragmentation by the print engine to disagree with.
+
+   The consequence is that the page box must be A4 with no margin, so the sheet
+   fills it exactly. See the note on `.p-sheet` about the rounding that keeps a
+   sheet from spilling onto a second, near-blank page.
    ============================================ */
 
 @page {
   size: A4 portrait;
-  margin: 20mm 18mm;
+  margin: 0;
 }
 
 /* ============================================
@@ -38,8 +47,9 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
   line-height: 1.75;
   color: var(--p-text);
   background: var(--p-bg);
@@ -140,12 +150,20 @@ body {
   page-break-after: avoid;
 }
 
-.p-content h1 { font-size: 1.5em; }
-.p-content h2 { font-size: 1.3em; }
-.p-content h3 { font-size: 1.12em; }
+.p-content h1 {
+  font-size: 1.5em;
+}
+.p-content h2 {
+  font-size: 1.3em;
+}
+.p-content h3 {
+  font-size: 1.12em;
+}
 .p-content h4,
 .p-content h5,
-.p-content h6 { font-size: 1em; }
+.p-content h6 {
+  font-size: 1em;
+}
 
 .p-content ul,
 .p-content ol {
@@ -211,17 +229,39 @@ body {
 }
 
 /* Token colors — tuned for a light background. */
-.token-comment { color: #6a9955; font-style: italic; }
-.token-string  { color: #a31515; }
-.token-number  { color: #098658; }
-.token-keyword { color: #0000cd; font-weight: 600; }
-.token-function{ color: #795e26; }
+.token-comment {
+  color: #6a9955;
+  font-style: italic;
+}
+.token-string {
+  color: #a31515;
+}
+.token-number {
+  color: #098658;
+}
+.token-keyword {
+  color: #0000cd;
+  font-weight: 600;
+}
+.token-function {
+  color: #795e26;
+}
 
-.p-theme-sepia .token-comment { color: #6b7a4a; }
-.p-theme-sepia .token-string  { color: #9c4a2f; }
-.p-theme-sepia .token-number  { color: #4a7040; }
-.p-theme-sepia .token-keyword { color: #6b4fa0; }
-.p-theme-sepia .token-function{ color: #8a6a2a; }
+.p-theme-sepia .token-comment {
+  color: #6b7a4a;
+}
+.p-theme-sepia .token-string {
+  color: #9c4a2f;
+}
+.p-theme-sepia .token-number {
+  color: #4a7040;
+}
+.p-theme-sepia .token-keyword {
+  color: #6b4fa0;
+}
+.p-theme-sepia .token-function {
+  color: #8a6a2a;
+}
 
 /* Inline code that is not part of a block. */
 .p-content :not(pre) > code {
@@ -329,4 +369,83 @@ body {
   color: var(--p-text-muted);
   text-decoration: none;
   border: none;
+}
+
+/* ============================================
+   Paged sheets
+
+   One `.p-sheet` per printed page. The sheet owns the full A4 box and clips its
+   slice, so the print engine has nothing left to fragment: it is told where
+   the page ends rather than left to decide. That is the whole point of the
+   paginated preview — the thing on screen is the thing on paper.
+   ============================================ */
+
+@media print {
+  /* The measuring surface is a full-height copy of the article parked off to
+     the left. It is `visibility: hidden`, so nothing paints, but it is still a
+     multi-thousand-pixel box in the printed flow. Dropping it removes any
+     chance of it contributing a page of its own. The sheets are independent
+     clones, so nothing is lost. */
+  #sheet {
+    display: none;
+  }
+
+  .p-sheets {
+    display: block;
+    gap: 0;
+  }
+
+  .p-sheet {
+    /* Exactly A4. A hair under the true 297mm, because the print engine
+       rounds the page box and a sheet that lands a fraction of a millimetre
+       over produces a trailing blank page. 0.1mm is far below anything a
+       reader could see, and it is spent out of the bottom margin, never out of
+       the 257mm content box the layout was measured against. */
+    width: 210mm;
+    height: 296.9mm;
+    padding: 20mm 18mm;
+    margin: 0;
+    overflow: hidden;
+    outline: none;
+    border-radius: 0;
+    box-shadow: none;
+    /* Every sheet but the last ends a page. The last one must not, or the
+       engine starts a further, empty page after it. */
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .p-sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* The clipping box is what actually ends the page. */
+  .p-sheet__viewport {
+    position: absolute;
+    top: 20mm;
+    left: 18mm;
+    width: 174mm;
+    height: 257mm;
+    overflow: hidden;
+  }
+
+  /* Page blocks are placed at their measured offsets inside this box. */
+  .p-sheet__content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 174mm;
+  }
+
+  .p-sheet__number {
+    position: absolute;
+    left: 18mm;
+    right: 18mm;
+    bottom: 8mm;
+    text-align: center;
+    font-size: 8pt;
+  }
 }

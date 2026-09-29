@@ -1,15 +1,28 @@
 /**
  * Print Page — entry point
  *
- * Reads a one-shot payload handed over by the background script, renders it
- * at A4 width, and lets the user pick a paper theme and font size before
- * handing off to the browser's own print engine.
+ * Reads a one-shot payload handed over by the background script, renders it at
+ * A4 width, and lets the user pick a paper theme and font size before handing
+ * off to the browser's own print engine.
  *
- * There is no pagination preview here on purpose. Browsers expose no API to
- * query where a page break will fall — the engine decides at line level,
- * which JS cannot observe. Any "preview" we drew would be an estimate that
- * looks authoritative but is often wrong, which is worse than none. Chrome's
- * print dialog shows the real thing.
+ * ## Pagination
+ *
+ * The document is measured once in a 174mm column — the exact width the printer
+ * uses — and cut into real A4 sheets that are themselves what gets printed. The
+ * on-screen preview is therefore the printed result, not an estimate of it.
+ *
+ * This replaced an earlier deliberate rule that the page carried *no*
+ * pagination preview, on the grounds that browsers expose no API to query
+ * where a break will fall, so any preview would be "an estimate that looks
+ * authoritative but is often wrong". That objection was correct while the
+ * preview was advisory: we drew a guess, then handed the same document to
+ * Chrome and let it fragment again. Deciding the breaks ourselves and printing
+ * the result removes the disagreement instead of documenting it.
+ *
+ * What survives from the old rule is the underlying fact — Chrome still makes
+ * the final call, and the sheets are sized to leave it nothing to change. The
+ * measurement is taken at the real print width, and the sheet is a hair under
+ * A4 so the engine's rounding cannot tip it onto a second page.
  */
 
 import type { PrintPayload, PrintSettings, PrintImageSize } from '../shared/types';
@@ -18,24 +31,42 @@ import { getPrintSettings, savePrintSettings, DEFAULT_PRINT_SETTINGS } from '../
 import { buildDocument, buildFilename } from './buildDocument';
 import { eagerizeImages, waitForImages } from './prepareImages';
 import { markOversizedBlocks, clearBreakMarks } from './markBreaks';
+import { measureDocument, paginate, PAGE_CONTENT_HEIGHT_PX } from './paginate';
+import { renderSheets, clearSheets } from './renderSheets';
 
-import './print.css';
+// Order matters. Both files style the same selectors at the same specificity —
+// a media query adds none — so the later import wins outright. `print.css`
+// carries the `@media print` rules that make each sheet exactly one page, and
+// they are worthless if `preview.css` follows and re-declares `.p-sheet` for
+// the screen. Importing print last is what keeps the printed page a page.
 import './preview.css';
+import './print.css';
 
 const elements = {
   sheet: document.getElementById('sheet') as HTMLElement,
+  pages: document.getElementById('pages') as HTMLElement,
   title: document.getElementById('doc-title') as HTMLElement,
   status: document.getElementById('status') as HTMLElement,
   printBtn: document.getElementById('print-btn') as HTMLButtonElement,
   fontValue: document.getElementById('font-value') as HTMLElement,
   fontDown: document.getElementById('font-down') as HTMLButtonElement,
   fontUp: document.getElementById('font-up') as HTMLButtonElement,
+  pageCount: document.getElementById('page-count') as HTMLElement,
   themeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme]')),
   imgSizeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-imgsize]')),
 };
 
 let currentSettings: PrintSettings = { ...DEFAULT_PRINT_SETTINGS };
 let currentFilename = 'article.pdf';
+
+/**
+ * The rendered article (`.p-doc`), kept for re-pagination.
+ *
+ * Deliberately *not* `elements.sheet`: that element is the measuring container
+ * and carries the `sheet` presentation class, so cloning it would put a second
+ * bordered, padded sheet inside every page.
+ */
+let contentDoc: HTMLElement | null = null;
 
 function setStatus(message: string): void {
   elements.status.classList.remove('status--hidden');
@@ -50,6 +81,10 @@ function clearStatus(): void {
 function showPlaceholder(title: string, detail: string): void {
   document.querySelector('.toolbar')?.remove();
   clearStatus();
+  // The empty state replaces the whole preview area, so any sheets from a
+  // previous payload must go with it — a stale page count next to "no content"
+  // reads as a bug rather than an empty state.
+  clearSheets(elements.pages);
 
   const placeholder = document.createElement('div');
   placeholder.className = 'placeholder';
@@ -78,6 +113,27 @@ function currentFontIndex(): number {
   );
 }
 
+/**
+ * Apply the theme and image-size classes to a set of sheet elements.
+ *
+ * The image size is load-bearing for the preview, not just cosmetic: it caps
+ * image height in `print.css`, so a sheet missing the class renders images up to
+ * twice as tall as the one the layout was measured with — the page boundary
+ * would then cut straight through a picture. Both `applySettings` (for a change
+ * that does not reflow the text) and `repaginate` (for a full re-cut) go
+ * through here, because the sheets are rebuilt from scratch on every cut and
+ * whatever the previous set carried is gone.
+ */
+function applySheetClasses(sheets: Iterable<HTMLElement>): void {
+  for (const sheet of sheets) {
+    sheet.classList.toggle('p-sheet--light', currentSettings.theme === 'light');
+    sheet.classList.toggle('p-sheet--sepia', currentSettings.theme === 'sepia');
+    sheet.classList.toggle('p-imgsize-large', currentSettings.imageSize === 'large');
+    sheet.classList.toggle('p-imgsize-medium', currentSettings.imageSize === 'medium');
+    sheet.classList.toggle('p-imgsize-small', currentSettings.imageSize === 'small');
+  }
+}
+
 function applySettings(): void {
   document.documentElement.style.setProperty('--print-font-size', `${currentSettings.fontSize}pt`);
 
@@ -86,6 +142,8 @@ function applySettings(): void {
   elements.sheet.classList.toggle('p-imgsize-large', currentSettings.imageSize === 'large');
   elements.sheet.classList.toggle('p-imgsize-medium', currentSettings.imageSize === 'medium');
   elements.sheet.classList.toggle('p-imgsize-small', currentSettings.imageSize === 'small');
+
+  applySheetClasses(elements.pages.children as Iterable<HTMLElement>);
 
   for (const button of elements.themeButtons) {
     button.setAttribute('aria-pressed', String(button.dataset.theme === currentSettings.theme));
@@ -152,6 +210,25 @@ let remarkTimer: ReturnType<typeof setTimeout> | null = null;
 function remarkOversizedBlocks(): void {
   clearBreakMarks(elements.sheet);
   markOversizedBlocks(elements.sheet);
+  repaginate();
+}
+
+/**
+ * Re-cut the document into pages from the current layout.
+ *
+ * Runs after anything that reflows the column: a font-size step, an image-size
+ * step, or images finally resolving. Every offset the last cut was based on is
+ * stale after any of those, and a stale cut does not fail loudly — it just
+ * shows the reader pages that no longer match the text on them.
+ */
+function repaginate(): void {
+  if (!contentDoc) return;
+  const layout = measureDocument(contentDoc);
+  const starts = paginate(layout.candidates, PAGE_CONTENT_HEIGHT_PX, layout.height);
+  const sheets = renderSheets(layout.blocks, starts, elements.pages, layout.height);
+  applySheetClasses(sheets);
+
+  elements.pageCount.textContent = starts.length === 1 ? '共 1 页' : `共 ${starts.length} 页`;
 }
 
 function scheduleRemarking(): void {
@@ -252,6 +329,7 @@ async function main(): Promise<void> {
 
   const doc = buildDocument(payload);
   eagerizeImages(doc);
+  contentDoc = doc;
   elements.sheet.replaceChildren(doc);
 
   applySettings();
@@ -262,8 +340,10 @@ async function main(): Promise<void> {
   const result = await waitForImages(elements.sheet, 5000);
 
   // Image heights changed the layout; now re-measure and let oversized code
-  // blocks and tables break across pages instead of stranding blank space.
+  // blocks and tables break across pages instead of stranding blank space,
+  // then cut the document into pages from that final measurement.
   markOversizedBlocks(elements.sheet);
+  repaginate();
 
   // Report only what went wrong. A clean sweep says nothing — announcing
   // "N images loaded" is noise on a page the user never asked about. But an

@@ -45,10 +45,23 @@ fastest way to orient yourself.
      afterwards races the hand-off.
    - The print page runs **no** article scripts and accepts source links only
      when they are `http(s)`.
-   - There is deliberately **no pagination preview**. Browsers expose no API to
-     query where a page break falls, so any preview would be an estimate that
-     looks authoritative and is often wrong. Chrome's print dialog shows the
-     real thing.
+   - There **is** a pagination preview, and it is the output rather than a
+     prediction of it. The document is measured once in a 174mm column, cut into
+     real A4 sheets, and those sheets are what `@media print` emits — one sheet,
+     one page. This replaced an earlier rule against previewing, which was right
+     _while the preview was advisory_: we drew a guess, then handed the same
+     document to Chrome and let it fragment again, so the two could never be
+     made to agree. Deciding the breaks ourselves removes the disagreement.
+     See `src/print/paginate.ts` (pure `paginate`, DOM `measureDocument`) and
+     `src/print/renderSheets.ts` (place-and-clip, per block).
+   - A page shows `[start_k, start_{k+1})`, **not** a fixed-height window. The
+     two are different, and using the window prints the gap between them twice.
+   - Only the blocks intersecting a page are copied onto it. Cloning the whole
+     article per page costs a full document copy per page: 58,000 DOM nodes on a
+     60-page article, against ~1,000 this way.
+   - `preview.css` must be imported **before** `print.css`. Equal specificity
+     means the later file wins outright, and a media query adds none — reversed,
+     the screen rules silently override every `@media print` rule.
 
 ### Storage
 
@@ -117,8 +130,10 @@ src/
 │   ├── buildDocument.ts  #   sanitized document + filename construction
 │   ├── prepareImages.ts  #   lazy-image backfill, decode wait, height clamping
 │   ├── markBreaks.ts     #   page-break policy for code blocks / tall blocks
-│   ├── print.css         #   @media print rules
-│   └── preview.css       #   on-screen preview chrome (toolbar, sheet)
+│   ├── paginate.ts       #   measure the laid-out doc; pure break decision
+│   ├── renderSheets.ts   #   cut pages into A4 sheets (place + clip per block)
+│   ├── print.css         #   @media print rules — import LAST, it wins ties
+│   └── preview.css       #   on-screen chrome (toolbar, page stack, sheets)
 ├── shared/               # Imported by every surface
 │   ├── types.ts          #   Type-only; excluded from coverage on purpose
 │   ├── constants.ts      #   STORAGE_KEYS, MESSAGE_TYPES, A4 geometry, limits
@@ -140,7 +155,8 @@ tests/                    # Flat, mirroring src/ — no unit/integration/e2e spl
 ├── background/messageRouting.test.ts
 ├── content/{CodeBlock,ReaderView,SettingsPanel,errorHandling,
 │            exportHandoff,messageHandling}.test.tsx|.ts
-├── print/{buildDocument,main,markBreaks,prepareImages,printSettings}.test.ts
+├── print/{buildDocument,main,markBreaks,paginate,prepareImages,
+│          printSettings,renderSheets}.test.ts
 └── shared/{codeHighlight,history,printSettings,readerThemes,sanitize,storage}.test.ts
 
 public/                   # Copied to dist/ by the build; manifest lives here
