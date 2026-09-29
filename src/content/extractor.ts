@@ -15,6 +15,19 @@ import { sanitizeArticleHtml } from '../shared/sanitize';
 const contentCache = new Map<string, ExtractedContent>();
 
 /**
+ * Whether sanitized article markup still carries readable text.
+ *
+ * Counts the text a reader would actually see, ignoring leftover empty
+ * elements. A `<div></div>` left behind by the sanitizer is markup without
+ * content; `<p>Short</p>` is a short article. Both are "non-empty html", but
+ * only one is worth opening.
+ */
+function hasVisibleText(html: string): boolean {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return (doc.body.textContent ?? '').trim().length > 0;
+}
+
+/**
  * Calculate word count from text content
  */
 function countWords(text: string): number {
@@ -114,20 +127,30 @@ export function extractContent(
       };
     }
 
-    if (!article.content || article.content.trim().length < 50) {
-      return {
-        success: false,
-        error: 'Extracted content is too short or empty',
-      };
-    }
-
     // Readability output is page-controlled, and this string is later handed
     // to the reader view via dangerouslySetInnerHTML and to the print page —
     // so sanitize it once, here, before it is cached or returned. This also
     // replaces the old stripInlineStyles pass: the sanitizer drops `style`
     // outright, so our reader CSS keeps full control of the layout.
     const cleanContent = sanitizeArticleHtml(article.content);
-    
+
+    // Gate on the SANITIZED content, and on its TEXT rather than its markup.
+    //
+    // The old gate measured the raw html, where Readability's own wrapper
+    // (`<div id="readability-page-1" class="page">`, ~47 chars) was most of
+    // what it counted — so a one-word page cleared it for the wrong reason. The
+    // same flaw let a page whose content lives entirely inside a <form> or an
+    // inline <style> clear the gate and then sanitize down to nothing: a reader
+    // that renders blank and reports success. Text-based gating separates the
+    // two cases honestly — leftover empty markup carries no text, a short
+    // article does.
+    if (!hasVisibleText(cleanContent)) {
+      return {
+        success: false,
+        error: 'Extracted content is too short or empty',
+      };
+    }
+
     // Build extracted content object
     const textContent = article.textContent ?? '';
     const wordCount = countWords(textContent);
