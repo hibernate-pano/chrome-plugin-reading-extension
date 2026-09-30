@@ -92,7 +92,14 @@ export function renderSheets(
     viewport.style.height = `${sliceHeight}px`;
 
     const slice = document.createElement('div');
-    slice.className = PAGE_CLONE_CLASS;
+    // The slice must reproduce the measurement document's *styling context*,
+    // not just its geometry. Block styles are scoped under `.p-doc` /
+    // `.p-content` — image caps, heading sizes, paragraph spacing — and a
+    // clone lifted out of those ancestors loses every one of them: images
+    // render at natural size and run over the next block, headings fall back
+    // to user-agent defaults. Carrying the same two classes restores the
+    // cascade, so what was measured is what gets drawn.
+    slice.className = `${PAGE_CLONE_CLASS} p-doc p-content`;
 
     for (const block of blocks) {
       // A block is on this page if any part of it falls inside the slice. The

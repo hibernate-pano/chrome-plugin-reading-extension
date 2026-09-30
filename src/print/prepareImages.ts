@@ -83,7 +83,7 @@ export function eagerizeImages(root: HTMLElement): number {
   return repaired;
 }
 
-interface ImageWaitResult {
+export interface ImageWaitResult {
   loaded: number;
   failed: number;
   /** Still unanswered when the ceiling fired — neither loaded nor failed. */

@@ -657,6 +657,60 @@ describe('print page · image size', () => {
     expect(sheet().classList.contains('p-imgsize-large')).toBe(true);
     expect(local.set, 'an unrecognised size must not be persisted').not.toHaveBeenCalled();
   });
+
+  it('presses 无图, swaps the class and persists it like any other level', async () => {
+    await boot({ payload: payload() });
+
+    imgSizeButton('none')?.click();
+    await flush();
+
+    expect(pressedIn('[data-imgsize]')).toEqual(['none']);
+    expect(sheet().classList.contains('p-imgsize-none')).toBe(true);
+    expect(persisted()?.imageSize).toBe('none');
+  });
+
+  it('boots into 无图 without waiting for images at all', async () => {
+    // 无图 keeps images out of the layout, so a dead image host must not hold
+    // a text-only printout hostage for the five-second ceiling.
+    await boot({
+      payload: payload(),
+      storedSettings: { theme: 'light', fontSize: 11, imageSize: 'none' },
+    });
+
+    expect(mocks.waitForImages).not.toHaveBeenCalled();
+    expect(sheet().classList.contains('p-imgsize-none')).toBe(true);
+    expect(printButton().disabled).toBe(false);
+    expect(remarkCount()).toBe(1);
+  });
+
+  it('waits for images again before re-measuring when leaving 无图', async () => {
+    await boot({
+      payload: payload(),
+      storedSettings: { theme: 'light', fontSize: 11, imageSize: 'none' },
+    });
+    expect(mocks.waitForImages).not.toHaveBeenCalled();
+    const remarksAtBoot = remarkCount();
+
+    // Drive the wait by hand: the re-measure must not fire while the bitmaps
+    // that move the layout are still in flight.
+    let release!: (result: { loaded: number; failed: number }) => void;
+    mocks.waitForImages.mockReturnValue(new Promise((resolve_) => { release = resolve_; }));
+    vi.useFakeTimers();
+
+    imgSizeButton('small')?.click();
+    await flushMicrotasks();
+
+    expect(mocks.waitForImages).toHaveBeenCalledWith(sheet(), 5000);
+    expect(statusEl().textContent).toBe('正在加载图片…');
+    expect(remarkCount(), 'no re-cut before images settle').toBe(remarksAtBoot);
+
+    release({ loaded: 1, failed: 0 });
+    await flushMicrotasks();
+    vi.advanceTimersByTime(120);
+
+    expect(remarkCount()).toBe(remarksAtBoot + 1);
+    expect(sheet().classList.contains('p-imgsize-small')).toBe(true);
+  });
 });
 
 describe('print page · print button', () => {

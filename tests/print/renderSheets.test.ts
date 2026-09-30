@@ -85,6 +85,20 @@ describe('renderSheets', () => {
     expect(blockTops(sheets[2])).toEqual(['800']);
   });
 
+  it('carries the measurement document\'s styling context on every slice', () => {
+    // Block styles are scoped under `.p-doc` / `.p-content` — image caps,
+    // heading sizes, paragraph spacing. A slice without those classes lifts
+    // every clone out of the cascade, and the sheet then draws images at
+    // natural size and headings at user-agent defaults: taller than the
+    // measurement recorded, so each one runs over the block below it.
+    const sheets = renderSheets(blocks, [0, 500], container, 1500);
+    for (const sheet of sheets) {
+      const slice = sheet.querySelector(`.${PAGE_CLONE_CLASS}`);
+      expect(slice?.classList.contains('p-doc'), 'document shell styles').toBe(true);
+      expect(slice?.classList.contains('p-content'), 'body typography scope').toBe(true);
+    }
+  });
+
   it('records each block offset relative to its own page', () => {
     const sheets = renderSheets(blocks, [0, 500], container, 1500);
     const children = Array.from(sheets[1]?.querySelectorAll(`.${PAGE_CLONE_CLASS} > *`) ?? []);

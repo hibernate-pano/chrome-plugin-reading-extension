@@ -29,7 +29,7 @@ import type { PrintPayload, PrintSettings, PrintImageSize } from '../shared/type
 import { PRINT_FONT_SIZES, STORAGE_KEYS } from '../shared/constants';
 import { getPrintSettings, savePrintSettings, DEFAULT_PRINT_SETTINGS } from '../shared/printSettings';
 import { buildDocument, buildFilename } from './buildDocument';
-import { eagerizeImages, waitForImages } from './prepareImages';
+import { eagerizeImages, waitForImages, type ImageWaitResult } from './prepareImages';
 import { markOversizedBlocks, clearBreakMarks } from './markBreaks';
 import { measureDocument, paginate, PAGE_CONTENT_HEIGHT_PX } from './paginate';
 import { renderSheets, clearSheets } from './renderSheets';
@@ -131,6 +131,7 @@ function applySheetClasses(sheets: Iterable<HTMLElement>): void {
     sheet.classList.toggle('p-imgsize-large', currentSettings.imageSize === 'large');
     sheet.classList.toggle('p-imgsize-medium', currentSettings.imageSize === 'medium');
     sheet.classList.toggle('p-imgsize-small', currentSettings.imageSize === 'small');
+    sheet.classList.toggle('p-imgsize-none', currentSettings.imageSize === 'none');
   }
 }
 
@@ -142,6 +143,7 @@ function applySettings(): void {
   elements.sheet.classList.toggle('p-imgsize-large', currentSettings.imageSize === 'large');
   elements.sheet.classList.toggle('p-imgsize-medium', currentSettings.imageSize === 'medium');
   elements.sheet.classList.toggle('p-imgsize-small', currentSettings.imageSize === 'small');
+  elements.sheet.classList.toggle('p-imgsize-none', currentSettings.imageSize === 'none');
 
   applySheetClasses(elements.pages.children as Iterable<HTMLElement>);
 
@@ -179,13 +181,24 @@ function setTheme(theme: PrintSettings['theme']): void {
   void savePrintSettings({ theme });
 }
 
-const IMAGE_SIZES: readonly PrintImageSize[] = ['large', 'medium', 'small'];
+const IMAGE_SIZES: readonly PrintImageSize[] = ['large', 'medium', 'small', 'none'];
 
-function setImageSize(size: PrintImageSize): void {
+async function setImageSize(size: PrintImageSize): Promise<void> {
   if (size === currentSettings.imageSize) return;
+  // 无图 keeps images out of the layout entirely, so boot skipped waiting for
+  // them. Leaving 无图 puts them back into the flow — measuring before their
+  // bitmaps land would cut pages around empty frames and print the wrong
+  // document the moment they arrive.
+  const leavingImageless = currentSettings.imageSize === 'none' && size !== 'none';
   currentSettings.imageSize = size;
   applySettings();
   void savePrintSettings({ imageSize: size });
+
+  if (leavingImageless) {
+    setStatus('正在加载图片…');
+    const result = await waitForImages(elements.sheet, 5000);
+    reportImageProblems(result);
+  }
   scheduleRemarking();
 }
 
@@ -236,6 +249,27 @@ function scheduleRemarking(): void {
   remarkTimer = setTimeout(remarkOversizedBlocks, 120);
 }
 
+/**
+ * Turn an image wait into the one status line the reader needs.
+ *
+ * Report only what went wrong. A clean sweep says nothing — announcing
+ * "N images loaded" is noise on a page the user never asked about. But an
+ * image that never answered is `pending`, and staying silent about it is
+ * how a dead image host ends up printing blank frames.
+ */
+function reportImageProblems(result: ImageWaitResult): void {
+  const problems: string[] = [];
+  if (result.failed > 0) problems.push(`${result.failed} 张未能加载（可能是防盗链或已失效）`);
+  if (result.pending > 0) problems.push(`${result.pending} 张仍在加载（图片服务器可能无响应）`);
+
+  if (problems.length > 0) {
+    const loaded = result.loaded > 0 ? `${result.loaded} 张图片已加载，` : '';
+    setStatus(`${loaded}${problems.join('，')}。仍可继续打印。`);
+  } else {
+    clearStatus();
+  }
+}
+
 function wireToolbar(): void {
   for (const button of elements.themeButtons) {
     button.addEventListener('click', () => {
@@ -248,7 +282,7 @@ function wireToolbar(): void {
     button.addEventListener('click', () => {
       const size = button.dataset.imgsize;
       if (size && IMAGE_SIZES.includes(size as PrintImageSize)) {
-        setImageSize(size as PrintImageSize);
+        void setImageSize(size as PrintImageSize);
       }
     });
   }
@@ -336,29 +370,19 @@ async function main(): Promise<void> {
   wireToolbar();
 
   // Hold the print button until images settle — printing early yields blanks.
-  setStatus('正在加载图片…');
-  const result = await waitForImages(elements.sheet, 5000);
+  // 无图 keeps images out of the layout entirely, so there is nothing to wait
+  // for and a dead image host must not delay a text-only printout.
+  if (currentSettings.imageSize !== 'none') {
+    setStatus('正在加载图片…');
+    const result = await waitForImages(elements.sheet, 5000);
+    reportImageProblems(result);
+  }
 
   // Image heights changed the layout; now re-measure and let oversized code
   // blocks and tables break across pages instead of stranding blank space,
   // then cut the document into pages from that final measurement.
   markOversizedBlocks(elements.sheet);
   repaginate();
-
-  // Report only what went wrong. A clean sweep says nothing — announcing
-  // "N images loaded" is noise on a page the user never asked about. But an
-  // image that never answered is `pending`, and staying silent about it is
-  // how a dead image host ends up printing blank frames.
-  const problems: string[] = [];
-  if (result.failed > 0) problems.push(`${result.failed} 张未能加载（可能是防盗链或已失效）`);
-  if (result.pending > 0) problems.push(`${result.pending} 张仍在加载（图片服务器可能无响应）`);
-
-  if (problems.length > 0) {
-    const loaded = result.loaded > 0 ? `${result.loaded} 张图片已加载，` : '';
-    setStatus(`${loaded}${problems.join('，')}。仍可继续打印。`);
-  } else {
-    clearStatus();
-  }
 
   elements.printBtn.disabled = false;
   elements.printBtn.focus();

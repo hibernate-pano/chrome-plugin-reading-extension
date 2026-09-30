@@ -10,7 +10,7 @@ import type { PrintSettings, PrintTheme, PrintImageSize } from './types';
 import { PRINT_FONT_SIZES, STORAGE_KEYS } from './constants';
 
 const VALID_THEMES: readonly PrintTheme[] = ['light', 'sepia'];
-const VALID_IMAGE_SIZES: readonly PrintImageSize[] = ['large', 'medium', 'small'];
+const VALID_IMAGE_SIZES: readonly PrintImageSize[] = ['large', 'medium', 'small', 'none'];
 
 export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   theme: 'light',

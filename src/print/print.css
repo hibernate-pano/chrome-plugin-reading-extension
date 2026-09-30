@@ -308,6 +308,18 @@ body {
   max-height: 75mm;
 }
 
+/* 无图 drops images and their captions entirely: a caption without its
+   picture is an orphan, and merely hiding the image would leave an empty
+   figure spending its margins on a hole in the text. `:has` keeps any
+   figure that carries other content alive. */
+.p-imgsize-none .p-content img {
+  display: none;
+}
+
+.p-imgsize-none .p-content figure:has(img) {
+  display: none;
+}
+
 .p-caption {
   margin-top: 2mm;
   font-size: 0.82em;

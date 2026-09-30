@@ -18,7 +18,7 @@ describe('validatePrintSettings', () => {
   });
 
   it('keeps a valid image size', () => {
-    for (const size of ['large', 'medium', 'small'] as const) {
+    for (const size of ['large', 'medium', 'small', 'none'] as const) {
       expect(validatePrintSettings({ imageSize: size }).imageSize).toBe(size);
     }
   });
