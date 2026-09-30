@@ -149,13 +149,22 @@ describe('showToast', () => {
     expect(toast.classList.contains('reader-toast--error')).toBe(type === 'error');
   });
 
-  it('colors errors differently from the other types', () => {
+  it('gives every type one snackbar surface and separates them by icon colour', () => {
+    // Material snackbars are a single inverse surface; the type reads through
+    // the leading glyph, and both the surface and the glyph colours live in
+    // the injected host stylesheet. Inline style is therefore deliberately
+    // empty, and the difference has to be asserted in the sheet — which also
+    // proves the sheet arrived with its real content, not an empty string.
     showToast({ type: 'error', message: 'e' });
     showToast({ type: 'success', message: 's' });
 
     const [errorToast, successToast] = toasts();
-    expect(errorToast.style.backgroundColor).not.toBe(successToast.style.backgroundColor);
-    expect(errorToast.style.backgroundColor).toBe('rgb(254, 226, 226)');
+    expect(errorToast.style.backgroundColor).toBe('');
+    expect(successToast.style.backgroundColor).toBe('');
+
+    const sheet = document.getElementById(STYLE_ID)?.textContent ?? '';
+    expect(sheet).toMatch(/\.reader-toast--error \.reader-toast__icon\s*{[^}]*#f28b82/);
+    expect(sheet).toMatch(/\.reader-toast--success \.reader-toast__icon\s*{[^}]*#81c995/);
   });
 
   it('appends multiple toasts side by side', () => {

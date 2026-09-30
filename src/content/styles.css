@@ -1,6 +1,25 @@
 /**
- * Reading Mode Styles — Clean Reader v3
- * Injected into Shadow DOM for complete CSS isolation from the host page
+ * Folio — reader overlay styles
+ *
+ * Injected into a Shadow DOM for complete CSS isolation from the host page.
+ *
+ * ## The design system this file speaks
+ *
+ * Colour, type, shape, elevation and motion come from Google's own product
+ * language — Google Blue 600, the Google Grey scale, the Google Sans/Roboto
+ * stack, the 8dp grid, Google's three elevation levels and Material's motion
+ * easings — so the reader sits inside Chrome rather than on top of it.
+ *
+ * Two rules keep that from decaying into "a different set of hand-picked
+ * values":
+ *
+ * 1. Nothing picks a raw colour. Every surface, line and hover state resolves
+ *    through a `--md-*` role token, and a theme change rewrites the role
+ *    values rather than re-styling components.
+ * 2. Interaction is expressed with state layers (a wash of the control's own
+ *    colour at 8% on hover, 10% on press), never with movement. The scale/
+ *    lift animations this replaces were the clearest "web page" tell in the
+ *    previous design.
  */
 
 /* ============================================
@@ -23,62 +42,290 @@
 }
 
 /* ============================================
-   CSS Variables & Theme System
+   Design tokens
+
+   These live on `.reader-overlay`, NOT on `:root`. The stylesheet is adopted
+   into the shadow root, where `:root` matches nothing — every token on it was
+   dead, and each `var()` that read one fell back to the property's *initial*
+   value: Times for fonts, 0 for radii, no motion at all. Scoping the block to
+   the overlay puts the tokens on the one element every surface inherits from;
+   the theme classes below then override the coloured ones on the same element.
    ============================================ */
 
-:root {
-  /* Light Theme (default) — warm, easy on the eyes */
-  --reader-bg: #faf9f7;
-  --reader-text: #2c2b28;
-  --reader-text-muted: #8a8680;
-  --reader-accent: #1a56db;
-  --reader-border: #e8e4dc;
-  --reader-code-bg: #f2ede6;
-  --reader-selection: rgba(26, 86, 219, 0.12);
-  --reader-focus-ring: #1a56db;
-  --reader-focus-ring-offset: 2px;
-  --reader-shadow: rgba(0, 0, 0, 0.06);
-  --reader-overlay-bg: rgba(250, 249, 247, 0.97);
+.reader-overlay {
+  /* --- Typography ---
+     Google Sans ships with Chrome-adjacent Google apps but is not something
+     an extension can download, so the stack falls through Roboto to the
+     platform UI font. Chinese text needs its own tail: a page rendered in
+     Latin looks right and its CJK fallback still looks like a default. */
+  --font-ui:
+    'Google Sans', 'Google Sans Text', 'Product Sans', Roboto, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', Arial,
+    sans-serif;
+  --font-mono: 'Roboto Mono', 'SF Mono', 'Fira Code', Menlo, Consolas, 'Liberation Mono', monospace;
+  /* The reading column keeps a serif. Controls are chrome and speak Google
+     Sans; the article is the content, and a reader whose body text is the
+     same sans as its buttons has no voice of its own. */
+  --font-reading: ui-serif, Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif;
+
+  /* --- Shape: the Material corner scale --- */
+  --shape-xs: 4px;
+  --shape-sm: 8px;
+  --shape-md: 12px;
+  --shape-lg: 16px;
+  --shape-xl: 24px;
+  --shape-full: 999px;
+
+  /* --- Motion: Material's standard and emphasized easings --- */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-short: 150ms;
+  --duration-medium: 250ms;
+  --duration-long: 350ms;
+
+  /* --- Control metrics --- */
+  --icon-btn-size: 40px;
+  --icon-size: 20px;
+  --panel-width: 336px;
+
+  /* --- Default light palette (overridden per theme) --- */
+  --reader-bg: #ffffff;
+  --reader-text: #202124;
+  --reader-text-muted: #5f6368;
+  --reader-accent: #1a73e8;
+  --reader-border: #dadce0;
+  --reader-code-bg: #f8f9fa;
+  --reader-selection: rgba(26, 115, 232, 0.18);
+  --reader-font-size: 19px;
+  --reader-line-height: 1.75;
+  --reader-page-width: 680px;
+
+  --md-surface: #ffffff;
+  --md-surface-container: #f8f9fa;
+  --md-surface-container-high: #f1f3f4;
+  --md-surface-container-highest: #e8eaed;
+  --md-on-surface: #202124;
+  --md-on-surface-variant: #5f6368;
+  --md-outline: #dadce0;
+  --md-outline-variant: #e8eaed;
+  --md-primary: #1a73e8;
+  --md-primary-hover: #1967d2;
+  --md-primary-container: #e8f0fe;
+  --md-on-primary-container: #174ea6;
+  --md-on-primary: #ffffff;
+  --md-error: #d93025;
+  --md-error-container: #fce8e6;
+  --md-success: #188038;
+  --md-success-container: #e6f4ea;
+  --md-state-press: rgba(60, 64, 67, 0.14);
+  --md-state-hover: rgba(60, 64, 67, 0.08);
+  --md-track: #dadce0;
+  --md-code-header: #f1f3f4;
+  --md-inverse-surface: #323130;
+  --md-inverse-on-surface: #ffffff;
+  --md-shadow-1: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --md-shadow-2: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+  --md-shadow-3: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+
+  /* Syntax colours: Google Codey's light palette. */
+  --code-keyword: #a626a4;
+  --code-string: #0b8043;
+  --code-comment: #5f6368;
+  --code-number: #b06000;
+  --code-function: #1a73e8;
+  --code-operator: #5f6368;
 }
 
 /* ============================================
-   Theme Variants
+   Theme variants
    ============================================ */
 
 .reader-theme-light {
-  --reader-bg: #faf9f7;
-  --reader-text: #2c2b28;
-  --reader-text-muted: #8a8680;
-  --reader-accent: #1a56db;
-  --reader-border: #e8e4dc;
-  --reader-code-bg: #f2ede6;
-  --reader-selection: rgba(26, 86, 219, 0.12);
-  --reader-shadow: rgba(0, 0, 0, 0.06);
-  --reader-overlay-bg: rgba(250, 249, 247, 0.97);
+  --reader-bg: #ffffff;
+  --reader-text: #202124;
+  --reader-text-muted: #5f6368;
+  --reader-accent: #1a73e8;
+  --reader-border: #dadce0;
+  --reader-code-bg: #f8f9fa;
+  --reader-selection: rgba(26, 115, 232, 0.18);
+  --md-surface: #ffffff;
+  --md-surface-container: #f8f9fa;
+  --md-surface-container-high: #f1f3f4;
+  --md-surface-container-highest: #e8eaed;
+  --md-on-surface: #202124;
+  --md-on-surface-variant: #5f6368;
+  --md-outline: #dadce0;
+  --md-outline-variant: #e8eaed;
+  --md-primary: #1a73e8;
+  --md-primary-hover: #1967d2;
+  --md-primary-container: #e8f0fe;
+  --md-on-primary-container: #174ea6;
+  --md-on-primary: #ffffff;
+  --md-error: #c5221f;
+  --md-error-container: #fce8e6;
+  --md-success: #137333;
+  --md-success-container: #e6f4ea;
+  --md-state-press: rgba(60, 64, 67, 0.14);
+  --md-state-hover: rgba(60, 64, 67, 0.08);
+  --md-track: #dadce0;
+  --md-code-header: #f1f3f4;
+  --md-inverse-surface: #323130;
+  --md-inverse-on-surface: #ffffff;
+  --md-shadow-1: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --md-shadow-2: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+  --md-shadow-3: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
 }
 
 .reader-theme-dark {
-  --reader-bg: #1c1b1a;
-  --reader-text: #e6e4df;
-  --reader-text-muted: #7a7872;
+  --reader-bg: #202124;
+  --reader-text: #e8eaed;
+  --reader-text-muted: #9aa0a6;
   --reader-accent: #8ab4f8;
-  --reader-border: #2d2d2b;
-  --reader-code-bg: #252423;
-  --reader-selection: rgba(138, 180, 248, 0.18);
-  --reader-shadow: rgba(0, 0, 0, 0.3);
-  --reader-overlay-bg: rgba(28, 27, 26, 0.98);
+  --reader-border: #3c4043;
+  --reader-code-bg: #292a2d;
+  --reader-selection: rgba(138, 180, 248, 0.24);
+  --md-surface: #202124;
+  --md-surface-container: #292a2d;
+  --md-surface-container-high: #303134;
+  --md-surface-container-highest: #3c4043;
+  --md-on-surface: #e8eaed;
+  --md-on-surface-variant: #9aa0a6;
+  --md-outline: #3c4043;
+  --md-outline-variant: #3c4043;
+  --md-primary: #8ab4f8;
+  --md-primary-hover: #aecbfa;
+  --md-primary-container: #284777;
+  --md-on-primary-container: #d2e3fc;
+  --md-on-primary: #0b2c57;
+  --md-error: #f28b82;
+  --md-error-container: #5c2b26;
+  --md-success: #81c995;
+  --md-success-container: #1e3a28;
+  --md-state-press: rgba(232, 234, 237, 0.16);
+  --md-state-hover: rgba(232, 234, 237, 0.1);
+  --md-track: #5f6368;
+  --md-code-header: #303134;
+  --md-inverse-surface: #e8eaed;
+  --md-inverse-on-surface: #202124;
+  --md-shadow-1: 0 1px 2px 0 rgba(0, 0, 0, 0.6), 0 1px 3px 1px rgba(0, 0, 0, 0.3);
+  --md-shadow-2: 0 1px 2px 0 rgba(0, 0, 0, 0.6), 0 2px 6px 2px rgba(0, 0, 0, 0.3);
+  --md-shadow-3: 0 1px 3px 0 rgba(0, 0, 0, 0.6), 0 4px 8px 3px rgba(0, 0, 0, 0.3);
+  --code-keyword: #c58af9;
+  --code-string: #81c995;
+  --code-comment: #9aa0a6;
+  --code-number: #f5bf55;
+  --code-function: #8ab4f8;
+  --code-operator: #bdc1c6;
 }
 
 .reader-theme-sepia {
-  --reader-bg: #f5eed6;
-  --reader-text: #433422;
-  --reader-text-muted: #8a7560;
-  --reader-accent: #7a5c2e;
-  --reader-border: #d4c9a8;
-  --reader-code-bg: #ede6cc;
-  --reader-selection: rgba(122, 92, 46, 0.15);
-  --reader-shadow: rgba(0, 0, 0, 0.06);
-  --reader-overlay-bg: rgba(245, 238, 214, 0.97);
+  --reader-bg: #f8f2e7;
+  --reader-text: #3d3529;
+  --reader-text-muted: #776c59;
+  --reader-accent: #175fcc;
+  --reader-border: #e5dac5;
+  --reader-code-bg: #f2ebdc;
+  --reader-selection: rgba(23, 95, 204, 0.16);
+  --md-surface: #f8f2e7;
+  --md-surface-container: #f3ecdd;
+  --md-surface-container-high: #ece2cd;
+  --md-surface-container-highest: #e2d6bd;
+  --md-on-surface: #3d3529;
+  --md-on-surface-variant: #776c59;
+  --md-outline: #e5dac5;
+  --md-outline-variant: #e5dac5;
+  --md-primary: #175fcc;
+  --md-primary-hover: #12509f;
+  --md-primary-container: #e3ebf8;
+  --md-on-primary-container: #12407f;
+  --md-on-primary: #ffffff;
+  --md-error: #b3261e;
+  --md-error-container: #f8e3e0;
+  --md-success: #17683a;
+  --md-success-container: #e2eee6;
+  --md-state-press: rgba(61, 53, 41, 0.14);
+  --md-state-hover: rgba(61, 53, 41, 0.08);
+  --md-track: #d9cbb0;
+  --md-code-header: #ece2cd;
+  --md-inverse-surface: #3d3529;
+  --md-inverse-on-surface: #f8f2e7;
+  --md-shadow-1: 0 1px 2px 0 rgba(61, 53, 41, 0.16), 0 1px 3px 1px rgba(61, 53, 41, 0.08);
+  --md-shadow-2: 0 1px 2px 0 rgba(61, 53, 41, 0.16), 0 2px 6px 2px rgba(61, 53, 41, 0.08);
+  --md-shadow-3: 0 1px 3px 0 rgba(61, 53, 41, 0.16), 0 4px 8px 3px rgba(61, 53, 41, 0.08);
+  --code-keyword: #8b3aa8;
+  --code-string: #2f6b40;
+  --code-comment: #776c59;
+  --code-number: #9a5b12;
+  --code-function: #175fcc;
+  --code-operator: #6b6151;
+}
+
+/* ============================================
+   State layer — the one interaction primitive
+   Every interactive control paints a wash of its own colour instead of
+   moving. Grouped here so a control cannot grow a bespoke hover.
+   ============================================ */
+
+.reader-close-btn,
+.reader-settings-btn,
+.reader-history-btn,
+.reader-export-btn,
+.reader-settings-panel__close,
+.reader-history-panel__close,
+.reader-history-item__delete,
+.reader-code-block__copy,
+.reader-settings-reset,
+.reader-history-clear {
+  position: relative;
+  isolation: isolate;
+}
+
+.reader-close-btn::after,
+.reader-settings-btn::after,
+.reader-history-btn::after,
+.reader-export-btn::after,
+.reader-settings-panel__close::after,
+.reader-history-panel__close::after,
+.reader-history-item__delete::after,
+.reader-code-block__copy::after,
+.reader-settings-reset::after,
+.reader-history-clear::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-short) var(--ease-standard);
+}
+
+.reader-close-btn:hover::after,
+.reader-settings-btn:hover::after,
+.reader-history-btn:hover::after,
+.reader-export-btn:hover:not(:disabled)::after,
+.reader-settings-panel__close:hover::after,
+.reader-history-panel__close:hover::after,
+.reader-history-item__delete:hover::after,
+.reader-code-block__copy:hover::after,
+.reader-settings-reset:hover:not(:disabled)::after,
+.reader-history-clear:hover:not(:disabled)::after {
+  opacity: 0.08;
+}
+
+.reader-close-btn:active::after,
+.reader-settings-btn:active::after,
+.reader-history-btn:active::after,
+.reader-export-btn:active:not(:disabled)::after,
+.reader-settings-panel__close:active::after,
+.reader-history-panel__close:active::after,
+.reader-history-item__delete:active::after,
+.reader-code-block__copy:active::after,
+.reader-settings-reset:active:not(:disabled)::after,
+.reader-history-clear:active:not(:disabled)::after {
+  opacity: 0.12;
 }
 
 /* ============================================
@@ -91,15 +338,16 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483010;
-  padding: 0.6rem 1.2rem;
-  background-color: var(--reader-accent);
-  color: white;
+  padding: 12px 20px;
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
   text-decoration: none;
-  font-weight: 600;
-  font-size: 0.875rem;
-  border-radius: 0 0 6px 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transition: top 0.2s ease;
+  border-radius: 0 0 var(--shape-md) var(--shape-md);
+  box-shadow: var(--md-shadow-2);
+  transition: top var(--duration-medium) var(--ease-emphasized);
 }
 
 .reader-skip-link:focus {
@@ -107,9 +355,11 @@
   outline: none;
 }
 
+/* Google's focus indicator: a solid ring in the accent colour, offset from
+   the control so the shape underneath stays readable. */
 .reader-overlay *:focus-visible {
-  outline: 2px solid var(--reader-focus-ring);
-  outline-offset: var(--reader-focus-ring-offset);
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 .reader-content:focus {
@@ -128,24 +378,32 @@
   justify-content: center;
   align-items: flex-start;
   overflow-y: auto;
-  background-color: var(--reader-bg);
-  animation: reader-fade-in 0.25s ease;
-  transition: background-color 0.3s ease;
+  overscroll-behavior: contain;
+  background-color: var(--md-surface);
+  color-scheme: light dark;
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  animation: reader-fade-in var(--duration-medium) var(--ease-standard);
+  transition: background-color var(--duration-medium) var(--ease-standard);
 }
 
 .reader-container {
   width: 100%;
   max-width: var(--reader-page-width, 680px);
   min-height: 100vh;
+  /* Top padding clears the floating toolbar; bottom padding gives the last
+     paragraph somewhere to end without hugging the viewport edge. */
   padding: 5rem 2rem 6rem;
-  background-color: var(--reader-bg);
-  color: var(--reader-text);
-  font-family: ui-serif, Georgia, 'Times New Roman', 'Noto Serif SC', 'SimSun', serif;
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
+  font-family: var(--font-reading);
   font-size: var(--reader-font-size, 19px);
+  font-weight: 400;
   line-height: var(--reader-line-height, 1.75);
+  text-rendering: optimizeLegibility;
   transition:
-    font-size 0.15s ease,
-    line-height 0.15s ease;
+    font-size var(--duration-short) var(--ease-standard),
+    line-height var(--duration-short) var(--ease-standard);
 }
 
 body.reader-mode-active {
@@ -153,7 +411,12 @@ body.reader-mode-active {
 }
 
 /* ============================================
-   Toolbar — auto-hiding top bar
+   Toolbar — auto-hiding top strip
+
+   Full width, `space-between`: close on the left edge, actions on the right,
+   both outside the reading column so no viewport width can slide text under
+   them. `pointer-events` lives on the children, so the strip's transparent
+   middle and its gradient let clicks through to the article below.
    ============================================ */
 
 .reader-toolbar {
@@ -166,190 +429,110 @@ body.reader-mode-active {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  background: linear-gradient(to bottom, var(--reader-bg) 60%, transparent);
-  transition:
-    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    background 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(to bottom, var(--md-surface) 60%, transparent);
+  transition: opacity var(--duration-medium) var(--ease-standard);
   pointer-events: none;
-}
-
-.reader-toolbar--hidden {
-  opacity: 0;
-}
-
-.reader-toolbar--visible {
-  opacity: 1;
 }
 
 .reader-toolbar > * {
   pointer-events: auto;
 }
 
-/* The toolbar is space-between, so the two secondary controls need to be
-   grouped or they get pushed to opposite ends of the strip. */
+.reader-toolbar--visible {
+  opacity: 1;
+}
+
+.reader-toolbar--hidden {
+  opacity: 0;
+}
+
+/* A hidden toolbar must not leave invisible buttons eating clicks at the
+   corners; focus itself is untouched, so Esc and Tab still find them. */
+.reader-toolbar--hidden > * {
+  pointer-events: none;
+}
+
+/* Reading progress, drawn as a track welded to the top edge of the viewport —
+   the same place Chrome paints a page load. One gradient and one custom
+   property: the scroll handler writes the same number the gradient reads, so
+   the bar cannot desynchronise from the article. */
+.reader-toolbar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    var(--md-primary) 0 var(--reader-progress, 0%),
+    var(--md-surface-container-highest) var(--reader-progress, 0%) 100%
+  );
+}
+
 .reader-toolbar__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 /* ============================================
-   Close Button
+   Icon buttons — toolbar, panels, list rows
+
+   40px targets, no border, no shadow: the state layer is the whole hover
+   treatment.
    ============================================ */
 
-.reader-close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: transparent;
-  border: 1px solid var(--reader-border);
-  border-radius: 8px;
-  color: var(--reader-text-muted);
-  cursor: pointer;
-  transition:
-    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.reader-close-btn:hover {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
-  border-color: var(--reader-text-muted);
-  transform: scale(1.05);
-}
-
-.reader-close-btn:active {
-  transform: scale(0.95);
-}
-
-.reader-close-btn:focus-visible {
-  outline: 2px solid var(--reader-focus-ring);
-  outline-offset: 2px;
-}
-
-/* ============================================
-   Settings Button (toolbar right side)
-   ============================================ */
-
-.reader-settings-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: transparent;
-  border: 1px solid var(--reader-border);
-  border-radius: 8px;
-  color: var(--reader-text-muted);
-  cursor: pointer;
-  transition:
-    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.reader-settings-btn:hover,
-.reader-settings-btn--active {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
-  border-color: var(--reader-text-muted);
-  transform: scale(1.05);
-}
-
-.reader-settings-btn:active {
-  transform: scale(0.95);
-}
-
-.reader-settings-btn:focus-visible {
-  outline: 2px solid var(--reader-focus-ring);
-  outline-offset: 2px;
-}
-
-/* ============================================
-   History Button (toolbar right side)
-   ============================================ */
-
-.reader-history-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: transparent;
-  border: 1px solid var(--reader-border);
-  border-radius: 8px;
-  color: var(--reader-text-muted);
-  cursor: pointer;
-  transition:
-    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.reader-history-btn:hover,
-.reader-history-btn--active {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
-  border-color: var(--reader-text-muted);
-  transform: scale(1.05);
-}
-
-.reader-history-btn:active {
-  transform: scale(0.95);
-}
-
-.reader-history-btn:focus-visible {
-  outline: 2px solid var(--reader-focus-ring);
-  outline-offset: 2px;
-}
-
-/* ============================================
-   Export PDF Button
-   ============================================ */
-
+.reader-close-btn,
+.reader-settings-btn,
+.reader-history-btn,
 .reader-export-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--icon-btn-size);
+  height: var(--icon-btn-size);
+  padding: 0;
   background: transparent;
-  border: 1px solid var(--reader-border);
-  border-radius: 8px;
-  color: var(--reader-text-muted);
+  border: none;
+  border-radius: var(--shape-full);
+  color: var(--md-on-surface-variant);
   cursor: pointer;
   transition:
-    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color var(--duration-short) var(--ease-standard),
+    color var(--duration-short) var(--ease-standard);
 }
 
+.reader-close-btn:hover,
+.reader-settings-btn:hover,
+.reader-history-btn:hover,
 .reader-export-btn:hover:not(:disabled) {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
-  border-color: var(--reader-text-muted);
-  transform: scale(1.05);
+  color: var(--md-on-surface);
 }
 
+.reader-close-btn:active,
+.reader-settings-btn:active,
+.reader-history-btn:active,
 .reader-export-btn:active:not(:disabled) {
-  transform: scale(0.95);
+  color: var(--md-on-surface);
 }
 
-.reader-export-btn:focus-visible {
-  outline: 2px solid var(--reader-focus-ring);
-  outline-offset: 2px;
+.reader-settings-btn--active,
+.reader-history-btn--active {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.reader-settings-btn--active:hover,
+.reader-history-btn--active:hover {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
 }
 
 .reader-export-btn:disabled {
   cursor: progress;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .reader-spinner {
@@ -362,23 +545,37 @@ body.reader-mode-active {
   }
 }
 
+/* ============================================
+   Snackbar — export failures
+
+   Anchored to the viewport, not the toolbar: the toolbar is a fixed strip
+   and a positioned child of it would resolve against the wrong box. Bottom
+   centre is where Material puts a snackbar, and it is the only place on
+   screen that is guaranteed to be empty while a reader is scrolling.
+   ============================================ */
+
 .reader-export-error {
-  /* Anchored to the top-right of the viewport, below the toolbar strip.
-     The toolbar itself is position: fixed with no positioning context, so
-     an absolutely positioned child of it would resolve against the wrong box. */
   position: fixed;
-  top: 4.5rem;
-  right: 1.25rem;
-  max-width: 260px;
-  padding: 8px 12px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #a1222b;
-  background: var(--reader-bg);
-  border: 1px solid var(--reader-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px var(--reader-shadow);
-  z-index: 2147483000;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 2147483004;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: var(--shape-md);
+  background-color: var(--md-inverse-surface);
+  color: var(--md-inverse-on-surface);
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: var(--md-shadow-3);
+  animation: reader-snackbar-in var(--duration-medium) var(--ease-emphasized-decelerate);
+}
+
+.reader-export-error svg {
+  flex-shrink: 0;
 }
 
 /* ============================================
@@ -387,27 +584,28 @@ body.reader-mode-active {
 
 .reader-header {
   margin-bottom: 2.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--reader-border);
 }
 
 .reader-title {
   margin: 0 0 0.75rem;
-  font-size: 1.85em;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--reader-text);
-  letter-spacing: -0.01em;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--md-on-surface);
+  /* A long headline wrapping to one orphan line is the single ugliest thing
+     an article title can do; balancing costs nothing where it is supported. */
+  text-wrap: balance;
 }
 
 .reader-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem 1.2rem;
-  font-size: 0.85em;
-  color: var(--reader-text-muted);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  gap: 8px 10px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--md-on-surface-variant);
 }
 
 .reader-meta__item {
@@ -417,17 +615,28 @@ body.reader-mode-active {
 }
 
 .reader-meta__separator {
-  color: var(--reader-border);
+  color: var(--md-outline);
   user-select: none;
+}
+
+/* Reading time is the one meta field worth drawing attention to, so it gets
+   the chip treatment — and the separator that would sit against a rounded
+   edge goes away with it. */
+.reader-meta__item:last-child {
+  padding: 3px 10px;
+  border-radius: var(--shape-full);
+  background-color: var(--md-surface-container);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.reader-meta__separator:has(+ .reader-meta__item:last-child) {
+  display: none;
 }
 
 /* ============================================
    Article Content Typography
    ============================================ */
-
-.reader-content {
-  /* Optimal reading measure */
-}
 
 .reader-content > * + * {
   margin-top: 0;
@@ -439,22 +648,22 @@ body.reader-mode-active {
 .reader-content h4,
 .reader-content h5,
 .reader-content h6 {
-  margin-top: 2em;
-  margin-bottom: 0.6em;
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--reader-text);
-  letter-spacing: -0.01em;
+  margin-top: 2.4em;
+  margin-bottom: 0.55em;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.011em;
+  color: var(--md-on-surface);
 }
 
 .reader-content h1 {
-  font-size: 1.75em;
+  font-size: 1.6em;
 }
 .reader-content h2 {
-  font-size: 1.4em;
+  font-size: 1.375em;
 }
 .reader-content h3 {
-  font-size: 1.2em;
+  font-size: 1.175em;
 }
 .reader-content h4 {
   font-size: 1.05em;
@@ -463,52 +672,51 @@ body.reader-mode-active {
   font-size: 1em;
 }
 .reader-content h6 {
-  font-size: 0.9em;
-  font-weight: 600;
-  color: var(--reader-text-muted);
+  font-size: 0.875em;
+  letter-spacing: 0.02em;
+  color: var(--md-on-surface-variant);
 }
 
 .reader-content p {
   margin-top: 0;
-  margin-bottom: 1.4em;
-  hyphens: auto;
-  -webkit-hyphens: auto;
+  margin-bottom: 1.25em;
 }
 
 .reader-content p:last-child {
   margin-bottom: 0;
 }
 
+/* Google leaves body links undecorated and reveals the underline on hover —
+   the colour already carries the affordance. */
 .reader-content a {
-  color: var(--reader-accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: var(--md-primary);
+  text-decoration: none;
+  text-underline-offset: 3px;
   text-decoration-thickness: 1px;
   text-decoration-color: transparent;
   transition:
-    text-decoration-color 0.2s ease,
-    color 0.2s ease;
+    text-decoration-color var(--duration-short) var(--ease-standard),
+    color var(--duration-short) var(--ease-standard);
 }
 
 .reader-content a:hover {
-  text-decoration-color: var(--reader-accent);
+  text-decoration-color: var(--md-primary);
 }
 
 .reader-content a:active {
-  color: var(--reader-text);
+  color: var(--md-primary-hover);
 }
 
 .reader-content a:focus-visible {
-  outline: 2px solid var(--reader-accent);
+  outline: 2px solid var(--md-primary);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--shape-xs);
 }
 
-/* Strong emphasis */
 .reader-content strong,
 .reader-content b {
-  font-weight: 700;
-  color: var(--reader-text);
+  font-weight: 600;
+  color: var(--md-on-surface);
 }
 
 .reader-content em,
@@ -522,12 +730,12 @@ body.reader-mode-active {
 
 .reader-content ul,
 .reader-content ol {
-  margin: 0 0 1.4em 0;
-  padding-left: 1.75em;
+  margin: 0 0 1.25em;
+  padding-left: 1.5em;
 }
 
 .reader-content li {
-  margin-bottom: 0.4em;
+  margin-bottom: 0.35em;
   line-height: var(--reader-line-height, 1.75);
 }
 
@@ -535,24 +743,32 @@ body.reader-mode-active {
   margin-bottom: 0;
 }
 
+/* Google tints list markers one step down rather than leaving them at full
+   body contrast — it keeps a long list from reading as a wall. */
+.reader-content li::marker {
+  color: var(--md-on-surface-variant);
+}
+
 .reader-content ul ul,
 .reader-content ol ol,
 .reader-content ul ol,
 .reader-content ol ul {
-  margin-top: 0.4em;
+  margin-top: 0.35em;
   margin-bottom: 0;
 }
 
 /* ============================================
    Blockquotes
+
+   A coloured rule plus a quieter text colour. The italic serif treatment
+   this replaced was a typographic voice; a rule is not.
    ============================================ */
 
 .reader-content blockquote {
   margin: 1.75em 0;
-  padding: 0.75em 1.25em;
-  border-left: 3px solid var(--reader-accent);
-  color: var(--reader-text-muted);
-  font-style: italic;
+  padding: 0.1em 0 0.1em 1.15em;
+  border-left: 4px solid var(--md-primary);
+  color: var(--md-on-surface-variant);
 }
 
 .reader-content blockquote p:last-child {
@@ -567,52 +783,60 @@ body.reader-mode-active {
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 1.75em auto;
-  border-radius: 6px;
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+  margin: 2em auto;
+  border-radius: var(--shape-md);
 }
 
 .reader-content figure {
-  margin: 1.75em 0;
+  margin: 2em 0;
   text-align: center;
 }
 
 .reader-content figcaption {
-  margin-top: 0.6em;
-  font-size: 0.875em;
-  color: var(--reader-text-muted);
-  font-style: italic;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin-top: 0.75em;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--md-on-surface-variant);
+  font-family: var(--font-ui);
 }
 
 /* ============================================
    Tables
+
+   Separate borders with a clipped radius: `collapse` cannot round its own
+   corners, so the table would either square off or lose the header fill.
    ============================================ */
 
 .reader-content table {
   width: 100%;
-  margin: 1.5em 0;
-  border-collapse: collapse;
-  font-size: 0.92em;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 1.75em 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-md);
+  overflow: hidden;
+  /* Data reads as data: tables sit in the UI sans, like every other
+     structured surface, rather than inheriting the column's serif. */
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .reader-content th,
 .reader-content td {
-  padding: 0.6em 0.85em;
+  padding: 10px 14px;
   text-align: left;
-  border: 1px solid var(--reader-border);
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 
 .reader-content th {
-  background-color: var(--reader-code-bg);
-  font-weight: 600;
+  background-color: var(--md-surface-container);
+  font-weight: 500;
+  color: var(--md-on-surface);
 }
 
-.reader-content tr:nth-child(even) td {
-  background-color: var(--reader-code-bg);
+.reader-content tr:last-child td {
+  border-bottom: none;
 }
 
 /* ============================================
@@ -621,8 +845,8 @@ body.reader-mode-active {
 
 .reader-content hr {
   border: none;
-  border-top: 1px solid var(--reader-border);
-  margin: 2.5em 0;
+  border-top: 1px solid var(--md-outline-variant);
+  margin: 3em 0;
 }
 
 /* ============================================
@@ -630,12 +854,12 @@ body.reader-mode-active {
    ============================================ */
 
 .reader-content code:not(pre code) {
-  padding: 0.15em 0.4em;
-  background-color: var(--reader-code-bg);
-  border-radius: 4px;
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
-  font-size: 0.875em;
-  color: var(--reader-text);
+  padding: 0.12em 0.36em;
+  background-color: var(--md-surface-container-high);
+  border-radius: var(--shape-xs);
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--md-on-surface);
 }
 
 /* ============================================
@@ -645,77 +869,64 @@ body.reader-mode-active {
 .reader-code-block {
   position: relative;
   margin: 1.75em 0;
-  border-radius: 8px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-md);
   overflow: hidden;
   background-color: var(--reader-code-bg);
-  border: 1px solid var(--reader-border);
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .reader-code-block__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5em 1em;
-  background-color: var(--reader-border);
-  font-size: 0.8em;
-  color: var(--reader-text-muted);
+  padding: 4px 6px 4px 16px;
+  background-color: var(--md-code-header);
+  border-bottom: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
 }
 
 .reader-code-block__language {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.75em;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  color: var(--md-on-surface-variant);
 }
 
 .reader-code-block__copy {
   display: inline-flex;
   align-items: center;
-  gap: 0.3em;
-  padding: 0.2em 0.6em;
+  gap: 6px;
+  padding: 6px 12px;
   background: transparent;
-  border: 1px solid var(--reader-text-muted);
-  border-radius: 4px;
-  color: var(--reader-text-muted);
-  font-size: 0.85em;
+  border: none;
+  border-radius: var(--shape-full);
+  color: var(--md-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0.7;
-}
-
-.reader-code-block__copy:hover {
-  opacity: 1;
-  color: var(--reader-text);
-  border-color: var(--reader-text);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px var(--reader-shadow);
-}
-
-.reader-code-block__copy:active {
-  transform: translateY(0);
-  box-shadow: none;
+  transition: color var(--duration-short) var(--ease-standard);
 }
 
 .reader-code-block__copy--copied {
-  color: #22c55e;
-  border-color: #22c55e;
-  opacity: 1;
+  color: var(--md-success);
 }
 
 .reader-code-block pre {
   margin: 0;
-  padding: 1em;
+  padding: 16px 18px;
   overflow-x: auto;
-  font-size: 0.875em;
-  line-height: 1.6;
+  font-size: 0.8125rem;
+  line-height: 1.65;
 }
 
 .reader-code-block code {
   display: block;
   background: none;
   padding: 0;
-  color: var(--reader-text);
+  color: var(--md-on-surface);
 }
 
 /* ============================================
@@ -723,136 +934,134 @@ body.reader-mode-active {
    ============================================ */
 
 .reader-code-block .token-keyword {
-  color: #d73a49;
-}
-.reader-theme-dark .reader-code-block .token-keyword {
-  color: #ff7b72;
-}
-.reader-theme-sepia .reader-code-block .token-keyword {
-  color: #a0522d;
+  color: var(--code-keyword);
 }
 
 .reader-code-block .token-string {
-  color: #032f62;
-}
-.reader-theme-dark .reader-code-block .token-string {
-  color: #a5d6ff;
-}
-.reader-theme-sepia .reader-code-block .token-string {
-  color: #6b4423;
+  color: var(--code-string);
 }
 
 .reader-code-block .token-comment {
-  color: #6a737d;
+  color: var(--code-comment);
   font-style: italic;
-}
-.reader-theme-dark .reader-code-block .token-comment {
-  color: #8b949e;
-}
-.reader-theme-sepia .reader-code-block .token-comment {
-  color: #8b7355;
 }
 
 .reader-code-block .token-number {
-  color: #005cc5;
-}
-.reader-theme-dark .reader-code-block .token-number {
-  color: #79c0ff;
-}
-.reader-theme-sepia .reader-code-block .token-number {
-  color: #8b4513;
+  color: var(--code-number);
 }
 
 .reader-code-block .token-function {
-  color: #6f42c1;
-}
-.reader-theme-dark .reader-code-block .token-function {
-  color: #d2a8ff;
-}
-.reader-theme-sepia .reader-code-block .token-function {
-  color: #704214;
+  color: var(--code-function);
 }
 
 .reader-code-block .token-operator {
-  color: #d73a49;
-}
-.reader-theme-dark .reader-code-block .token-operator {
-  color: #ff7b72;
-}
-.reader-theme-sepia .reader-code-block .token-operator {
-  color: #a0522d;
+  color: var(--code-operator);
 }
 
 /* ============================================
-   Settings Panel
+   Panel shell — settings and history share it
    ============================================ */
 
-.reader-settings-panel {
+.reader-settings-panel,
+.reader-history-panel {
   position: fixed;
-  top: 56px;
-  right: 1rem;
+  top: 68px;
+  right: 20px;
   z-index: 2147483002;
-  width: 280px;
-  max-height: calc(100vh - 76px);
-  overflow-y: auto;
-  padding: 1rem;
-  background-color: var(--reader-bg);
-  border: 1px solid var(--reader-border);
-  border-radius: 12px;
-  box-shadow:
-    0 8px 28px var(--reader-shadow),
-    0 2px 8px var(--reader-shadow),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  animation: reader-slide-down 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  width: var(--panel-width);
+  padding: 12px;
+  background-color: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-xl);
+  box-shadow: var(--md-shadow-2);
+  font-family: var(--font-ui);
+  color: var(--md-on-surface);
+  animation: reader-panel-in var(--duration-medium) var(--ease-emphasized-decelerate);
   scrollbar-width: thin;
-  scrollbar-color: var(--reader-border) transparent;
+  scrollbar-color: var(--md-surface-container-highest) transparent;
 }
 
-.reader-settings-panel__header {
+/* The dialog root receives the mount focus, so it must not paint the ring a
+   mouse opener never earned. Real controls — reached by Tab — keep theirs:
+   this rule loses the tie with `.reader-overlay *:focus-visible` on purpose,
+   and file order is what makes it win. */
+.reader-settings-panel:focus,
+.reader-history-panel:focus {
+  outline: none;
+}
+
+.reader-settings-panel {
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+}
+
+.reader-history-panel {
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  /* The body scrolls, not the panel: `overflow: hidden` here plus a flex body
+     with `min-height: 0` keeps the header and the clear-all row pinned. */
+  max-height: calc(100vh - 88px);
+  overflow: hidden;
+}
+
+.reader-settings-panel__header,
+.reader-history-panel__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--reader-border);
+  gap: 8px;
+  padding: 0 4px 10px 8px;
 }
 
-.reader-settings-panel__title {
+.reader-settings-panel__title,
+.reader-history-panel__title {
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--reader-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  letter-spacing: 0.01em;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--md-on-surface);
 }
 
-.reader-settings-panel__close {
+.reader-history-panel__count {
+  margin-right: auto;
+  padding: 2px 10px;
+  border-radius: var(--shape-full);
+  background-color: var(--md-surface-container-highest);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
+}
+
+.reader-settings-panel__close,
+.reader-history-panel__close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  flex-shrink: 0;
+  width: var(--icon-btn-size);
+  height: var(--icon-btn-size);
+  padding: 0;
   background: transparent;
   border: none;
-  border-radius: 5px;
-  color: var(--reader-text-muted);
+  border-radius: var(--shape-full);
+  color: var(--md-on-surface-variant);
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: color var(--duration-short) var(--ease-standard);
 }
 
-.reader-settings-panel__close:hover {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
+.reader-settings-panel__close:hover,
+.reader-history-panel__close:hover {
+  color: var(--md-on-surface);
 }
 
-/* Settings Groups */
+/* ============================================
+   Settings groups
+   ============================================ */
+
 .reader-settings-group {
-  margin-bottom: 1rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin-bottom: 20px;
+  padding: 0 8px;
 }
 
 .reader-settings-group:last-child {
@@ -861,183 +1070,201 @@ body.reader-mode-active {
 
 .reader-settings-label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--reader-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--md-on-surface-variant);
 }
 
-/* Theme Grid Selector */
+/* ============================================
+   Theme Selector
+
+   Three circles in three equal columns. The previous rule asked for a
+   six-column grid and got three swatches, so they packed into half the row
+   and left the rest of the panel empty.
+   ============================================ */
+
 .reader-theme-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 5px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .reader-theme-swatch {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 8px;
-  border: 1.5px solid var(--swatch-border, rgba(0, 0, 0, 0.1));
-  cursor: pointer;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--shape-md);
+  cursor: pointer;
+  font-family: var(--font-ui);
 }
 
-.reader-theme-swatch::after {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background-color: var(--swatch-accent);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+.reader-theme-swatch__chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--shape-full);
+  border: 1px solid var(--swatch-border, rgba(60, 64, 67, 0.2));
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow var(--duration-medium) var(--ease-standard);
 }
 
-.reader-theme-swatch:hover {
-  transform: scale(1.14);
-  z-index: 1;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+.reader-theme-swatch:hover .reader-theme-swatch__chip {
+  box-shadow: 0 0 0 6px var(--md-state-hover);
 }
 
-.reader-theme-swatch:active {
-  transform: scale(1.06);
+.reader-theme-swatch:active .reader-theme-swatch__chip {
+  box-shadow: 0 0 0 10px var(--md-state-press);
 }
 
-.reader-theme-swatch--active {
-  border-color: transparent;
+.reader-theme-swatch--active .reader-theme-swatch__chip {
   box-shadow:
-    0 0 0 2px var(--reader-bg),
-    0 0 0 4.5px var(--swatch-accent, var(--reader-accent));
+    0 0 0 2px var(--md-surface-container),
+    0 0 0 4px var(--md-primary);
 }
 
-.reader-theme-swatch--active:hover {
+.reader-theme-swatch--active:hover .reader-theme-swatch__chip {
   box-shadow:
-    0 0 0 2px var(--reader-bg),
-    0 0 0 4.5px var(--swatch-accent, var(--reader-accent)),
-    0 3px 10px rgba(0, 0, 0, 0.2);
+    0 0 0 2px var(--md-surface-container),
+    0 0 0 4px var(--md-primary),
+    0 0 0 10px var(--md-state-hover);
 }
 
-/* Sliders */
+.reader-theme-swatch__check {
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity var(--duration-short) var(--ease-standard);
+}
+
+.reader-theme-swatch--active .reader-theme-swatch__check {
+  opacity: 1;
+}
+
+.reader-theme-swatch__name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--md-on-surface-variant);
+}
+
+.reader-theme-swatch--active .reader-theme-swatch__name {
+  color: var(--md-on-surface);
+}
+
+.reader-theme-swatch--active:hover .reader-theme-swatch__check {
+  box-shadow: none;
+}
+
+/* ============================================
+   Sliders
+
+   Material slider: a 6px rounded track whose filled portion is the accent
+   colour, and a 20px handle that grows a state ring on press instead of
+   scaling. The fill is one custom property written from the component, so
+   WebKit and Gecko get the same picture from one number.
+   ============================================ */
+
 .reader-slider-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 12px;
 }
 
 .reader-slider {
   flex: 1;
-  height: 4px;
-  background-color: var(--reader-border);
-  border-radius: 2px;
+  min-width: 0;
+  height: 20px;
+  background: transparent;
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
 }
 
+.reader-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--shape-full);
+  background: linear-gradient(
+    to right,
+    var(--md-primary) 0 var(--slider-fill, 0%),
+    var(--md-track) var(--slider-fill, 0%) 100%
+  );
+}
+
 .reader-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  background-color: var(--reader-accent);
-  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  background-color: var(--md-primary);
+  border: none;
+  border-radius: var(--shape-full);
   cursor: pointer;
-  transition:
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.2s ease;
-  box-shadow: 0 2px 4px rgba(26, 86, 219, 0.25);
+  box-shadow: 0 0 0 0 var(--md-primary);
+  transition: box-shadow var(--duration-short) var(--ease-standard);
 }
 
-.reader-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 3px 8px rgba(26, 86, 219, 0.35);
+.reader-slider:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 8px var(--md-state-press);
 }
 
-.reader-slider::-webkit-slider-thumb:active {
-  transform: scale(1.1);
+.reader-slider:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 12px var(--md-state-press);
+}
+
+.reader-slider::-moz-range-track {
+  height: 6px;
+  border-radius: var(--shape-full);
+  background-color: var(--md-track);
+}
+
+.reader-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: var(--shape-full);
+  background-color: var(--md-primary);
 }
 
 .reader-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background-color: var(--reader-accent);
+  width: 20px;
+  height: 20px;
+  background-color: var(--md-primary);
   border: none;
-  border-radius: 50%;
+  border-radius: var(--shape-full);
   cursor: pointer;
-  transition:
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.2s ease;
-  box-shadow: 0 2px 4px rgba(26, 86, 219, 0.25);
+  box-shadow: 0 0 0 0 var(--md-primary);
+  transition: box-shadow var(--duration-short) var(--ease-standard);
+}
+
+.reader-slider:hover::-moz-range-thumb {
+  box-shadow: 0 0 0 8px var(--md-state-press);
+}
+
+.reader-slider:active::-moz-range-thumb {
+  box-shadow: 0 0 0 12px var(--md-state-press);
 }
 
 .reader-slider:focus-visible {
-  outline: 2px solid var(--reader-accent);
-  outline-offset: 3px;
-  border-radius: 4px;
+  outline: 2px solid var(--md-primary);
+  outline-offset: 4px;
+  border-radius: var(--shape-full);
 }
 
 .reader-slider-value {
-  min-width: 2.8em;
+  min-width: 3.2em;
   text-align: right;
-  font-size: 0.8rem;
-  color: var(--reader-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ============================================
-   Toggle Buttons (Show/Hide Images)
-   ============================================ */
-
-.reader-toggle-row {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.reader-toggle-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.75rem;
-  background-color: var(--reader-code-bg);
-  border: 1.5px solid transparent;
-  border-radius: 7px;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--reader-text-muted);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.reader-toggle-btn:hover {
-  color: var(--reader-text);
-  border-color: var(--reader-border);
-  transform: translateY(-1px);
-}
-
-.reader-toggle-btn:active {
-  transform: translateY(0);
-}
-
-.reader-toggle-btn--active {
-  border-color: var(--reader-accent);
-  color: var(--reader-accent);
-  background-color: var(--reader-bg);
-  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.15);
-}
-
-.reader-toggle-btn svg {
-  flex-shrink: 0;
+  line-height: 1.4;
+  color: var(--md-on-surface-variant);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================
@@ -1045,140 +1272,65 @@ body.reader-mode-active {
    ============================================ */
 
 .reader-settings-footer {
-  margin-top: 1.25rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--reader-border);
+  margin-top: 4px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--md-outline-variant);
 }
 
 .reader-settings-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  background-color: transparent;
-  border: 1px solid var(--reader-border);
-  border-radius: 7px;
-  font-size: 0.8rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: var(--reader-text-muted);
+  height: 40px;
+  padding: 0 16px;
+  background-color: var(--md-surface-container-highest);
+  border: none;
+  border-radius: var(--shape-full);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-on-surface);
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.reader-settings-reset:hover:not(:disabled) {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
-  border-color: var(--reader-text-muted);
+  transition: background-color var(--duration-short) var(--ease-standard);
 }
 
 .reader-settings-reset:disabled {
   cursor: progress;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 /* Always reserves one line so the panel does not jump when a message lands
    in it — and so the live region exists before it has anything to say. */
 .reader-settings-status {
   min-height: 1.15em;
-  margin-top: 0.5rem;
-  font-size: 0.72rem;
+  margin-top: 10px;
+  font-size: 0.75rem;
   line-height: 1.15em;
-  color: var(--reader-text-muted);
+  text-align: center;
+  color: var(--md-on-surface-variant);
 }
 
 .reader-settings-status--failed {
-  color: #a1222b;
-}
-
-.reader-theme-dark .reader-settings-status--failed {
-  color: #f28b82;
+  color: var(--md-error);
 }
 
 /* ============================================
-   History Panel
+   History Panel body
    ============================================ */
-
-.reader-history-panel {
-  position: fixed;
-  top: 56px;
-  right: 1rem;
-  z-index: 2147483002;
-  display: flex;
-  flex-direction: column;
-  width: 340px;
-  /* The body scrolls, not the panel: `overflow: hidden` here plus a flex body
-     with `min-height: 0` keeps the header and the clear-all row pinned. */
-  max-height: calc(100vh - 76px);
-  overflow: hidden;
-  padding: 1rem;
-  background-color: var(--reader-bg);
-  border: 1px solid var(--reader-border);
-  border-radius: 12px;
-  box-shadow:
-    0 8px 28px var(--reader-shadow),
-    0 2px 8px var(--reader-shadow),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  animation: reader-slide-down 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.reader-history-panel__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--reader-border);
-}
-
-.reader-history-panel__title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--reader-text);
-  letter-spacing: 0.01em;
-}
-
-.reader-history-panel__count {
-  margin-right: auto;
-  font-size: 0.72rem;
-  color: var(--reader-text-muted);
-}
-
-.reader-history-panel__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: transparent;
-  border: none;
-  border-radius: 5px;
-  color: var(--reader-text-muted);
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.reader-history-panel__close:hover {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
-}
 
 .reader-history-panel__body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  padding: 0 4px;
   scrollbar-width: thin;
-  scrollbar-color: var(--reader-border) transparent;
+  scrollbar-color: var(--md-surface-container-highest) transparent;
 }
 
 .reader-history-panel__body::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .reader-history-panel__body::-webkit-scrollbar-track {
@@ -1186,38 +1338,44 @@ body.reader-mode-active {
 }
 
 .reader-history-panel__body::-webkit-scrollbar-thumb {
-  background: var(--reader-border);
-  border-radius: 3px;
+  background: var(--md-surface-container-highest);
+  border: 2px solid transparent;
+  border-radius: var(--shape-full);
+  background-clip: padding-box;
 }
 
 .reader-history-panel__body::-webkit-scrollbar-thumb:hover {
-  background: var(--reader-text-muted);
+  background: var(--md-on-surface-variant);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .reader-history-status,
 .reader-history-empty {
-  padding: 1.5rem 0.5rem;
-  font-size: 0.8rem;
+  padding: 40px 16px;
+  font-size: 0.875rem;
   line-height: 1.5;
   text-align: center;
-  color: var(--reader-text-muted);
+  color: var(--md-on-surface-variant);
 }
 
 .reader-history-error {
-  margin-top: 0.75rem;
-  padding: 8px 10px;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: #a1222b;
-  background: var(--reader-code-bg);
-  border-radius: 6px;
+  margin: 8px 8px 0;
+  padding: 10px 12px;
+  border-radius: var(--shape-sm);
+  background-color: var(--md-error-container);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--md-error);
 }
 
-.reader-theme-dark .reader-history-error {
-  color: #f28b82;
-}
+/* ============================================
+   Records
 
-/* Records */
+   Google list rows: no rules between items, a rounded hover field, and a
+   title that clamps to two lines instead of stretching the panel.
+   ============================================ */
+
 .reader-history-list {
   margin: 0;
   padding: 0;
@@ -1228,17 +1386,14 @@ body.reader-mode-active {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.65rem 0.25rem;
-  border-bottom: 1px solid var(--reader-border);
-}
-
-.reader-history-item:last-child {
-  border-bottom: none;
+  gap: 4px;
+  padding: 10px 4px 10px 12px;
+  border-radius: var(--shape-md);
+  transition: background-color var(--duration-short) var(--ease-standard);
 }
 
 .reader-history-item:hover {
-  background-color: var(--reader-code-bg);
+  background-color: var(--md-surface-container-high);
 }
 
 .reader-history-item__main {
@@ -1246,44 +1401,47 @@ body.reader-mode-active {
 }
 
 .reader-history-item__title {
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   max-width: 100%;
   padding: 0;
   background: transparent;
   border: none;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--reader-text);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--md-on-surface);
   text-align: left;
   cursor: pointer;
-  overflow-wrap: anywhere;
+  transition: color var(--duration-short) var(--ease-standard);
 }
 
 .reader-history-item__title:hover {
-  color: var(--reader-accent);
+  color: var(--md-primary);
 }
 
 /* A record whose URL is not a safe http(s) link. It is still listed — hiding
    it would hide the fact that it exists — but it is not actionable. */
 .reader-history-item__title--inert {
   cursor: default;
-  color: var(--reader-text-muted);
+  color: var(--md-on-surface-variant);
 }
 
 .reader-history-item__title--inert:hover {
-  color: var(--reader-text-muted);
+  color: var(--md-on-surface-variant);
 }
 
 .reader-history-item__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 0.5rem;
-  margin-top: 0.2rem;
-  font-size: 0.72rem;
+  gap: 4px 10px;
+  margin-top: 4px;
+  font-size: 0.75rem;
   line-height: 1.4;
-  color: var(--reader-text-muted);
+  color: var(--md-on-surface-variant);
 }
 
 .reader-history-item__site {
@@ -1295,17 +1453,21 @@ body.reader-mode-active {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: var(--icon-btn-size);
+  height: var(--icon-btn-size);
+  padding: 0;
   background: transparent;
   border: none;
-  border-radius: 5px;
-  color: var(--reader-text-muted);
+  border-radius: var(--shape-full);
+  color: var(--md-on-surface-variant);
   cursor: pointer;
   transition:
-    opacity 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease;
+    color var(--duration-short) var(--ease-standard),
+    background-color var(--duration-short) var(--ease-standard);
+}
+
+.reader-history-item__delete:hover {
+  color: var(--md-error);
 }
 
 /* Only a pointer can hover, so only a pointer gets the hidden-until-hover
@@ -1322,87 +1484,138 @@ body.reader-mode-active {
   }
 }
 
-.reader-history-item__delete:hover {
-  background-color: var(--reader-bg);
-  color: #a1222b;
-}
+/* ============================================
+   History footer
+   ============================================ */
 
-.reader-theme-dark .reader-history-item__delete:hover {
-  color: #f28b82;
-}
-
-/* Footer */
 .reader-history-panel__footer {
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--reader-border);
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--md-outline-variant);
 }
 
 .reader-history-privacy {
-  margin-bottom: 0.5rem;
-  font-size: 0.72rem;
+  margin-bottom: 10px;
+  font-size: 0.75rem;
   line-height: 1.5;
-  color: var(--reader-text-muted);
+  color: var(--md-on-surface-variant);
 }
 
 .reader-history-clear {
-  padding: 0.45rem 0.75rem;
-  background-color: transparent;
-  border: 1px solid var(--reader-border);
-  border-radius: 7px;
-  font-family: inherit;
-  font-size: 0.78rem;
-  color: var(--reader-text-muted);
+  min-height: 36px;
+  padding: 0 16px;
+  background: transparent;
+  border: none;
+  border-radius: var(--shape-full);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-primary);
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+  transition: color var(--duration-short) var(--ease-standard);
 }
 
 .reader-history-clear:hover:not(:disabled) {
-  background-color: var(--reader-code-bg);
-  color: var(--reader-text);
-  border-color: var(--reader-text-muted);
+  color: var(--md-primary-hover);
 }
 
 .reader-history-clear:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .reader-history-clear--danger {
-  color: #a1222b;
-  border-color: #a1222b;
+  color: var(--md-error);
 }
 
 .reader-history-clear--danger:hover:not(:disabled) {
-  color: #a1222b;
-  border-color: #a1222b;
-  background-color: var(--reader-code-bg);
-}
-
-.reader-theme-dark .reader-history-clear--danger {
-  color: #f28b82;
-  border-color: #f28b82;
-}
-
-.reader-theme-dark .reader-history-clear--danger:hover:not(:disabled) {
-  color: #f28b82;
-  border-color: #f28b82;
+  color: var(--md-error);
 }
 
 /* Clear-all confirmation */
 .reader-history-confirm__text {
-  margin-bottom: 0.5rem;
-  font-size: 0.75rem;
+  margin-bottom: 12px;
+  font-size: 0.8125rem;
   line-height: 1.5;
-  color: var(--reader-text);
+  color: var(--md-on-surface);
 }
 
 .reader-history-confirm__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 8px;
+}
+
+/* ============================================
+   Error fallback
+
+   The one state with no article behind it. Centred, one mark, one sentence,
+   one action — the empty-state layout Google uses for a result that is not
+   there, rather than a red "error page".
+   ============================================ */
+
+.reader-error-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100vh;
+  padding: 48px 24px;
+  text-align: center;
+  font-family: var(--font-ui);
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+.reader-error-fallback__badge {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 8px;
+  border-radius: var(--shape-full);
+  background-color: var(--md-error-container);
+  color: var(--md-error);
+}
+
+.reader-error-fallback__title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--md-on-surface);
+}
+
+.reader-error-fallback__message {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--md-on-surface-variant);
+}
+
+.reader-error-fallback__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  margin-top: 12px;
+  padding: 0 24px;
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+  border: none;
+  border-radius: var(--shape-full);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--duration-short) var(--ease-standard);
+}
+
+.reader-error-fallback__action:hover {
+  background-color: var(--md-primary-hover);
 }
 
 /* ============================================
@@ -1418,7 +1631,7 @@ body.reader-mode-active {
    ============================================ */
 
 .reader-overlay::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
 }
 
 .reader-overlay::-webkit-scrollbar-track {
@@ -1426,12 +1639,16 @@ body.reader-mode-active {
 }
 
 .reader-overlay::-webkit-scrollbar-thumb {
-  background: var(--reader-border);
-  border-radius: 3px;
+  background: var(--md-surface-container-highest);
+  border: 3px solid transparent;
+  border-radius: var(--shape-full);
+  background-clip: padding-box;
 }
 
 .reader-overlay::-webkit-scrollbar-thumb:hover {
-  background: var(--reader-text-muted);
+  background: var(--md-on-surface-variant);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 /* ============================================
@@ -1447,14 +1664,27 @@ body.reader-mode-active {
   }
 }
 
-@keyframes reader-slide-down {
+/* Material's "fade through": the incoming surface rises and opens up from a
+   slightly reduced scale instead of sliding or bouncing into place. */
+@keyframes reader-panel-in {
   from {
     opacity: 0;
-    transform: translateY(-12px) scale(0.98);
+    transform: translateY(-12px) scale(0.96);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes reader-snackbar-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 }
 
@@ -1464,23 +1694,24 @@ body.reader-mode-active {
 
 @media (max-width: 768px) {
   .reader-container {
-    padding: 4.5rem 1.25rem 5rem;
+    padding: 5.5rem 1.25rem 5rem;
   }
 
   .reader-title {
-    font-size: 1.5em;
+    font-size: 1.625rem;
   }
 
   .reader-settings-panel,
   .reader-history-panel {
     top: auto;
-    bottom: 1rem;
-    right: 1rem;
-    left: 1rem;
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
     width: auto;
   }
 
-  /* A full-width sheet has no width budget left for a 56px top offset. */
+  /* A full-width sheet has no width budget left for a 68px top offset. */
+  .reader-settings-panel,
   .reader-history-panel {
     max-height: calc(100vh - 6rem);
   }
@@ -1488,16 +1719,20 @@ body.reader-mode-active {
 
 @media (max-width: 480px) {
   .reader-container {
-    padding: 4rem 1rem 4.5rem;
+    padding: 5rem 1rem 4rem;
   }
 
   .reader-title {
-    font-size: 1.35em;
+    font-size: 1.4375rem;
   }
 
   .reader-meta {
-    gap: 0.4rem 0.8rem;
-    font-size: 0.8em;
+    gap: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .reader-code-block pre {
+    padding: 14px;
   }
 }
 
@@ -1537,13 +1772,16 @@ body.reader-mode-active {
   .reader-overlay,
   .reader-settings-panel,
   .reader-history-panel,
-  .reader-toolbar {
+  .reader-export-error,
+  .reader-toolbar,
+  .reader-skip-link {
     animation: none;
     transition: none;
   }
 
-  .reader-slider::-webkit-slider-thumb,
-  .reader-history-item__delete {
+  .reader-theme-swatch__chip,
+  .reader-history-item,
+  .reader-code-block__copy {
     transition: none;
   }
 }

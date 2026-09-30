@@ -17,6 +17,12 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     globals: true,
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    // Vitest skips the CSS pipeline by default, which makes `?inline` imports
+    // (host.css in the toast path) resolve to an empty string — the injection
+    // tests would then assert against nothing and pass vacuously or fail on
+    // content that is really there. Process CSS so inlined stylesheets carry
+    // their actual text.
+    css: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

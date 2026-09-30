@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import type { ReadingRecord } from '../shared/history';
 import { usePanelDismiss } from './usePanelDismiss';
+import { CloseIcon, TrashIcon } from './icons';
 
 interface HistoryPanelProps {
   /** Stored records, newest first — the panel sorts defensively anyway. */
@@ -120,8 +121,11 @@ export function HistoryPanel({
   // One "now" per render, so two rows never disagree about what day it is.
   const now = useMemo(() => Date.now(), [records]);
 
+  // Initial focus on the dialog root, for the same reason as SettingsPanel:
+  // a control focused by script during the opening click paints a ring the
+  // mouse user never earned, while the non-interactive dialog root does not.
   useEffect(() => {
-    closeButtonRef.current?.focus();
+    panelRef.current?.focus();
   }, []);
 
   usePanelDismiss({
@@ -180,6 +184,7 @@ export function HistoryPanel({
       role="dialog"
       aria-label="阅读历史"
       aria-modal="true"
+      tabIndex={-1}
     >
       <div className="reader-history-panel__header">
         <h3 className="reader-history-panel__title" id="history-title">阅读历史</h3>
@@ -313,42 +318,3 @@ export function HistoryPanel({
   );
 }
 
-function CloseIcon(): JSX.Element {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
-function TrashIcon(): JSX.Element {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6M14 11v6" />
-      <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-    </svg>
-  );
-}

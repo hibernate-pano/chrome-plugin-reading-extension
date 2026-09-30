@@ -1,0 +1,95 @@
+/**
+ * Host-document styles for the toast.
+ *
+ * The toast is the one element the reader puts in the *page's* document rather
+ * than in its own shadow root, so styles.css cannot reach it and the shadow
+ * root's custom properties do not inherit into it. These rules are injected
+ * once, on demand, and restate the handful of tokens the snackbar needs.
+ *
+ * Kept deliberately small: a snackbar is an inverse surface with a leading
+ * glyph. It is not a coloured alert box, which is what it used to be — the old
+ * red-on-pink treatment was the single most foreign-looking thing the
+ * extension put on a page.
+ */
+
+.reader-toast {
+  --reader-toast-surface: #323130;
+  --reader-toast-on-surface: #ffffff;
+  --reader-toast-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  --reader-toast-font:
+    'Google Sans', 'Google Sans Text', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+}
+
+.reader-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 12px;
+  background-color: var(--reader-toast-surface);
+  color: var(--reader-toast-on-surface);
+  font-family: var(--reader-toast-font);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  box-shadow: var(--reader-toast-shadow);
+}
+
+.reader-toast__icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.reader-toast--error .reader-toast__icon {
+  color: #f28b82;
+}
+
+.reader-toast--warning .reader-toast__icon {
+  color: #fdd663;
+}
+
+.reader-toast--success .reader-toast__icon {
+  color: #81c995;
+}
+
+.reader-toast--info .reader-toast__icon {
+  color: #8ab4f8;
+}
+
+.reader-toast__message {
+  min-width: 0;
+}
+
+@keyframes reader-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes reader-toast-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-toast {
+    animation: none;
+  }
+}

@@ -108,9 +108,13 @@ describe('HistoryPanel — dialog shell', () => {
     expect(document.querySelector('.reader-history-panel__count')).toHaveTextContent('2 条');
   });
 
-  it('moves focus to the close button on mount', () => {
+  it('moves focus into the dialog itself on mount', () => {
     renderPanel();
-    expect(document.activeElement).toBe(closeButton());
+    // Same reasoning as SettingsPanel: the non-interactive dialog root takes
+    // the initial focus, so a mouse opener gets no focus ring.
+    expect(document.activeElement).toBe(
+      screen.getByRole('dialog', { name: '阅读历史' })
+    );
   });
 
   it('says the records never leave the device', () => {

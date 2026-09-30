@@ -63,9 +63,14 @@ describe('SettingsPanel — dialog shell', () => {
     expect(panel).toHaveClass('reader-settings-panel');
   });
 
-  it('moves focus to the close button on mount', () => {
+  it('moves focus into the dialog itself on mount', () => {
     renderPanel();
-    expect(document.activeElement).toBe(closeButton());
+    // The dialog root takes the initial focus: it is not interactive, so a
+    // mouse opener gets no focus ring, and the first Tab walks into the
+    // controls — whose rings are keyboard-earned.
+    expect(document.activeElement).toBe(
+      screen.getByRole('dialog', { name: 'Reading settings' })
+    );
   });
 
   it('renders exactly one swatch per theme, three sliders and the reset action', () => {
@@ -665,5 +670,60 @@ describe('SettingsPanel — restore defaults', () => {
     fireEvent.change(slider('字号'), { target: { value: '21' } });
 
     expect(document.querySelector('.reader-settings-status')).toHaveTextContent('');
+  });
+
+  it('ignores a second click while a reset is already in flight', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onReset = vi.fn(() => pending);
+    render(
+      <SettingsPanel
+        settings={{ ...BASE }}
+        onChange={vi.fn()}
+        onReset={onReset}
+        onClose={vi.fn()}
+      />
+    );
+
+    const button = document.querySelector('.reader-settings-reset') as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(onReset).toHaveBeenCalledTimes(1);
+    expect(button).toBeDisabled();
+
+    // A click that slips past `disabled` — fireEvent bypasses it — must meet
+    // the in-flight guard and be dropped.
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(onReset).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      release();
+      await pending;
+    });
+  });
+
+  it('falls back to a generic message when the reset rejects with a non-Error', async () => {
+    const onReset = vi.fn().mockRejectedValue('nope');
+    render(
+      <SettingsPanel
+        settings={{ ...BASE }}
+        onChange={vi.fn()}
+        onReset={onReset}
+        onClose={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(resetButton());
+    });
+
+    const status = document.querySelector('.reader-settings-status') as HTMLElement;
+    expect(status).toHaveTextContent('恢复默认设置失败');
+    expect(status).toHaveClass('reader-settings-status--failed');
   });
 });

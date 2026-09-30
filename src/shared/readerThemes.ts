@@ -1,7 +1,18 @@
 /**
  * Reader Theme Definitions
  * Three base themes — light, dark, sepia.
- * Designed to match Google/Apple aesthetic: minimal, restrained, readable.
+ *
+ * Every colour is drawn from Google's own palette rather than a generic
+ * "material" ramp: the blue is Google Blue 600 (the one the Chrome UI is
+ * painted with, #1a73e8) and the neutrals are the Google Grey scale that
+ * Search, Docs and Drive are built from. A reader that looks like a Google
+ * product does not get there by being "close to blue" — it gets there by
+ * using the *same* blue and the *same* greys, so the chrome around it and
+ * the page inside it belong to one system.
+ *
+ * The dark theme is deliberately neutral (#202124) rather than warm-black,
+ * because Chrome's dark surfaces are neutral and a warm black next to a
+ * neutral browser frame reads as a different application.
  */
 
 export type ThemeId = 'light' | 'dark' | 'sepia';
@@ -21,32 +32,36 @@ export const READER_THEMES: readonly ReaderTheme[] = [
   {
     id: 'light',
     name: '浅色',
-    background: '#faf9f7',
-    text: '#2c2b28',
-    textMuted: '#8a8680',
-    accent: '#1a56db',
-    border: '#e8e4dc',
-    codeBg: '#f2ede6',
+    // Google Grey 0 / 900 / 700, Blue 600, Grey 300, Grey 50
+    background: '#ffffff',
+    text: '#202124',
+    textMuted: '#5f6368',
+    accent: '#1a73e8',
+    border: '#dadce0',
+    codeBg: '#f8f9fa',
   },
   {
     id: 'dark',
     name: '深色',
-    background: '#1c1b1a',
-    text: '#e6e4df',
-    textMuted: '#7a7872',
+    // Chrome's dark surfaces: neutral, one step above pure black
+    background: '#202124',
+    text: '#e8eaed',
+    textMuted: '#9aa0a6',
     accent: '#8ab4f8',
-    border: '#2d2d2b',
-    codeBg: '#252423',
+    border: '#3c4043',
+    codeBg: '#292a2d',
   },
   {
     id: 'sepia',
     name: '护眼',
-    background: '#f5eed6',
-    text: '#433422',
-    textMuted: '#8a7560',
-    accent: '#7a5c2e',
-    border: '#d4c9a8',
-    codeBg: '#ede6cc',
+    // Warm paper, but the accent is still a Google blue — darkened two steps
+    // so it clears 4.5:1 against cream, where #1a73e8 only reaches 4.06:1.
+    background: '#f8f2e7',
+    text: '#3d3529',
+    textMuted: '#776c59',
+    accent: '#175fcc',
+    border: '#e5dac5',
+    codeBg: '#f2ebdc',
   },
 ] as const;
 

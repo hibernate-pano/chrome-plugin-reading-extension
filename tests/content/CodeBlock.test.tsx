@@ -325,7 +325,8 @@ describe('CodeBlock — execCommand fallback', () => {
     }
   });
 
-  it('still shows the copied state after the fallback', async () => {
+  it('still shows the copied state after the fallback, then reverts 2000ms later', async () => {
+    vi.useFakeTimers();
     stubClipboard(vi.fn().mockRejectedValue(new Error('denied')));
     (document as Document & { execCommand?: unknown }).execCommand = vi.fn(() => true);
 
@@ -338,6 +339,13 @@ describe('CodeBlock — execCommand fallback', () => {
 
     expect(screen.getByText('Copied!')).toBeInTheDocument();
     expect(button).toHaveClass('reader-code-block__copy--copied');
+
+    // The legacy path arms the same revert timer as the modern one.
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.queryByText('Copied!')).not.toBeInTheDocument();
+    expect(button).toHaveAttribute('aria-label', 'Copy code to clipboard');
   });
 
   it('falls back when navigator.clipboard is missing entirely', async () => {

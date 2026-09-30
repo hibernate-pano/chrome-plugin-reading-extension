@@ -92,8 +92,8 @@ describe('getReaderThemeById', () => {
 
   it('gives the dark theme a dark background and light text', () => {
     const dark = getReaderThemeById('dark');
-    expect(dark.background).toBe('#1c1b1a');
-    expect(dark.text).toBe('#e6e4df');
+    expect(dark.background).toBe('#202124');
+    expect(dark.text).toBe('#e8eaed');
   });
 
   const FALLBACK_CASES: Array<[label: string, id: string | null | undefined]> = [

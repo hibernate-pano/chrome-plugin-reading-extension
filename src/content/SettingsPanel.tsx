@@ -9,6 +9,25 @@ import type { Settings, Theme } from '../shared/types';
 import { SETTINGS_CONSTRAINTS } from '../shared/constants';
 import { READER_THEMES } from '../shared/readerThemes';
 import { usePanelDismiss } from './usePanelDismiss';
+import { CheckIcon, CloseIcon, RefreshIcon } from './icons';
+
+/**
+ * Where `value` sits inside its range, as a CSS percentage.
+ *
+ * Material sliders paint a filled track up to the handle. That fill cannot be
+ * expressed in CSS alone — it depends on the value — so the component hands
+ * the stylesheet one number and the gradient in `.reader-slider` does the rest.
+ */
+function fillPercent(value: number, min: number, max: number): string {
+  if (max <= min) return '0%';
+  const ratio = Math.min(1, Math.max(0, (value - min) / (max - min)));
+  return `${(ratio * 100).toFixed(2)}%`;
+}
+
+/** `fillPercent` packaged as the custom property the slider CSS reads. */
+function fillStyle(value: number, min: number, max: number): React.CSSProperties {
+  return { '--slider-fill': fillPercent(value, min, max) } as React.CSSProperties;
+}
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -26,9 +45,13 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
     null
   );
 
-  // Focus close button on mount
+  // Initial focus lands on the dialog root, not the close button. Chrome's
+  // :focus-visible heuristic paints a ring on any control focused by script
+  // during the opening click, so a mouse user opened the panel and got a ring
+  // they never earned. The dialog root is not interactive and carries none —
+  // its stylesheet says so — and the first Tab walks into the real controls.
   useEffect(() => {
-    closeButtonRef.current?.focus();
+    panelRef.current?.focus();
   }, []);
 
   // Escape, focus trap and click-outside — shared with HistoryPanel so the two
@@ -142,6 +165,7 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
       role="dialog"
       aria-label="Reading settings"
       aria-modal="true"
+      tabIndex={-1}
     >
       <div className="reader-settings-panel__header">
         <h3 className="reader-settings-panel__title" id="settings-title">设置</h3>
@@ -185,12 +209,24 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
               // option. `tabIndex={0}` on all three would make it three, which
               // is the behaviour the arrow keys above exist to replace.
               tabIndex={settings.theme === theme.id ? 0 : -1}
-              style={{
-                backgroundColor: theme.background,
-                '--swatch-accent': theme.accent,
-                '--swatch-border': theme.border,
-              } as React.CSSProperties}
-            />
+            >
+              <span
+                className="reader-theme-swatch__chip"
+                style={{
+                  backgroundColor: theme.background,
+                  // The tick has to read on a white, a near-black and a cream
+                  // circle, so it is painted in the theme's own ink rather than
+                  // in the panel's.
+                  color: theme.text,
+                  '--swatch-border': theme.border,
+                } as React.CSSProperties}
+              >
+                <span className="reader-theme-swatch__check">
+                  <CheckIcon size={18} />
+                </span>
+              </span>
+              <span className="reader-theme-swatch__name">{theme.name}</span>
+            </button>
           ))}
         </div>
       </div>
@@ -205,6 +241,11 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
             id="reader-font-size"
             type="range"
             className="reader-slider"
+            style={fillStyle(
+              settings.fontSize,
+              SETTINGS_CONSTRAINTS.fontSize.min,
+              SETTINGS_CONSTRAINTS.fontSize.max
+            )}
             min={SETTINGS_CONSTRAINTS.fontSize.min}
             max={SETTINGS_CONSTRAINTS.fontSize.max}
             step={1}
@@ -230,6 +271,11 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
             id="reader-line-height"
             type="range"
             className="reader-slider"
+            style={fillStyle(
+              settings.lineHeight,
+              SETTINGS_CONSTRAINTS.lineHeight.min,
+              SETTINGS_CONSTRAINTS.lineHeight.max
+            )}
             min={SETTINGS_CONSTRAINTS.lineHeight.min}
             max={SETTINGS_CONSTRAINTS.lineHeight.max}
             step={0.1}
@@ -255,6 +301,11 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
             id="reader-page-width"
             type="range"
             className="reader-slider"
+            style={fillStyle(
+              settings.pageWidth,
+              SETTINGS_CONSTRAINTS.pageWidth.min,
+              SETTINGS_CONSTRAINTS.pageWidth.max
+            )}
             min={SETTINGS_CONSTRAINTS.pageWidth.min}
             max={SETTINGS_CONSTRAINTS.pageWidth.max}
             step={50}
@@ -278,6 +329,7 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
           disabled={resetting}
           type="button"
         >
+          <RefreshIcon size={18} />
           {resetting ? '恢复中…' : '恢复默认设置'}
         </button>
         {/* Always in the DOM: a live region inserted together with its text is
@@ -293,20 +345,3 @@ export function SettingsPanel({ settings, onChange, onReset, onClose }: Settings
   );
 }
 
-function CloseIcon(): JSX.Element {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}

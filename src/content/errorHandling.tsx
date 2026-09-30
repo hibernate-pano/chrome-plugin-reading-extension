@@ -1,10 +1,20 @@
 /**
  * Error Handling Module
- * Simplified error handling with user-friendly messages
- * Requirements: 8.1, 8.2, 8.3
+ * User-facing failure surfaces: a snackbar for anything recoverable, and a
+ * centred empty state for the one failure that leaves nothing to read.
  */
 
-import React, { Component, type ReactNode, type ErrorInfo, type JSX } from 'react';
+import { Component, type ReactNode, type ErrorInfo, type JSX } from 'react';
+import { ErrorIcon, ICON_PATHS, RefreshIcon } from './icons';
+
+// Injected into the *page's* document, because that is where the toast lives.
+// See host.css for why it cannot come from the shadow root's stylesheet.
+import hostCSS from './host.css?inline';
+
+/** Id of the injected toast stylesheet. */
+const TOAST_STYLE_ID = 'reader-toast-styles';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
  * Error context types for categorizing errors
@@ -49,55 +59,82 @@ export function getErrorMessage(context: ErrorContext): string {
     : ERROR_MESSAGES.default;
 }
 
+/** The glyph that tells four otherwise identical snackbars apart. */
+const TOAST_ICONS: Record<ToastOptions['type'], keyof typeof ICON_PATHS | null> = {
+  error: 'error',
+  warning: 'error',
+  success: 'check',
+  info: null,
+};
+
+/**
+ * Build a Material glyph with the DOM API.
+ *
+ * The toast is not React — it is appended to the host page's body and removed
+ * on a timer — so it cannot be rendered as an element tree. Drawing it from
+ * `ICON_PATHS` keeps one copy of the path data in the project.
+ */
+function createIconNode(name: keyof typeof ICON_PATHS, size = 20): SVGElement {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'currentColor');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', ICON_PATHS[name]);
+  svg.appendChild(path);
+  return svg;
+}
+
+/**
+ * Inject the toast stylesheet exactly once.
+ *
+ * Guarded on the element id: several failures can land in the same tick, and
+ * each one would otherwise append another copy of the same rules.
+ */
+function injectToastStyles(): void {
+  if (document.getElementById(TOAST_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = TOAST_STYLE_ID;
+  style.textContent = hostCSS;
+  document.head.appendChild(style);
+}
+
 /**
  * Show a toast notification to the user
+ *
+ * The message is set as `textContent` on its own element, never as markup: it
+ * can carry anything a failing layer put into an Error, and an error string
+ * containing markup must not become live DOM on someone else's page.
  */
 export function showToast(options: ToastOptions): void {
   const { type, message, duration = 5000 } = options;
 
-  // Create toast element
   const toast = document.createElement('div');
   toast.className = `reader-toast reader-toast--${type}`;
   toast.setAttribute('role', 'alert');
   toast.setAttribute('aria-live', 'polite');
-  toast.textContent = message;
 
-  // Add styles inline for isolation
-  Object.assign(toast.style, {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    padding: '12px 20px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    zIndex: '2147483647',
-    maxWidth: '400px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    animation: 'reader-toast-in 0.3s ease-out',
-    backgroundColor: type === 'error' ? '#fee2e2' : '#f0f9ff',
-    color: type === 'error' ? '#991b1b' : '#1e40af',
-    border: `1px solid ${type === 'error' ? '#fecaca' : '#bfdbfe'}`,
-  });
-
-  // Add animation keyframes if not already present
-  if (!document.getElementById('reader-toast-styles')) {
-    const style = document.createElement('style');
-    style.id = 'reader-toast-styles';
-    style.textContent = `
-      @keyframes reader-toast-in {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes reader-toast-out {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(20px); }
-      }
-    `;
-    document.head.appendChild(style);
+  const iconName = TOAST_ICONS[type];
+  if (iconName) {
+    const iconSlot = document.createElement('span');
+    iconSlot.className = 'reader-toast__icon';
+    iconSlot.setAttribute('aria-hidden', 'true');
+    iconSlot.appendChild(createIconNode(iconName));
+    toast.appendChild(iconSlot);
   }
 
-  // Add to document
+  const text = document.createElement('span');
+  text.className = 'reader-toast__message';
+  text.textContent = message;
+  toast.appendChild(text);
+
+  injectToastStyles();
+
+  toast.style.animation = 'reader-toast-in 0.3s ease-out';
   document.body.appendChild(toast);
 
   // Remove after duration
@@ -178,10 +215,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render(): ReactNode {
     if (this.state.hasError) {
-      return React.createElement(ErrorFallback, {
-        error: this.state.error,
-        onRetry: this.handleRetry,
-      });
+      return <ErrorFallback error={this.state.error} onRetry={this.handleRetry} />;
     }
 
     return this.props.children;
@@ -199,107 +233,25 @@ interface ErrorFallbackProps {
 /**
  * Error Fallback Component
  * Displayed when an error is caught by the ErrorBoundary
+ *
+ * This is the only state with no article behind it, so it is laid out as a
+ * centred empty state rather than an error page: one mark, one sentence about
+ * what happened, one way forward.
  */
 export function ErrorFallback({ error, onRetry }: ErrorFallbackProps): JSX.Element {
-  return React.createElement(
-    'div',
-    {
-      className: 'reader-error-fallback',
-      style: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '200px',
-        padding: '40px',
-        textAlign: 'center',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: '#374151',
-      },
-    },
-    // Error icon
-    React.createElement(
-      'div',
-      {
-        style: {
-          width: '64px',
-          height: '64px',
-          marginBottom: '16px',
-          borderRadius: '50%',
-          backgroundColor: '#fee2e2',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-      },
-      React.createElement(
-        'svg',
-        {
-          width: '32',
-          height: '32',
-          viewBox: '0 0 24 24',
-          fill: 'none',
-          stroke: '#dc2626',
-          strokeWidth: '2',
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-        },
-        React.createElement('circle', { cx: '12', cy: '12', r: '10' }),
-        React.createElement('line', { x1: '12', y1: '8', x2: '12', y2: '12' }),
-        React.createElement('line', { x1: '12', y1: '16', x2: '12.01', y2: '16' })
-      )
-    ),
-    // Error title
-    React.createElement(
-      'h2',
-      {
-        style: {
-          margin: '0 0 8px 0',
-          fontSize: '18px',
-          fontWeight: '600',
-          color: '#1f2937',
-        },
-      },
-      '出现了一些问题'
-    ),
-    // Error message
-    React.createElement(
-      'p',
-      {
-        style: {
-          margin: '0 0 24px 0',
-          fontSize: '14px',
-          color: '#6b7280',
-          maxWidth: '400px',
-        },
-      },
-      error?.message || ERROR_MESSAGES.render
-    ),
-    // Retry button
-    onRetry &&
-      React.createElement(
-        'button',
-        {
-          onClick: onRetry,
-          style: {
-            padding: '10px 24px',
-            fontSize: '14px',
-            fontWeight: '500',
-            color: '#ffffff',
-            backgroundColor: '#3b82f6',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-          },
-          onMouseOver: (e: React.MouseEvent<HTMLButtonElement>) => {
-            e.currentTarget.style.backgroundColor = '#2563eb';
-          },
-          onMouseOut: (e: React.MouseEvent<HTMLButtonElement>) => {
-            e.currentTarget.style.backgroundColor = '#3b82f6';
-          },
-        },
-        '重试'
-      )
+  return (
+    <div className="reader-error-fallback">
+      <span className="reader-error-fallback__badge">
+        <ErrorIcon size={32} />
+      </span>
+      <h2 className="reader-error-fallback__title">出现了一些问题</h2>
+      <p className="reader-error-fallback__message">{error?.message || ERROR_MESSAGES.render}</p>
+      {onRetry && (
+        <button className="reader-error-fallback__action" onClick={onRetry} type="button">
+          <RefreshIcon size={18} />
+          重试
+        </button>
+      )}
+    </div>
   );
 }

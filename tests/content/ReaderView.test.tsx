@@ -185,7 +185,7 @@ describe('ReaderView — article shell', () => {
     expect(overlay.style.getPropertyValue('--reader-font-size')).toBe('21px');
     expect(overlay.style.getPropertyValue('--reader-line-height')).toBe('1.5');
     expect(overlay.style.getPropertyValue('--reader-page-width')).toBe('800px');
-    expect(overlay.style.getPropertyValue('--reader-bg')).toBe('#f5eed6');
+    expect(overlay.style.getPropertyValue('--reader-bg')).toBe('#f8f2e7');
   });
 
   it('always shows the estimated read time', () => {
@@ -741,8 +741,9 @@ describe('ReaderView — settings panel', () => {
     await act(async () => {
       fireEvent.click(gear);
     });
+    // The dialog root takes the mount focus — see SettingsPanel.
     expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: '关闭设置' })
+      screen.getByRole('dialog', { name: 'Reading settings' })
     );
 
     await act(async () => {
@@ -890,6 +891,97 @@ describe('ReaderView — history panel', () => {
 
     expect(screen.getByText('Sticky')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('删除失败，请重试');
+  });
+
+  it('reports a failed history read in the panel', async () => {
+    renderReader(
+      {},
+      {},
+      undefined,
+      { onLoadHistory: () => Promise.reject(new Error('storage gone')) }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('storage gone');
+  });
+
+  it('uses a fallback message when a read rejects with a non-Error', async () => {
+    renderReader({}, {}, undefined, { onLoadHistory: () => Promise.reject('nope') });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('读取阅读历史失败');
+  });
+
+  it('ignores a read that settles after the panel unmounted', async () => {
+    const pending = deferred<ReadingRecord[]>();
+    const { unmount } = renderReader(
+      {},
+      {},
+      undefined,
+      { onLoadHistory: () => pending.promise }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    await act(async () => {
+      unmount();
+      pending.reject(new Error('late'));
+      await pending.promise.catch(() => {});
+    });
+    // The catch ran, saw `cancelled`, and dropped the result — no setState on
+    // an unmounted component, no crash.
+  });
+
+  it('uses a fallback message when a delete rejects with a non-Error', async () => {
+    renderReader(
+      {},
+      {},
+      undefined,
+      {
+        onLoadHistory: () => Promise.resolve([record({ title: 'Sticky' })]),
+        onDeleteHistory: () => Promise.reject('nope'),
+      }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '删除《Sticky》的阅读记录' }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('删除失败，请重试');
+  });
+
+  it('uses a fallback message when a clear rejects with a non-Error', async () => {
+    renderReader(
+      {},
+      {},
+      undefined,
+      {
+        onLoadHistory: () => Promise.resolve([record({ title: 'Wiped' })]),
+        onClearHistory: () => Promise.reject('nope'),
+      }
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open reading history' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '清空全部' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '确认清空' }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('清空失败，请重试');
   });
 
   it('erases the history only after the panel confirms', async () => {
@@ -1277,5 +1369,91 @@ describe('renderContentNodes escape handling', () => {
     renderReader({ content: '<p>Tom &amp;amp; Jerry &amp;lt;b&amp;gt;</p><code>x</code>' });
 
     expect(contentRegion().textContent).toContain('Tom &amp; Jerry &lt;b&gt;');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Reading progress
+ *
+ * jsdom does no layout, so the geometry the progress bar reads is faked
+ * onto the overlay instance; the writes land in its inline style, which is
+ * exactly what the stylesheet's progress gradient consumes.
+ * ------------------------------------------------------------------ */
+
+describe('ReaderView — reading progress', () => {
+  function fakeLayout(overlay: HTMLElement, scrollHeight: number, clientHeight: number): void {
+    Object.defineProperty(overlay, 'scrollHeight', { value: scrollHeight, configurable: true });
+    Object.defineProperty(overlay, 'clientHeight', { value: clientHeight, configurable: true });
+  }
+
+  const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+
+  it('writes scroll progress into a custom property on the overlay', async () => {
+    const { container, unmount } = renderReader();
+    const overlay = container.querySelector('.reader-overlay') as HTMLElement;
+    // No scrollable height yet: the bar starts empty, not NaN.
+    expect(overlay.style.getPropertyValue('--reader-progress')).toBe('0.00%');
+
+    fakeLayout(overlay, 3000, 1000);
+    await act(async () => {
+      overlay.dispatchEvent(new Event('scroll'));
+      await nextFrame();
+    });
+    expect(overlay.style.getPropertyValue('--reader-progress')).toBe('0.00%');
+
+    await act(async () => {
+      Object.defineProperty(overlay, 'scrollTop', { value: 1000, configurable: true });
+      overlay.dispatchEvent(new Event('scroll'));
+      // A second scroll inside the same frame is coalesced away, not queued.
+      overlay.dispatchEvent(new Event('scroll'));
+      await nextFrame();
+    });
+    expect(overlay.style.getPropertyValue('--reader-progress')).toBe('50.00%');
+
+    // A frame still pending at unmount must be cancelled rather than left to
+    // write into a detached overlay.
+    await act(async () => {
+      overlay.dispatchEvent(new Event('scroll'));
+      unmount();
+    });
+  });
+
+  it('clamps progress at 100% when a resize moves the end of the document up', async () => {
+    const { container, unmount } = renderReader();
+    const overlay = container.querySelector('.reader-overlay') as HTMLElement;
+
+    fakeLayout(overlay, 3000, 1000);
+    Object.defineProperty(overlay, 'scrollTop', { value: 4000, configurable: true });
+
+    await act(async () => {
+      window.dispatchEvent(new Event('resize'));
+      await nextFrame();
+    });
+    expect(overlay.style.getPropertyValue('--reader-progress')).toBe('100.00%');
+
+    unmount();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Render edge cases in the code-block walker
+ * ------------------------------------------------------------------ */
+
+describe('ReaderView — render edge cases', () => {
+  it('reads the language from a lang- class when there is no language- one', () => {
+    renderReader({ content: '<pre class="lang-rb">puts 1</pre>' });
+
+    expect(screen.getByLabelText('Code block in ruby')).toBeInTheDocument();
+  });
+
+  it('drops top-level comment nodes instead of serializing them back to life', () => {
+    // The comment must be a *direct child of body*: nested inside a <p> it
+    // never meets the serializer — the paragraph goes out as one outerHTML.
+    // The `<code>` sibling keeps the article on the node-by-node path.
+    renderReader({ content: '<p>Before</p><!-- dropped --><code>x</code>' });
+
+    const content = document.querySelector('#reader-content') as HTMLElement;
+    expect(content.textContent).toContain('Before');
+    expect(content.innerHTML).not.toContain('dropped');
   });
 });

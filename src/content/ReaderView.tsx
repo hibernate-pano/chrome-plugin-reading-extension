@@ -9,6 +9,14 @@ import type { ReadingRecord } from '../shared/history';
 import { SettingsPanel } from './SettingsPanel';
 import { HistoryPanel } from './HistoryPanel';
 import { CodeBlock } from './CodeBlock';
+import {
+  CloseIcon,
+  DownloadIcon,
+  ErrorIcon,
+  HistoryIcon,
+  SettingsIcon,
+  SpinnerIcon,
+} from './icons';
 import { getReaderThemeById } from '../shared/readerThemes';
 
 /** Which floating panel, if any, is open. They are mutually exclusive. */
@@ -57,6 +65,7 @@ export function ReaderView({
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
   const historyBtnRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastMoveRef = useRef(0);
@@ -133,6 +142,44 @@ export function ReaderView({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, activePanel]);
+
+  // Reading progress, written straight to the overlay as a custom property.
+  //
+  // A scrollbar drag emits scroll events faster than the frame rate, so the
+  // write is coalesced to one per frame. The value lands on an element the
+  // stylesheet already reads, so a scrolling article costs no React render at
+  // all. Window resize is the other thing that moves the end of the document.
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+
+    let frame: number | null = null;
+
+    const write = (): void => {
+      frame = null;
+      const scrollable = overlay.scrollHeight - overlay.clientHeight;
+      const ratio = scrollable > 0 ? overlay.scrollTop / scrollable : 0;
+      overlay.style.setProperty(
+        '--reader-progress',
+        `${(Math.min(1, Math.max(0, ratio)) * 100).toFixed(2)}%`
+      );
+    };
+
+    const handleScroll = (): void => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(write);
+    };
+
+    overlay.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    write();
+
+    return () => {
+      overlay.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   // Lock body scroll
   useEffect(() => {
@@ -288,7 +335,12 @@ export function ReaderView({
   }, [content.content]);
 
   return (
-    <div className={`reader-overlay ${themeClass}`} style={containerStyle} role="main">
+    <div
+      ref={overlayRef}
+      className={`reader-overlay ${themeClass}`}
+      style={containerStyle}
+      role="main"
+    >
       {/* Skip to content link */}
       <a
         href="#reader-content"
@@ -354,7 +406,8 @@ export function ReaderView({
           fixed top strip and would push this out of the viewport. */}
       {exportError && (
         <div className="reader-export-error" role="alert">
-          {exportError}
+          <ErrorIcon />
+          <span>{exportError}</span>
         </div>
       )}
 
@@ -571,54 +624,3 @@ function processContentWithCodeBlocks(htmlContent: string): React.ReactNode {
   return <>{segments}</>;
 }
 
-function CloseIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
-function DownloadIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
-function SpinnerIcon(): JSX.Element {
-  return (
-    <svg className="reader-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="12" y1="2" x2="12" y2="6" />
-      <line x1="12" y1="18" x2="12" y2="22" />
-      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
-      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
-      <line x1="2" y1="12" x2="6" y2="12" />
-      <line x1="18" y1="12" x2="22" y2="12" />
-      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
-      <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
-    </svg>
-  );
-}
-
-function HistoryIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" />
-      <polyline points="12 7 12 12 15.5 14" />
-    </svg>
-  );
-}
-
-function SettingsIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  );
-}
