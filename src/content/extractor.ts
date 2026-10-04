@@ -7,6 +7,7 @@ import { Readability } from '@mozilla/readability';
 import type { ExtractedContent, ExtractionResult } from '../shared/types';
 import { READING_SPEED } from '../shared/constants';
 import { sanitizeArticleHtml } from '../shared/sanitize';
+import { addCjkSpacing, addCjkSpacingToHtml } from '../shared/cjkSpacing';
 
 /**
  * Simple in-memory cache for extracted content
@@ -132,7 +133,7 @@ export function extractContent(
     // so sanitize it once, here, before it is cached or returned. This also
     // replaces the old stripInlineStyles pass: the sanitizer drops `style`
     // outright, so our reader CSS keeps full control of the layout.
-    const cleanContent = sanitizeArticleHtml(article.content);
+    const cleanContent = addCjkSpacingToHtml(sanitizeArticleHtml(article.content));
 
     // Gate on the SANITIZED content, and on its TEXT rather than its markup.
     //
@@ -151,15 +152,20 @@ export function extractContent(
       };
     }
 
-    // Build extracted content object
-    const textContent = article.textContent ?? '';
+    // Build extracted content object.
+    //
+    // Every field that reaches a reader gets the same spacing pass as the body:
+    // the title renders in the reader header and the print header, the excerpt
+    // in the history list. Skipping them would make the heading and the first
+    // paragraph disagree about how `React18` is set.
+    const textContent = addCjkSpacing(article.textContent ?? '');
     const wordCount = countWords(textContent);
     
     const extractedContent: ExtractedContent = {
-      title: article.title || doc.title || 'Untitled',
+      title: addCjkSpacing(article.title || doc.title || 'Untitled'),
       content: cleanContent,
       textContent: textContent,
-      excerpt: generateExcerpt(article.excerpt || textContent),
+      excerpt: generateExcerpt(addCjkSpacing(article.excerpt) || textContent),
       byline: article.byline || null,
       siteName: article.siteName || null,
       wordCount,

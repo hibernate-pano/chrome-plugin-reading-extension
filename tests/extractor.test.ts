@@ -93,6 +93,11 @@ function parseContent(content: string): Document {
   return new DOMParser().parseFromString(content, 'text/html');
 }
 
+/** Read the prose out of extracted article HTML. */
+function textOfContent(content: string): string {
+  return parseContent(content).body.textContent ?? '';
+}
+
 describe('Content Extractor', () => {
   // The module keeps a URL-keyed Map. Without this the suite is order-dependent:
   // a URL used twice in two tests would resolve from the first test's cache.
@@ -451,6 +456,50 @@ describe('Content Extractor', () => {
       } finally {
         errors.mockRestore();
       }
+    });
+  });
+
+  describe('CJK inter-script spacing', () => {
+    /**
+     * Chinese filler long enough to clear Readability's 500-char threshold,
+     * with the seams that matter embedded in it.
+     */
+    const CJK_FILLER =
+      '我们使用React18的钩子来重构这个模块，效果比预期好很多。' .repeat(14);
+
+    it('should space the body, the title and the excerpt consistently', () => {
+      const doc = createTestDocument(
+        `<article><h1>使用React18重构阅读器</h1><p>${CJK_FILLER}</p></article>`,
+        '使用React18重构阅读器'
+      );
+
+      const data = expectExtracted(
+        extractContent(doc, 'https://example.com/cjk'),
+        'cjk article'
+      );
+
+      expect(data.title).toBe('使用 React18 重构阅读器');
+      expect(textOfContent(data.content)).toContain('使用 React18 的钩子');
+      // The history list renders the excerpt, so a heading and a list row that
+      // disagree about `React18` would be visible at the same time.
+      expect(data.excerpt).toContain('使用 React18 的钩子');
+      expect(data.textContent).toContain('使用 React18 的钩子');
+    });
+
+    it('should leave a <pre> block in the extracted article unspaced', () => {
+      const doc = createTestDocument(
+        `<article><h1>安装</h1><p>${CJK_FILLER}</p>` +
+          '<pre><code>pnpm安装依赖后运行</code></pre></article>',
+        '安装'
+      );
+
+      const data = expectExtracted(
+        extractContent(doc, 'https://example.com/cjk-pre'),
+        'cjk article with a pre'
+      );
+      const parsed = parseContent(data.content);
+
+      expect(parsed.querySelector('pre')?.textContent).toBe('pnpm安装依赖后运行');
     });
   });
 });
