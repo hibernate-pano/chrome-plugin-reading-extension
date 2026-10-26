@@ -86,6 +86,15 @@ let currentSettings: PrintSettings = { ...DEFAULT_PRINT_SETTINGS };
 let currentFilename = 'article.pdf';
 
 /**
+ * The suffix that marks a cut export in the saved filename.
+ *
+ * Chrome proposes `document.title` as the name of the saved PDF, so without
+ * this marker a trimmed export and an untrimmed one of the same article land
+ * on the same name — and the second save overwrites the first without a word.
+ */
+const TRIMMED_SUFFIX = '（已裁剪）';
+
+/**
  * The rendered article (`.p-doc`), kept for re-pagination.
  *
  * Deliberately *not* `elements.sheet`: that element is the measuring container
@@ -446,6 +455,31 @@ async function setImageSize(size: PrintImageSize): Promise<void> {
 /* ------------------------------------------------------------------ */
 
 /**
+ * The filename Chrome will propose for the saved PDF.
+ *
+ * The suffix rides on the *current* trim state, not on a name captured at
+ * boot: the reader may cut, undo and cut again before printing, and the name
+ * has to describe the document as it is now.
+ */
+function proposedFilename(): string {
+  if (trimTargetId === null) return currentFilename;
+  // `buildFilename` always ends in `.pdf`; stripping it here is what puts the
+  // suffix between the name and the extension.
+  return `${currentFilename.replace(/\.pdf$/, '')}${TRIMMED_SUFFIX}.pdf`;
+}
+
+/**
+ * Copy the current filename into the document title.
+ *
+ * Chrome reads `document.title` when the reader saves the printout, so the
+ * title *is* the filename. It has to be refreshed whenever the trim state
+ * changes, and once more right before printing.
+ */
+function syncDocumentTitle(): void {
+  document.title = proposedFilename();
+}
+
+/**
  * The article body the trim cuts in.
  *
  * The title and the footer are *outside* it — the header is a sibling before
@@ -512,6 +546,7 @@ function applyTrim(blockId: string): void {
   trimSnippet = snippetOf(target);
   removedNodes = cutTrailingFrom(root, target);
   trimTargetId = blockId;
+  syncDocumentTitle();
 
   remarkOversizedBlocks();
 }
@@ -531,6 +566,7 @@ async function undoTrim(): Promise<void> {
   restoreRemoved(removedNodes);
   removedNodes = [];
   trimTargetId = null;
+  syncDocumentTitle();
 
   const pendingImage = Array.from(elements.sheet.querySelectorAll('img')).some(
     (image) => !image.complete
@@ -572,7 +608,6 @@ function updateTrimStatus(pageCount: number): void {
     if (!restoringImages) {
       elements.trimStatus.classList.add('status--hidden');
       elements.trimBadge.hidden = true;
-      document.body.classList.remove('has-trim');
     }
     return;
   }
@@ -580,7 +615,6 @@ function updateTrimStatus(pageCount: number): void {
   elements.trimStatus.classList.remove('status--hidden');
   elements.trimStatusText.textContent = `已裁剪至 ${pageCount} 页 · 「${trimSnippet}」`;
   elements.trimBadge.hidden = false;
-  document.body.classList.add('has-trim');
 }
 
 /* ------------------------------------------------------------------ */
@@ -697,8 +731,9 @@ function wireToolbar(): void {
     // Belt and braces: re-measure against the final layout right before the
     // snapshot, so no stale mark survives into the printed output.
     remarkOversizedBlocks();
-    // Chrome proposes document.title as the saved filename.
-    document.title = currentFilename;
+    // Chrome proposes document.title as the saved filename — and the trim
+    // state may have changed since the last time it was written.
+    syncDocumentTitle();
     window.print();
   });
 }
@@ -814,7 +849,7 @@ async function main(): Promise<void> {
   currentFilename = buildFilename(payload);
 
   elements.title.textContent = payload.title;
-  document.title = currentFilename;
+  syncDocumentTitle();
 
   const doc = buildDocument(payload);
   eagerizeImages(doc);

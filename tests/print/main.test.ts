@@ -128,6 +128,32 @@ function printCss(): string {
   return readFileSync(resolve(__dirname, '../../src/print/print.css'), 'utf8');
 }
 
+/**
+ * The body of the `@media print` block in the print stylesheet.
+ *
+ * A rule that only matters on paper has to be looked up *inside* that block.
+ * The same selector in a screen rule is a different rule, and searching the
+ * file as a whole would let a screen rule answer for the print one — the test
+ * would keep passing after the print override had been deleted.
+ */
+function printMediaBlock(css: string): string {
+  // The rule is matched, not the phrase: the file's header comment mentions
+  // `@media print` in prose, and a plain `indexOf` would start the scan there
+  // and hand back the `@page` block instead.
+  const match = /@media\s+print\s*\{/.exec(css);
+  if (!match) return '';
+  const open = match.index + match[0].length - 1;
+  let depth = 0;
+  for (let i = open; i < css.length; i += 1) {
+    if (css[i] === '{') depth += 1;
+    else if (css[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return css.slice(open + 1, i);
+    }
+  }
+  return '';
+}
+
 const REQUIRED_IDS = [
   'sheet',
   'doc-title',
@@ -686,22 +712,24 @@ describe('print page · stylesheet', () => {
     const css = printCss();
 
     // The gap token appears in more than one rule, so the assertion is on
-    // the list's own rule and on the declaration that carries it.
-    const rule = css.match(/^\.p-content ul,\s*\n\.p-content ol\s*\{[^}]*\}/m)?.[0] ?? '';
+    // the list's own rule and on the declaration that carries it. The break
+    // between the two selectors is optional: Prettier may lay the rule out on
+    // one line, and the assertion must not depend on which it chose.
+    const rule = css.match(/^\.p-content ul,\s*\.p-content ol\s*\{[^}]*\}/m)?.[0] ?? '';
     const margin = rule.match(/margin:\s*([^;]+);/)?.[1] ?? '';
 
     expect(margin).toContain('var(--print-para-gap');
   });
 
   it('does not print the hover outline', () => {
-    const css = printCss();
-
-    // The `::after` rule is the hover label; this one is the outline itself,
-    // so the selector is matched without it and the outline has to be reset
-    // in that very rule — the print engine keeps the `:hover` snapshot of
-    // the block the pointer was last on.
+    // The search is limited to the `@media print` block. The `::after` rule
+    // is the hover label; this one is the outline itself, so the selector is
+    // matched without it and the outline has to be reset in that very rule —
+    // the print engine keeps the `:hover` snapshot of the block the pointer
+    // was last on.
+    const block = printMediaBlock(printCss());
     const rule =
-      css.match(/body\.is-trimming \[data-trim-eligible='true'\]:hover\s*\{[^}]*\}/)?.[0] ?? '';
+      block.match(/body\.is-trimming \[data-trim-eligible='true'\]:hover\s*\{[^}]*\}/)?.[0] ?? '';
 
     expect(rule).toContain('outline: none');
   });
@@ -1587,5 +1615,82 @@ describe('print page · trim badge', () => {
 
     expect(document.body.classList.contains('is-trimming')).toBe(true);
     expect(byId('trim-hint').hidden).toBe(false);
+  });
+});
+
+/**
+ * The saved filename.
+ *
+ * Chrome proposes `document.title` as the name of the saved PDF, so the title
+ * *is* the filename. A cut has to show up in it: without the marker, a
+ * trimmed export and an untrimmed one of the same article land on the same
+ * name, and the second save silently overwrites the first.
+ */
+describe('print page · export filename', () => {
+  /** The marker a cut leaves in the name. */
+  const TRIMMED = '（已裁剪）';
+
+  /** An article with three cuttable blocks. */
+  function article(): PrintPayload {
+    return payload({ content: '<p>一</p><p>二</p><p>三</p>' });
+  }
+
+  /** Cut the document at its second block, the way the reader would. */
+  function cutAtSecondBlock(): void {
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+  }
+
+  it('carries no marker when nothing was cut', async () => {
+    const piece = article();
+    await boot({ payload: piece });
+
+    expect(document.title).toBe(buildFilename(piece));
+    expect(document.title).not.toContain(TRIMMED);
+  });
+
+  it('marks the name once the article is cut', async () => {
+    const piece = article();
+    await boot({ payload: piece });
+
+    cutAtSecondBlock();
+
+    expect(document.title).toContain(TRIMMED);
+    // The marker sits between the name and the extension.
+    expect(document.title).toBe(buildFilename(piece).replace(/\.pdf$/, `${TRIMMED}.pdf`));
+  });
+
+  it('restores the original name when the cut is undone', async () => {
+    const piece = article();
+    await boot({ payload: piece });
+    cutAtSecondBlock();
+    expect(document.title).toContain(TRIMMED);
+
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flush();
+
+    expect(document.title).toBe(buildFilename(piece));
+    expect(document.title).not.toContain(TRIMMED);
+  });
+
+  it('marks the name at the moment the print button is pressed', async () => {
+    await boot({ payload: article() });
+
+    cutAtSecondBlock();
+    printButton().click();
+
+    expect(document.title).toContain(TRIMMED);
+    expect(printSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves an uncut export unmarked all the way to the print button', async () => {
+    const piece = article();
+    await boot({ payload: piece });
+
+    printButton().click();
+
+    expect(document.title).toBe(buildFilename(piece));
+    expect(document.title).not.toContain(TRIMMED);
   });
 });

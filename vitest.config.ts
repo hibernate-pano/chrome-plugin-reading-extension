@@ -39,8 +39,8 @@ export default defineConfig({
         // just below the last measured value so the gate is real without
         // failing on a single newly-uncovered line:
         //
-        //   measured 2026-09-29 (all files, after excluding types.ts):
-        //   statements 97.04 · branches 92.65 · functions 97.13 · lines 98.27
+        //   measured 2026-10-26 (all files, after excluding types.ts):
+        //   statements 97.23 · branches 93.10 · functions 97.58 · lines 98.82
         //
         // Rounded down to whole numbers, so each gate keeps only the sliver of
         // headroom the rounding leaves behind — never more.

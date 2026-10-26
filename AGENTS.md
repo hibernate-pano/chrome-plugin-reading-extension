@@ -88,7 +88,7 @@ pnpm run lint          # eslint with --max-warnings 0
 pnpm run lint:fix      # eslint --fix
 
 # Tests
-pnpm run test          # vitest --run (all 20 files / 523 tests)
+pnpm run test          # vitest --run (all 29 files / 891 tests)
 pnpm run test:watch    # watch mode
 pnpm run test:coverage # v8 coverage; enforces thresholds (see vitest.config.ts)
 
@@ -152,12 +152,15 @@ tests/                    # Flat, mirroring src/ — no unit/integration/e2e spl
 ├── setup.ts             #   global test setup (also imported directly by some tests)
 ├── setup.test.ts
 ├── extractor.test.ts
+├── extractor.lengthGate.test.ts
 ├── background/messageRouting.test.ts
-├── content/{CodeBlock,ReaderView,SettingsPanel,errorHandling,
-│            exportHandoff,messageHandling}.test.tsx|.ts
-├── print/{buildDocument,main,markBreaks,paginate,prepareImages,
-│          printSettings,renderSheets}.test.ts
-└── shared/{codeHighlight,history,printSettings,readerThemes,sanitize,storage}.test.ts
+├── content/{CodeBlock,HistoryPanel,ReaderView,SettingsPanel}.test.tsx
+├── content/{errorHandling,exportHandoff,historyFlow,messageHandling}.test.ts
+├── print/{buildDocument,main,markBreaks,paginate,paginate.measure,
+│          paginate.noLayout,prepareImages,printSettings,renderSheets,
+│          trim}.test.ts
+└── shared/{cjkSpacing,codeHighlight,history,printSettings,readerThemes,
+            sanitize,storage}.test.ts
 
 public/                   # Copied to dist/ by the build; manifest lives here
 docs/                     # Release notes and design/plan specs
@@ -352,7 +355,7 @@ describe('Feature Name', () => {
 ```
 
 `pnpm run test:coverage` enforces a ratchet in `vitest.config.ts`: statements
-92, branches 83, functions 93, lines 94. `src/shared/types.ts` is excluded from
+97, branches 92, functions 97, lines 98. `src/shared/types.ts` is excluded from
 coverage (type-only, no runtime code). Raise the thresholds as coverage grows —
 a ratchet nobody bumps is a ratchet that rots.
 
