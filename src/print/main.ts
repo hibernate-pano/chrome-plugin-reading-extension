@@ -240,11 +240,19 @@ function currentParagraphSpacingIndex(): number {
  * that does not reflow the text) and `repaginate` (for a full re-cut) go
  * through here, because the sheets are rebuilt from scratch on every cut and
  * whatever the previous set carried is gone.
+ *
+ * The theme comes in two sets of classes, and they are not interchangeable:
+ * `p-sheet--*` paints the paper in the preview stylesheet, `p-theme-*` is
+ * where `print.css` reads the `--p-*` variables from. A sheet with only the
+ * first is a tinted page whose headings, links and code blocks still carry the
+ * light theme's colours.
  */
 function applySheetClasses(sheets: Iterable<HTMLElement>): void {
   for (const sheet of sheets) {
     sheet.classList.toggle('p-sheet--light', currentSettings.theme === 'light');
     sheet.classList.toggle('p-sheet--sepia', currentSettings.theme === 'sepia');
+    sheet.classList.toggle('p-theme-light', currentSettings.theme === 'light');
+    sheet.classList.toggle('p-theme-sepia', currentSettings.theme === 'sepia');
     sheet.classList.toggle('p-imgsize-large', currentSettings.imageSize === 'large');
     sheet.classList.toggle('p-imgsize-medium', currentSettings.imageSize === 'medium');
     sheet.classList.toggle('p-imgsize-small', currentSettings.imageSize === 'small');
@@ -268,6 +276,13 @@ function applySettings(): void {
 
   elements.sheet.classList.toggle('sheet--light', currentSettings.theme === 'light');
   elements.sheet.classList.toggle('sheet--sepia', currentSettings.theme === 'sepia');
+  // The theme tokens as well as the theme paint. `sheet--*` is what the
+  // preview stylesheet colours the measuring surface with; `p-theme-*` is
+  // where `print.css` reads its `--p-*` variables from, and the article
+  // measured here has to carry the same tokens as the paper it is cut into —
+  // otherwise the sepia paper is laid out with the light theme's colours.
+  elements.sheet.classList.toggle('p-theme-light', currentSettings.theme === 'light');
+  elements.sheet.classList.toggle('p-theme-sepia', currentSettings.theme === 'sepia');
   elements.sheet.classList.toggle('p-imgsize-large', currentSettings.imageSize === 'large');
   elements.sheet.classList.toggle('p-imgsize-medium', currentSettings.imageSize === 'medium');
   elements.sheet.classList.toggle('p-imgsize-small', currentSettings.imageSize === 'small');

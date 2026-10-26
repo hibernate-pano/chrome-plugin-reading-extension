@@ -445,10 +445,17 @@ body.is-trimming .p-sheet__trim {
 
 /* The continuous preview is still available: it is the honest view of how the
    text runs before it is cut, and it is what the settings changes re-measure
-   against. Hidden by default now that paged preview is the primary view. */
+   against. Hidden by default now that paged preview is the primary view.
+
+   This box is the measuring surface: the article is laid out here once, and
+   the page count is whatever fits in this column. The width is therefore the
+   paper's width, not the window's — a viewport-relative cap would shrink the
+   column in a narrow window, and the count would then describe a column
+   narrower than the one that prints. The page count stops being the page
+   count. A narrow window scrolls sideways instead; the paper is 210mm wide
+   whatever the screen is. */
 .sheet {
   width: 210mm;
-  max-width: 100%;
   margin: 0 auto;
   padding: 20mm 18mm;
   background: #ffffff;

@@ -99,6 +99,18 @@ const PAGE_HTML = readFileSync(resolve(__dirname, '../../print.html'), 'utf8').r
   ''
 );
 
+/**
+ * The print page's screen stylesheet, read from disk.
+ *
+ * The measuring surface's geometry is a promise the CSS has to keep: the
+ * article is measured in that box and the page count is whatever fits in it.
+ * A rule that narrows it makes the count describe a column narrower than the
+ * paper, so the rule itself is worth a test.
+ */
+function previewCss(): string {
+  return readFileSync(resolve(__dirname, '../../src/print/preview.css'), 'utf8');
+}
+
 const REQUIRED_IDS = [
   'sheet',
   'doc-title',
@@ -603,6 +615,35 @@ describe('print page · font stepper', () => {
   });
 });
 
+describe('print page · measuring column', () => {
+  it('measures the article at the print width, whatever the window is', () => {
+    const css = previewCss();
+
+    // The base `.sheet` rule — the measuring surface's own box. The anchor is
+    // the start of a line, so this cannot pick up the second copy of the same
+    // selector inside `@media print`; and the assertion on `210mm` would fail
+    // on that copy anyway, since the paper's rule says `width: auto`.
+    const rule = css.match(/^\.sheet\s*\{[^}]*\}/m)?.[0] ?? '';
+
+    expect(rule).toContain('width: 210mm');
+    // A viewport-relative cap makes the measured column narrower than the
+    // paper, so the page count stops being the page count.
+    expect(rule).not.toContain('max-width');
+  });
+
+  it('still hands the geometry back to @page when it prints', () => {
+    const css = previewCss();
+
+    // The paper's own copy of the rule: a different rule, and indented because
+    // it lives inside the `@media print` block. The base rule sits at the
+    // start of its line, so the two can never be confused for one another.
+    const printRule = css.match(/^[ \t]+\.sheet\s*\{[^}]*\}/m)?.[0] ?? '';
+
+    expect(printRule).toContain('width: auto');
+    expect(printRule).toContain('max-width: none');
+  });
+});
+
 describe('print page · theme', () => {
   it('presses exactly one button in the theme group', async () => {
     await boot({ payload: payload() });
@@ -623,6 +664,27 @@ describe('print page · theme', () => {
 
     expect(sheet().classList.contains('sheet--sepia')).toBe(true);
     expect(sheet().classList.contains('sheet--light')).toBe(false);
+  });
+
+  it('puts the paper theme tokens on the measuring surface and on every sheet', async () => {
+    await boot({ payload: payload() });
+
+    // Two jobs, two classes: `sheet--*` paints the measuring surface in the
+    // preview stylesheet, `p-theme-*` is where `print.css` reads the `--p-*`
+    // variables from. Without the latter the paper is tinted but its
+    // headings and links keep the light theme's colours.
+    expect(sheet().classList.contains('p-theme-light')).toBe(true);
+
+    const papers = Array.from(document.querySelectorAll<HTMLElement>('.p-sheet'));
+    expect(papers.length).toBeGreaterThan(0);
+    expect(papers.every((paper) => paper.classList.contains('p-theme-light'))).toBe(true);
+
+    themeButton('sepia').click();
+
+    expect(sheet().classList.contains('p-theme-sepia')).toBe(true);
+    expect(sheet().classList.contains('p-theme-light')).toBe(false);
+    expect(papers.every((paper) => paper.classList.contains('p-theme-sepia'))).toBe(true);
+    expect(papers.every((paper) => !paper.classList.contains('p-theme-light'))).toBe(true);
   });
 
   it('persists the theme', async () => {
