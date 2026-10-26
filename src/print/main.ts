@@ -26,7 +26,12 @@
  */
 
 import type { PrintPayload, PrintSettings, PrintImageSize } from '../shared/types';
-import { PRINT_FONT_SIZES, STORAGE_KEYS } from '../shared/constants';
+import {
+  PRINT_FONT_SIZES,
+  PRINT_LINE_HEIGHTS,
+  PRINT_PARAGRAPH_SPACINGS,
+  STORAGE_KEYS,
+} from '../shared/constants';
 import { getPrintSettings, savePrintSettings, DEFAULT_PRINT_SETTINGS } from '../shared/printSettings';
 import { buildDocument, buildFilename } from './buildDocument';
 import { eagerizeImages, waitForImages, type ImageWaitResult } from './prepareImages';
@@ -51,6 +56,12 @@ const elements = {
   fontValue: document.getElementById('font-value') as HTMLElement,
   fontDown: document.getElementById('font-down') as HTMLButtonElement,
   fontUp: document.getElementById('font-up') as HTMLButtonElement,
+  lineHeightValue: document.getElementById('line-height-value') as HTMLElement,
+  lineHeightDown: document.getElementById('line-height-down') as HTMLButtonElement,
+  lineHeightUp: document.getElementById('line-height-up') as HTMLButtonElement,
+  paraGapValue: document.getElementById('para-gap-value') as HTMLElement,
+  paraGapDown: document.getElementById('para-gap-down') as HTMLButtonElement,
+  paraGapUp: document.getElementById('para-gap-up') as HTMLButtonElement,
   pageCount: document.getElementById('page-count') as HTMLElement,
   themeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme]')),
   imgSizeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-imgsize]')),
@@ -151,6 +162,18 @@ function currentFontIndex(): number {
   );
 }
 
+function currentLineHeightIndex(): number {
+  return PRINT_LINE_HEIGHTS.indexOf(
+    currentSettings.lineHeight as (typeof PRINT_LINE_HEIGHTS)[number]
+  );
+}
+
+function currentParagraphSpacingIndex(): number {
+  return PRINT_PARAGRAPH_SPACINGS.indexOf(
+    currentSettings.paragraphSpacing as (typeof PRINT_PARAGRAPH_SPACINGS)[number]
+  );
+}
+
 /**
  * Apply the theme and image-size classes to a set of sheet elements.
  *
@@ -175,6 +198,17 @@ function applySheetClasses(sheets: Iterable<HTMLElement>): void {
 
 function applySettings(): void {
   document.documentElement.style.setProperty('--print-font-size', `${currentSettings.fontSize}pt`);
+  // Both density values reach the sheet as custom properties: the print rules
+  // read them directly, so one write covers the measuring surface and every
+  // rendered sheet, and the two stay independent of each other.
+  document.documentElement.style.setProperty(
+    '--print-line-height',
+    String(currentSettings.lineHeight)
+  );
+  document.documentElement.style.setProperty(
+    '--print-para-gap',
+    `${currentSettings.paragraphSpacing}em`
+  );
 
   elements.sheet.classList.toggle('sheet--light', currentSettings.theme === 'light');
   elements.sheet.classList.toggle('sheet--sepia', currentSettings.theme === 'sepia');
@@ -197,6 +231,16 @@ function applySettings(): void {
   elements.fontValue.textContent = `${currentSettings.fontSize}pt`;
   elements.fontDown.disabled = index <= 0;
   elements.fontUp.disabled = index < 0 || index >= PRINT_FONT_SIZES.length - 1;
+
+  const lineIndex = currentLineHeightIndex();
+  elements.lineHeightValue.textContent = String(currentSettings.lineHeight);
+  elements.lineHeightDown.disabled = lineIndex <= 0;
+  elements.lineHeightUp.disabled = lineIndex < 0 || lineIndex >= PRINT_LINE_HEIGHTS.length - 1;
+
+  const gapIndex = currentParagraphSpacingIndex();
+  elements.paraGapValue.textContent = `${currentSettings.paragraphSpacing}em`;
+  elements.paraGapDown.disabled = gapIndex <= 0;
+  elements.paraGapUp.disabled = gapIndex < 0 || gapIndex >= PRINT_PARAGRAPH_SPACINGS.length - 1;
 }
 
 function stepFontSize(delta: number): void {
@@ -209,6 +253,44 @@ function stepFontSize(delta: number): void {
   currentSettings.fontSize = next;
   applySettings();
   void savePrintSettings({ fontSize: next });
+  scheduleRemarking();
+}
+
+/**
+ * Move the body line height one offered step.
+ *
+ * A line height reflows every paragraph on the sheet, so the measurement the
+ * last cut was based on goes stale — same reason the font stepper re-marks.
+ */
+function stepLineHeight(delta: number): void {
+  const nextIndex = Math.min(
+    Math.max(currentLineHeightIndex() + delta, 0),
+    PRINT_LINE_HEIGHTS.length - 1
+  );
+  const next = PRINT_LINE_HEIGHTS[nextIndex];
+  if (next === undefined || next === currentSettings.lineHeight) return;
+  currentSettings.lineHeight = next;
+  applySettings();
+  void savePrintSettings({ lineHeight: next });
+  scheduleRemarking();
+}
+
+/**
+ * Move the paragraph spacing one offered step.
+ *
+ * The gap between paragraphs changes where a line falls, so the page breaks
+ * have to be decided again rather than carried over from the old layout.
+ */
+function stepParagraphSpacing(delta: number): void {
+  const nextIndex = Math.min(
+    Math.max(currentParagraphSpacingIndex() + delta, 0),
+    PRINT_PARAGRAPH_SPACINGS.length - 1
+  );
+  const next = PRINT_PARAGRAPH_SPACINGS[nextIndex];
+  if (next === undefined || next === currentSettings.paragraphSpacing) return;
+  currentSettings.paragraphSpacing = next;
+  applySettings();
+  void savePrintSettings({ paragraphSpacing: next });
   scheduleRemarking();
 }
 
@@ -371,6 +453,12 @@ function wireToolbar(): void {
 
   elements.fontDown.addEventListener('click', () => stepFontSize(-1));
   elements.fontUp.addEventListener('click', () => stepFontSize(1));
+
+  elements.lineHeightDown.addEventListener('click', () => stepLineHeight(-1));
+  elements.lineHeightUp.addEventListener('click', () => stepLineHeight(1));
+
+  elements.paraGapDown.addEventListener('click', () => stepParagraphSpacing(-1));
+  elements.paraGapUp.addEventListener('click', () => stepParagraphSpacing(1));
 
   elements.printBtn.addEventListener('click', () => {
     // Belt and braces: re-measure against the final layout right before the

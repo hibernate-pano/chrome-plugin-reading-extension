@@ -106,6 +106,8 @@ const REQUIRED_IDS = [
   'font-value',
   'font-down',
   'font-up',
+  'line-height-value',
+  'para-gap-value',
 ] as const;
 
 /**
@@ -954,5 +956,59 @@ describe('print page · re-measure debounce', () => {
 
     vi.advanceTimersByTime(1);
     expect(remarkCount()).toBe(before + 1);
+  });
+});
+
+describe('print page · density steppers', () => {
+  it('shows the default density and writes it into the stylesheet', async () => {
+    await boot({ payload: payload() });
+
+    expect(byId('line-height-value').textContent).toBe('1.6');
+    expect(byId('para-gap-value').textContent).toBe('0.5em');
+    expect(document.documentElement.style.getPropertyValue('--print-line-height')).toBe('1.6');
+    expect(document.documentElement.style.getPropertyValue('--print-para-gap')).toBe('0.5em');
+  });
+
+  it('applies a stored density before the first cut', async () => {
+    await boot({ payload: payload(), storedSettings: { lineHeight: 1.9, paragraphSpacing: 1.25 } });
+
+    expect(byId('line-height-value').textContent).toBe('1.9');
+    expect(document.documentElement.style.getPropertyValue('--print-line-height')).toBe('1.9');
+    expect(document.documentElement.style.getPropertyValue('--print-para-gap')).toBe('1.25em');
+  });
+
+  it('steps the line height, persists it and re-measures', async () => {
+    await boot({ payload: payload() });
+    const before = remarkCount();
+    vi.useFakeTimers();
+
+    byId<HTMLButtonElement>('line-height-up').click();
+
+    expect(byId('line-height-value').textContent).toBe('1.7');
+    expect(document.documentElement.style.getPropertyValue('--print-line-height')).toBe('1.7');
+    // Fake timers are already on, so the persist chain is drained with
+    // microtask turns rather than the timer-based flush.
+    await flushMicrotasks();
+    expect(persisted()?.lineHeight).toBe(1.7);
+    vi.advanceTimersByTime(120);
+    expect(remarkCount()).toBe(before + 1);
+  });
+
+  it('steps the paragraph spacing down to zero', async () => {
+    await boot({ payload: payload(), storedSettings: { paragraphSpacing: 0.25 } });
+
+    byId<HTMLButtonElement>('para-gap-down').click();
+
+    expect(byId('para-gap-value').textContent).toBe('0em');
+    expect(document.documentElement.style.getPropertyValue('--print-para-gap')).toBe('0em');
+  });
+
+  it('disables each stepper at both ends of its range', async () => {
+    await boot({ payload: payload(), storedSettings: { lineHeight: 1.4, paragraphSpacing: 0 } });
+
+    expect(byId<HTMLButtonElement>('line-height-down').disabled).toBe(true);
+    expect(byId<HTMLButtonElement>('line-height-up').disabled).toBe(false);
+    expect(byId<HTMLButtonElement>('para-gap-down').disabled).toBe(true);
+    expect(byId<HTMLButtonElement>('para-gap-up').disabled).toBe(false);
   });
 });

@@ -31,6 +31,32 @@
       </div>
 
       <div class="toolbar__group">
+        <span class="toolbar__label" title="正文行与行之间的距离">行高</span>
+        <div class="stepper">
+          <button class="stepper__btn" type="button" id="line-height-down" aria-label="减小行高">
+            −
+          </button>
+          <span class="stepper__value" id="line-height-value">1.6</span>
+          <button class="stepper__btn" type="button" id="line-height-up" aria-label="增大行高">
+            +
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar__group">
+        <span class="toolbar__label" title="段落之间、列表项之间的留白">段距</span>
+        <div class="stepper">
+          <button class="stepper__btn" type="button" id="para-gap-down" aria-label="减小段距">
+            −
+          </button>
+          <span class="stepper__value" id="para-gap-value">0.5em</span>
+          <button class="stepper__btn" type="button" id="para-gap-up" aria-label="增大段距">
+            +
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar__group">
         <span class="toolbar__label">图片</span>
         <div class="segmented" role="group" aria-label="图片大小">
           <button class="segmented__btn" type="button" data-imgsize="large" aria-pressed="true">

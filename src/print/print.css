@@ -50,7 +50,9 @@ body {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
-  line-height: 1.75;
+  /* The toolbar's density control writes this; the fallback is what the
+     sheet uses before the page has booted. */
+  line-height: var(--print-line-height, 1.6);
   color: var(--p-text);
   background: var(--p-bg);
   -webkit-font-smoothing: antialiased;
@@ -129,7 +131,7 @@ body {
 }
 
 .p-content p {
-  margin-bottom: 1em;
+  margin-bottom: var(--print-para-gap, 0.5em);
   /* Avoid a lone last line carried to the next page. */
   orphans: 3;
   widows: 3;
@@ -171,7 +173,9 @@ body {
 }
 
 .p-content li {
-  margin-bottom: 0.35em;
+  /* Half the paragraph gap: list items are read as one block, so a full gap
+     between them reads as a break the text does not have. */
+  margin-bottom: calc(var(--print-para-gap, 0.5em) * 0.5);
 }
 
 .p-content a {
