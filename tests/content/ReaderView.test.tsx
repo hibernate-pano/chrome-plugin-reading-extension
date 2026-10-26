@@ -359,6 +359,36 @@ describe('ReaderView — read time deduplication', () => {
 
     expect(meta.textContent?.match(/min read/g)).toBeNull();
   });
+
+  it('recognises a read time written in the plural', () => {
+    const { container } = renderReader({ byline: 'Jane Doe · 12 min reads', estimatedReadTime: 22 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    // The byline's own "12 min reads" contains "min read", so the estimate
+    // is the thing to look for: it must not be there.
+    expect(meta.textContent).not.toContain('22 min read');
+  });
+
+  it('recognises a read time written as a gerund', () => {
+    const { container } = renderReader({ byline: 'Jane Doe · 12 min reading', estimatedReadTime: 22 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent).not.toContain('22 min read');
+  });
+
+  it('does not mistake a longer word for a read time', () => {
+    const { container } = renderReader({ byline: '5 min ready', estimatedReadTime: 22 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent).toContain('22 min read');
+  });
+
+  it('does not mistake a reader for a read time', () => {
+    const { container } = renderReader({ byline: '5 min reader', estimatedReadTime: 22 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent).toContain('22 min read');
+  });
 });
 
 /* ------------------------------------------------------------------ *

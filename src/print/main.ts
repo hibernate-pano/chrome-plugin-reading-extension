@@ -173,6 +173,17 @@ function updateControls(): void {
   elements.trimBtn.disabled = elements.printBtn.disabled;
 }
 
+/**
+ * The status line's "the images are still loading" sentence.
+ *
+ * A constant because the undo has to recognise it. Undoing supersedes any
+ * image wait that was in flight, and a superseded wait writes nothing back —
+ * so the sentence it left on the status line outlives the wait. The undo
+ * clears it, but only that sentence: a report about the images that failed
+ * to load is still true, and the reader is meant to read it.
+ */
+const IMAGE_LOADING_STATUS = '正在加载图片…';
+
 function setStatus(message: string): void {
   elements.status.classList.remove('status--hidden');
   elements.status.textContent = message;
@@ -422,7 +433,7 @@ async function setImageSize(size: PrintImageSize): Promise<void> {
   // Any size that shows images has to wait for them: measuring before their
   // bitmaps land cuts pages around empty frames, and printing then yields the
   // blanks the reader is about to complain about.
-  setStatus('正在加载图片…');
+  setStatus(IMAGE_LOADING_STATUS);
   const result = await waitForImagesFor(generation);
   // Superseded — a newer action owns the gate now, and will re-cut the pages.
   if (result === null) return;
@@ -484,9 +495,9 @@ function applyTrim(blockId: string): void {
   const root = trimRoot();
   if (!root) return;
 
-  // The target is looked up before the previous cut is undone. Restoring first
-  // would put the tail back and then find nothing to cut, leaving the status
-  // line describing a cut that is no longer there.
+  // The target is looked up first: if it is not in the document there is
+  // nothing to cut, and undoing the previous cut first would silently drop
+  // it while the status line still described it.
   const target = Array.from(root.querySelectorAll<HTMLElement>('[data-p-block]')).find(
     (block) => block.dataset.pBlock === blockId
   );
@@ -539,6 +550,11 @@ async function undoTrim(): Promise<void> {
     // superseded wait never lowers the flag. This path owns the gate now.
     imageWaitPending = false;
     updateControls();
+    // The wait that was in flight may have left its sentence on the status
+    // line, and it will never take it back — a page whose images are not
+    // loading any more must not keep claiming that they are. Only that
+    // sentence goes; a report about images that failed is still true.
+    if (elements.status.textContent === IMAGE_LOADING_STATUS) clearStatus();
   }
 
   remarkOversizedBlocks();
@@ -824,7 +840,7 @@ async function main(): Promise<void> {
   // for and a dead image host must not delay a text-only printout.
   if (currentSettings.imageSize !== 'none') {
     const generation = ++imageWaitGeneration;
-    setStatus('正在加载图片…');
+    setStatus(IMAGE_LOADING_STATUS);
     const result = await waitForImagesFor(generation);
     // Overtaken by a user action. That action owns the gate now and schedules
     // its own re-cut, which is what completes the boot.

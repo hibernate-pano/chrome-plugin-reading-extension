@@ -116,6 +116,18 @@ function previewCss(): string {
   return readFileSync(resolve(__dirname, '../../src/print/preview.css'), 'utf8');
 }
 
+/**
+ * The print page's print stylesheet, read from disk.
+ *
+ * The same promise as `previewCss()`, on the other side of the sheet: what
+ * `@media print` leaves out reaches the paper. A rule that has to be absent
+ * from the printout is a rule worth a test, exactly like one that has to be
+ * present.
+ */
+function printCss(): string {
+  return readFileSync(resolve(__dirname, '../../src/print/print.css'), 'utf8');
+}
+
 const REQUIRED_IDS = [
   'sheet',
   'doc-title',
@@ -130,8 +142,12 @@ const REQUIRED_IDS = [
   'para-gap-value',
   'para-gap-down',
   'para-gap-up',
+  'page-count',
   'trim-btn',
+  'trim-badge',
   'trim-status',
+  'trim-status-text',
+  'trim-undo',
   'trim-hint',
 ] as const;
 
@@ -650,6 +666,44 @@ describe('print page · measuring column', () => {
 
     expect(printRule).toContain('width: auto');
     expect(printRule).toContain('max-width: none');
+  });
+});
+
+describe('print page · stylesheet', () => {
+  it('keeps the whole sheet reachable in a narrow window', () => {
+    const css = previewCss();
+
+    // The sheet is a fixed 210mm. A window narrower than that overflows on
+    // both sides, and a browser can only scroll to the right — so the left of
+    // the paper would be unreachable without `safe`, which falls back to
+    // start alignment once the sheet no longer fits.
+    const rule = css.match(/^\.p-sheets\s*\{[^}]*\}/m)?.[0] ?? '';
+
+    expect(rule).toContain('align-items: safe center');
+  });
+
+  it('lets a list follow the paragraph gap', () => {
+    const css = printCss();
+
+    // The gap token appears in more than one rule, so the assertion is on
+    // the list's own rule and on the declaration that carries it.
+    const rule = css.match(/^\.p-content ul,\s*\n\.p-content ol\s*\{[^}]*\}/m)?.[0] ?? '';
+    const margin = rule.match(/margin:\s*([^;]+);/)?.[1] ?? '';
+
+    expect(margin).toContain('var(--print-para-gap');
+  });
+
+  it('does not print the hover outline', () => {
+    const css = printCss();
+
+    // The `::after` rule is the hover label; this one is the outline itself,
+    // so the selector is matched without it and the outline has to be reset
+    // in that very rule — the print engine keeps the `:hover` snapshot of
+    // the block the pointer was last on.
+    const rule =
+      css.match(/body\.is-trimming \[data-trim-eligible='true'\]:hover\s*\{[^}]*\}/)?.[0] ?? '';
+
+    expect(rule).toContain('outline: none');
   });
 });
 
@@ -1245,6 +1299,7 @@ describe('print page · trim mode', () => {
     imgSizeButton('small')?.click();
     await flush();
     expect(printButton().disabled).toBe(true);
+    expect(statusEl().textContent).toBe('正在加载图片…');
 
     // The undo supersedes that wait, and there is no image of its own to wait
     // for — so the undo owns the gate and has to open it again.
@@ -1252,6 +1307,29 @@ describe('print page · trim mode', () => {
     await flush();
 
     expect(printButton().disabled).toBe(false);
+    // The superseded wait left its sentence on the status line and will
+    // never take it back: the gate is open, so the line must not still claim
+    // the images are loading.
+    expect(statusEl().textContent).not.toContain('正在加载图片');
+  });
+
+  it('keeps the image failure report when the undo supersedes a wait', async () => {
+    await boot({
+      payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }),
+      images: { loaded: 0, failed: 2 },
+    });
+    // The boot's wait reported what went wrong. That report is the reader's
+    // to see, so the undo must not wipe it on its way past.
+    expect(statusEl().textContent).toContain('仍可继续打印');
+
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flush();
+
+    expect(statusEl().textContent).toContain('仍可继续打印');
   });
 
   it('keeps the trim and the undo affordance through a density change', async () => {

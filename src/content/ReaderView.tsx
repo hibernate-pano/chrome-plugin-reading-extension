@@ -34,9 +34,15 @@ const TOOLBAR_INITIAL_IDLE_MS = 3000;
  * is a contradiction the reader has to resolve, so the estimate is dropped
  * instead. Both wordings are recognised — English ("12 min read") and Chinese
  * ("12 分钟阅读") — because the byline is not ours to rewrite.
+ *
+ * The English branch accepts the inflected forms too ("12 min reads",
+ * "12 min reading"): those state the read time just as plainly, and refusing
+ * them would put our estimate right next to a read time the reader already
+ * has. The word boundary is what keeps a longer word out — "5 min ready" and
+ * "5 min reader" are a name, not a duration.
  */
 const READ_TIME_IN_BYLINE =
-  /(?:\d+\s*min(?:ute)?s?\s+read\b)|(?:\d+\s*分钟\s*(?:阅读|读完))/i;
+  /(?:\d+\s*min(?:ute)?s?\s+read(?:s|ing)?\b)|(?:\d+\s*分钟\s*(?:阅读|读完))/i;
 
 interface ReaderViewProps {
   content: ExtractedContent;
