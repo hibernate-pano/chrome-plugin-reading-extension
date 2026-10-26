@@ -27,6 +27,13 @@ const TOOLBAR_IDLE_MS = 2500;
 /** Slightly longer window for the initial hide, before any mouse move at all. */
 const TOOLBAR_INITIAL_IDLE_MS = 3000;
 
+/**
+ * byline 里已经写明了阅读时长（英文 "12 min read"、中文 "12 分钟阅读"）时，
+ * 阅读器再补一个自己的估算就是重复。匹配两种写法，避免出现
+ * 「12 min read · 22 min read」。
+ */
+const READ_TIME_IN_BYLINE = /(?:\d+\s*min(?:ute)?s?\s+read)|(?:\d+\s*分钟\s*(?:阅读|读完))/i;
+
 interface ReaderViewProps {
   content: ExtractedContent;
   settings: Settings;
@@ -326,7 +333,9 @@ export function ReaderView({
     const items: string[] = [];
     if (content.siteName) items.push(content.siteName);
     if (content.byline) items.push(content.byline);
-    items.push(`${content.estimatedReadTime} min read`);
+    // byline 自带阅读时长时不再追加，否则同一个时长会出现两次。
+    const bylineStatesReadTime = content.byline ? READ_TIME_IN_BYLINE.test(content.byline) : false;
+    if (!bylineStatesReadTime) items.push(`${content.estimatedReadTime} min read`);
     return items;
   }, [content.siteName, content.byline, content.estimatedReadTime]);
 

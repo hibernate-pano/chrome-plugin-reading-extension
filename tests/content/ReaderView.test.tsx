@@ -304,6 +304,50 @@ describe('ReaderView — meta separators', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Read time deduplication — the byline may already state one
+ * ------------------------------------------------------------------ */
+
+describe('ReaderView — read time deduplication', () => {
+  it('does not repeat a read time the byline already states', () => {
+    const { container } = renderReader({ byline: 'Jane Doe · 12 min read', estimatedReadTime: 12 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent?.match(/min read/g)).toHaveLength(1);
+    expect(meta.textContent).toContain('Jane Doe');
+  });
+
+  it('still adds the read time when the byline has none', () => {
+    const { container } = renderReader({ byline: 'Jane Doe', estimatedReadTime: 12 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent?.match(/min read/g)).toHaveLength(1);
+  });
+
+  it('drops the read time and the separator that would follow it', () => {
+    const { container } = renderReader({
+      siteName: 'Example Blog',
+      byline: 'Jane Doe · 12 min read',
+      estimatedReadTime: 12,
+    });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    const items = Array.from(meta.querySelectorAll('.reader-meta__item')).map(
+      (el) => el.textContent
+    );
+    expect(items).toEqual(['Example Blog', 'Jane Doe · 12 min read']);
+    expect(meta.querySelectorAll('.reader-meta__separator')).toHaveLength(1);
+  });
+
+  it('recognizes a Chinese read time in the byline', () => {
+    const { container } = renderReader({ byline: '张三 · 12 分钟阅读', estimatedReadTime: 12 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent).toContain('张三 · 12 分钟阅读');
+    expect(meta.textContent).not.toContain('min read');
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * Code blocks
  * ------------------------------------------------------------------ */
 
