@@ -220,6 +220,68 @@ body {
 }
 
 /* ============================================
+   Tail trim
+   ============================================ */
+
+/* The hint under the toolbar. It says what a click does, because in trim mode
+   a click on the page cuts the article and nothing else on the page looks
+   clickable. */
+.trim-hint {
+  padding: 7px 20px;
+  font-size: 12px;
+  background: #eef4ff;
+  border-bottom: 1px solid #d6e2ff;
+  color: #234;
+}
+
+.trim-hint[hidden] {
+  display: none;
+}
+
+/* The trim status carries the undo, so it stays on one line with the button
+   next to it. */
+.trim-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The hidden state has to be spelled out: `.trim-status` and `.status--hidden`
+   carry the same weight, so whichever comes later wins outright — and the
+   layout rule is the later one. Without this the bar would never go away. */
+.trim-status.status--hidden {
+  display: none;
+}
+
+.trim-status__undo {
+  padding: 2px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border);
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* The badge next to the page count: a marker that the article was cut, and a
+   way back into the trim mode. */
+.toolbar__badge {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #234;
+  border: 1px solid #d6e2ff;
+  cursor: pointer;
+}
+
+.toolbar__badge[hidden] {
+  display: none;
+}
+
+/* ============================================
    Page
    ============================================ */
 

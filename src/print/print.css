@@ -406,6 +406,14 @@ body {
     display: none;
   }
 
+  /* The trim's own chrome: the hint and the status line. They are about the
+     preview, not about the paper, and the paper must carry the article
+     alone. */
+  .trim-hint,
+  #trim-status {
+    display: none !important;
+  }
+
   .p-sheets {
     display: block;
     gap: 0;

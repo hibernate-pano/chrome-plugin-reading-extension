@@ -74,6 +74,13 @@
         </div>
       </div>
 
+      <div class="toolbar__group">
+        <button class="btn btn--ghost" type="button" id="trim-btn" disabled aria-pressed="false">
+          裁剪
+        </button>
+        <button class="toolbar__badge" type="button" id="trim-badge" hidden>已裁剪</button>
+      </div>
+
       <div class="toolbar__spacer"></div>
 
       <div class="toolbar__group">
@@ -84,6 +91,19 @@
     </div>
 
     <div class="status status--hidden" id="status" role="status" aria-live="polite"></div>
+
+    <div class="trim-hint" id="trim-hint" hidden>
+      点击第一段不要的内容，它之后都不会打印。Esc 退出。
+    </div>
+    <div
+      class="status trim-status status--hidden"
+      id="trim-status"
+      role="status"
+      aria-live="polite"
+    >
+      <span id="trim-status-text"></span>
+      <button class="trim-status__undo" type="button" id="trim-undo">撤销</button>
+    </div>
 
     <main class="page">
       <!--

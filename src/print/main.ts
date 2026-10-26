@@ -38,7 +38,13 @@ import { eagerizeImages, waitForImages, type ImageWaitResult } from './prepareIm
 import { markOversizedBlocks, clearBreakMarks } from './markBreaks';
 import { measureDocument, paginate, PAGE_CONTENT_HEIGHT_PX } from './paginate';
 import { renderSheets, clearSheets } from './renderSheets';
-import { assignBlockIds } from './trim';
+import {
+  assignBlockIds,
+  cutTrailingFrom,
+  restoreRemoved,
+  startsOnPage,
+  type RemovedNode,
+} from './trim';
 
 // Order matters. Both files style the same selectors at the same specificity —
 // a media query adds none — so the later import wins outright. `print.css`
@@ -64,6 +70,12 @@ const elements = {
   paraGapDown: document.getElementById('para-gap-down') as HTMLButtonElement,
   paraGapUp: document.getElementById('para-gap-up') as HTMLButtonElement,
   pageCount: document.getElementById('page-count') as HTMLElement,
+  trimBtn: document.getElementById('trim-btn') as HTMLButtonElement,
+  trimBadge: document.getElementById('trim-badge') as HTMLButtonElement,
+  trimHint: document.getElementById('trim-hint') as HTMLElement,
+  trimStatus: document.getElementById('trim-status') as HTMLElement,
+  trimStatusText: document.getElementById('trim-status-text') as HTMLElement,
+  trimUndo: document.getElementById('trim-undo') as HTMLButtonElement,
   themeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme]')),
   imgSizeButtons: Array.from(document.querySelectorAll<HTMLButtonElement>('[data-imgsize]')),
 };
@@ -108,6 +120,44 @@ let imageWaitPending = false;
 let imageWaitGeneration = 0;
 
 /**
+ * Whether the trim mode is on.
+ *
+ * The mode only decides what a click on a block *means*; it never decides what
+ * is printed. Leaving the mode keeps the cut, so the reader can look at the
+ * result and come back to it.
+ */
+let isTrimming = false;
+
+/**
+ * The id of the block the document was cut at, or `null` when nothing is cut.
+ *
+ * A single cut point, not a stack: the reader's decision is the last one they
+ * made, and a second cut replaces the first.
+ */
+let trimTargetId: string | null = null;
+
+/**
+ * A short excerpt of the cut-off block.
+ *
+ * Shown in the status line so the reader can see they cut in the right place
+ * — the page count alone does not say which paragraph went away.
+ */
+let trimSnippet = '';
+
+/**
+ * Everything the last cut detached, kept so it can be put back.
+ */
+let removedNodes: RemovedNode[] = [];
+
+/**
+ * Whether an undo is waiting for the images it brought back.
+ *
+ * The wait owns the trim status line while it runs: that line is the only
+ * thing telling the reader why the page cannot be printed yet.
+ */
+let restoringImages = false;
+
+/**
  * The one place that decides what the toolbar allows.
  *
  * Every path goes through here, so "may the user print yet?" has exactly one
@@ -116,6 +166,9 @@ let imageWaitGeneration = 0;
  */
 function updateControls(): void {
   elements.printBtn.disabled = !(bootReady && !imageWaitPending);
+  // The trim rides on the same condition: cutting while the images are still
+  // arriving would measure a layout that is about to change under it.
+  elements.trimBtn.disabled = elements.printBtn.disabled;
 }
 
 function setStatus(message: string): void {
@@ -361,6 +414,134 @@ async function setImageSize(size: PrintImageSize): Promise<void> {
 }
 
 /* ------------------------------------------------------------------ */
+/* Tail trim                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The article body the trim cuts in.
+ *
+ * The title and the footer are *outside* it — the header is a sibling before
+ * it, the footer a sibling after it — so a cut inside the body leaves both
+ * standing. The footer in particular has to survive: it carries the source
+ * link the article is credited by.
+ */
+function trimRoot(): HTMLElement | null {
+  return contentDoc?.querySelector<HTMLElement>('.p-content') ?? null;
+}
+
+/**
+ * A short excerpt of a block, for the status line.
+ *
+ * Text first, the picture's `alt` second: a block that is nothing but an
+ * image has no text to show, and an empty excerpt would tell the reader
+ * nothing about where they cut.
+ */
+function snippetOf(element: HTMLElement): string {
+  const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const alt = (element.querySelector('img')?.getAttribute('alt') ?? '').replace(/\s+/g, ' ').trim();
+  const excerpt = text.length > 0 ? text : alt;
+  return excerpt.length > 24 ? `${excerpt.slice(0, 24)}…` : excerpt;
+}
+
+/**
+ * Turn the trim mode on or off.
+ *
+ * Leaving the mode does not undo the cut — the reader may want to look at the
+ * result and come back to it, and the badge keeps the way in.
+ */
+function setTrimming(on: boolean): void {
+  isTrimming = on;
+  document.body.classList.toggle('is-trimming', on);
+  elements.trimHint.hidden = !on;
+  elements.trimBtn.setAttribute('aria-pressed', String(on));
+}
+
+/**
+ * Cut the document at the given block and lay it out again.
+ *
+ * One cut point at a time: a new cut restores the previous one first, so the
+ * document always carries the reader's last decision rather than the
+ * accumulation of every click.
+ */
+function applyTrim(blockId: string): void {
+  const root = trimRoot();
+  if (!root) return;
+
+  if (removedNodes.length > 0) {
+    restoreRemoved(removedNodes);
+    removedNodes = [];
+  }
+
+  const target = Array.from(root.querySelectorAll<HTMLElement>('[data-p-block]')).find(
+    (block) => block.dataset.pBlock === blockId
+  );
+  if (!target) return;
+
+  // Read before the cut: afterwards there is nothing left to read.
+  trimSnippet = snippetOf(target);
+  removedNodes = cutTrailingFrom(root, target);
+  trimTargetId = blockId;
+
+  remarkOversizedBlocks();
+}
+
+/**
+ * Put the cut content back and lay the document out again.
+ *
+ * The restored images may not have decoded — a page that booted in 无图 never
+ * waited for them — so the re-measure waits for them, on the same gate the
+ * image size switch uses. A wait that has been superseded writes nothing back:
+ * the action that superseded it owns the gate now.
+ */
+async function undoTrim(): Promise<void> {
+  if (trimTargetId === null && removedNodes.length === 0) return;
+
+  const generation = ++imageWaitGeneration;
+  restoreRemoved(removedNodes);
+  removedNodes = [];
+  trimTargetId = null;
+
+  const pendingImage = Array.from(elements.sheet.querySelectorAll('img')).some(
+    (image) => !image.complete
+  );
+
+  if (pendingImage) {
+    restoringImages = true;
+    elements.trimStatus.classList.remove('status--hidden');
+    elements.trimStatusText.textContent = '正在恢复图片…';
+    const result = await waitForImagesFor(generation);
+    restoringImages = false;
+    // Superseded — a newer action owns the gate now, and will re-cut the pages.
+    if (result === null) return;
+  }
+
+  remarkOversizedBlocks();
+}
+
+/**
+ * Show or hide the trim status, and keep the page count in it current.
+ *
+ * Called on every re-layout: the status line is the only way back to the
+ * undo, so it must not disappear when the reader changes the font size.
+ */
+function updateTrimStatus(pageCount: number): void {
+  if (trimTargetId === null) {
+    // The wait for restored images owns the line while it runs.
+    if (!restoringImages) {
+      elements.trimStatus.classList.add('status--hidden');
+      elements.trimBadge.hidden = true;
+      document.body.classList.remove('has-trim');
+    }
+    return;
+  }
+
+  elements.trimStatus.classList.remove('status--hidden');
+  elements.trimStatusText.textContent = `已裁剪至 ${pageCount} 页 · 「${trimSnippet}」`;
+  elements.trimBadge.hidden = false;
+  document.body.classList.add('has-trim');
+}
+
+/* ------------------------------------------------------------------ */
 /* Break-decision refresh                                              */
 /* ------------------------------------------------------------------ */
 
@@ -400,6 +581,10 @@ function repaginate(): void {
   applySheetClasses(sheets);
 
   elements.pageCount.textContent = starts.length === 1 ? '共 1 页' : `共 ${starts.length} 页`;
+
+  // The trim status carries the page count too, and it is the only way back to
+  // the undo — so it is refreshed on every re-layout, not only on a cut.
+  updateTrimStatus(starts.length);
 
   // The document now exists as pages, so printing it is meaningful. This lives
   // here rather than at the end of `main()` because the boot wait can be
@@ -468,6 +653,47 @@ function wireToolbar(): void {
     // Chrome proposes document.title as the saved filename.
     document.title = currentFilename;
     window.print();
+  });
+}
+
+/**
+ * Wire the trim: the mode, the badge, the undo, and the click on a block.
+ */
+function wireTrim(): void {
+  elements.trimBtn.addEventListener('click', () => setTrimming(!isTrimming));
+  // The badge is a way back into the mode, not a way out of the cut.
+  elements.trimBadge.addEventListener('click', () => setTrimming(true));
+  elements.trimUndo.addEventListener('click', () => void undoTrim());
+
+  document.addEventListener('keydown', (event) => {
+    // Leaving the mode keeps the cut: the reader may only want a look at the
+    // result, and the status line still offers the undo.
+    if (event.key === 'Escape' && isTrimming) setTrimming(false);
+  });
+
+  // Delegated on the rendered pages, because the sheets are rebuilt on every
+  // re-layout and a handler bound to a sheet would die with it.
+  elements.pages.addEventListener('click', (event) => {
+    if (!isTrimming || imageWaitPending) return;
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const block = target.closest<HTMLElement>('[data-p-block]');
+    if (!block) return;
+
+    const page = block.closest<HTMLElement>('.p-sheet');
+    if (!page) return;
+    const pageStart = Number(page.dataset.pageStart);
+    if (!Number.isFinite(pageStart)) return;
+
+    // A block that continues from the previous page is not a cut point:
+    // cutting there would throw away the half of it that already fits on the
+    // earlier page, and the reader would never see what went.
+    if (!startsOnPage(block, pageStart)) return;
+
+    const blockId = block.dataset.pBlock;
+    if (!blockId) return;
+    applyTrim(blockId);
   });
 }
 
@@ -547,6 +773,7 @@ async function main(): Promise<void> {
 
   applySettings();
   wireToolbar();
+  wireTrim();
 
   // Hold the print button until images settle — printing early yields blanks.
   // 无图 keeps images out of the layout entirely, so there is nothing to wait

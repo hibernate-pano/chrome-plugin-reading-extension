@@ -21,6 +21,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PRINT_FONT_SIZES, STORAGE_KEYS } from '../../src/shared/constants';
 import { buildFilename } from '../../src/print/buildDocument';
+import { decorateSheetForTrim } from '../../src/print/trim';
 import type { PrintPayload, PrintSettings } from '../../src/shared/types';
 
 /* ------------------------------------------------------------------ */
@@ -108,6 +109,9 @@ const REQUIRED_IDS = [
   'font-up',
   'line-height-value',
   'para-gap-value',
+  'trim-btn',
+  'trim-status',
+  'trim-hint',
 ] as const;
 
 /**
@@ -241,6 +245,33 @@ function themeButton(theme: string): HTMLButtonElement {
 
 function imgSizeButton(size: string): HTMLButtonElement | null {
   return document.querySelector<HTMLButtonElement>(`[data-imgsize="${size}"]`);
+}
+
+/**
+ * A sheet built by hand, hung where the real ones are.
+ *
+ * jsdom has no layout engine, so `measureDocument` finds no blocks and the
+ * rendered sheets come out empty. This mimics what `renderSheets` produces —
+ * a `data-page-start` and one clone per block, carrying the source block's id
+ * and the document offset it was measured at — and lets the real trim code
+ * decorate it, so the buttons and the marks under test are the real ones.
+ */
+function fakeSheet(pageStart: number, clones: Array<{ id: string; top: number }>): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'p-sheet';
+  el.dataset.pageStart = String(pageStart);
+  const content = document.createElement('div');
+  content.className = 'p-sheet__content';
+  for (const clone of clones) {
+    const node = document.createElement('p');
+    node.dataset.pBlock = clone.id;
+    node.dataset.docTop = String(clone.top);
+    content.appendChild(node);
+  }
+  el.appendChild(content);
+  (document.getElementById('pages') as HTMLElement).appendChild(el);
+  decorateSheetForTrim(el);
+  return el;
 }
 
 function pressedIn(selector: string): string[] {
@@ -1021,5 +1052,174 @@ describe('print page · block ids', () => {
       el.getAttribute('data-p-block')
     );
     expect(ids).toEqual(['b1', 'b2']);
+  });
+});
+
+describe('print page · trim mode', () => {
+  it('ships the trim button disabled and opens it once the first cut is done', async () => {
+    mountPage();
+    expect(byId<HTMLButtonElement>('trim-btn').disabled).toBe(true);
+
+    await boot({ payload: payload() });
+    expect(byId<HTMLButtonElement>('trim-btn').disabled).toBe(false);
+  });
+
+  it('enters and leaves trim mode without losing the trim', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+    const trimBtn = byId<HTMLButtonElement>('trim-btn');
+
+    trimBtn.click();
+    expect(document.body.classList.contains('is-trimming')).toBe(true);
+    expect(byId('trim-hint').hidden).toBe(false);
+    expect(trimBtn.getAttribute('aria-pressed')).toBe('true');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.body.classList.contains('is-trimming')).toBe(false);
+    expect(byId('trim-hint').hidden).toBe(true);
+  });
+
+  it('cuts the clicked block and everything after it', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    const fake = fakeSheet(0, [
+      { id: 'b1', top: 0 },
+      { id: 'b2', top: 100 },
+    ]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).not.toBeNull();
+    expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+    expect(sheet().querySelector('[data-p-block="b3"]')).toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(false);
+    expect(byId('trim-status-text').textContent).toContain('已裁剪至');
+  });
+
+  it('ignores a block that only continues from the previous page', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    const fake = fakeSheet(500, [{ id: 'b1', top: 400 }]);
+    (fake.querySelector('[data-p-block="b1"]') as HTMLElement).click();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).not.toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
+  });
+
+  it('leaves the header and the footer when the first body block is cut', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    const fake = fakeSheet(0, [{ id: 'b1', top: 0 }]);
+    (fake.querySelector('[data-p-block="b1"]') as HTMLElement).click();
+
+    expect(sheet().querySelector('.p-content')?.textContent).toBe('');
+    expect(sheet().querySelector('.p-title')).not.toBeNull();
+    expect(sheet().querySelector('.p-footer')).not.toBeNull();
+  });
+
+  it('keeps the trim through an image-size change', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+
+    imgSizeButton('small')?.click();
+    await flush();
+
+    expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(false);
+  });
+
+  it('undo restores the removed content and hides the status', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flush();
+
+    expect(sheet().querySelector('[data-p-block="b2"]')).not.toBeNull();
+    expect(sheet().querySelector('[data-p-block="b3"]')).not.toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
+    expect(byId('trim-badge').hidden).toBe(true);
+  });
+
+  it('keeps the trim and the undo affordance through a density change', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+    vi.useFakeTimers();
+
+    byId<HTMLButtonElement>('line-height-up').click();
+    vi.advanceTimersByTime(120);
+
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(false);
+    expect(byId('trim-undo')).not.toBeNull();
+    expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+  });
+
+  it('waits for the restored images before re-measuring', async () => {
+    await boot({
+      payload: payload({
+        content: '<p>一</p><p><img src="https://example.com/a.png" alt="a"></p>',
+      }),
+      storedSettings: { imageSize: 'none' },
+    });
+    const image = sheet().querySelector('img') as HTMLImageElement;
+    Object.defineProperty(image, 'complete', { value: false, configurable: true });
+
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b1', top: 0 }]);
+    (fake.querySelector('[data-p-block="b1"]') as HTMLElement).click();
+
+    let release!: (r: { loaded: number; failed: number }) => void;
+    mocks.waitForImages.mockReturnValue(
+      new Promise((resolve_) => {
+        release = resolve_;
+      })
+    );
+
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flushMicrotasks();
+
+    expect(mocks.waitForImages).toHaveBeenCalledWith(sheet(), 5000);
+    expect(byId('trim-status-text').textContent).toContain('正在恢复图片');
+    expect(printButton().disabled).toBe(true);
+
+    release({ loaded: 1, failed: 0 });
+    await flushMicrotasks();
+
+    expect(sheet().querySelector('img')).not.toBeNull();
+    expect(printButton().disabled).toBe(false);
+  });
+
+  it('replaces an existing cut instead of stacking cuts', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+
+    const second = fakeSheet(0, [{ id: 'b1', top: 0 }]);
+    (second.querySelector('[data-p-block="b1"]') as HTMLElement).click();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).toBeNull();
+    expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+  });
+
+  /**
+   * The class on the status bar is not the same thing as the bar being
+   * hidden. `.trim-status` and `.status--hidden` weigh the same, so the
+   * layout rule wins unless the hidden state is spelled out — and then the
+   * bar sits on the page forever, empty, with a 撤销 button on it.
+   */
+  it('actually hides the status bar, not just marks it hidden', async () => {
+    await boot({ payload: payload() });
+
+    expect(getComputedStyle(byId('trim-status')).display).toBe('none');
+    expect(getComputedStyle(byId('trim-hint')).display).toBe('none');
+    expect(getComputedStyle(byId('trim-badge')).display).toBe('none');
   });
 });
