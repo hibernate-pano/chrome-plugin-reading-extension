@@ -154,7 +154,9 @@ const RENDERED_TAGS = new Set([
 function isBlank(element: Element): boolean {
   if ((element.textContent ?? '').trim() !== '') return false;
   for (const child of Array.from(element.querySelectorAll('*'))) {
-    if (RENDERED_TAGS.has(child.tagName)) return false;
+    // tagName keeps its case for SVG and MathML elements, so compare in
+    // upper case — an inline SVG must not pass for invisible.
+    if (RENDERED_TAGS.has(child.tagName.toUpperCase())) return false;
   }
   return true;
 }
@@ -191,10 +193,10 @@ function processImage(image: HTMLImageElement): void {
   if (parent?.tagName === 'P') {
     // A paragraph that mixes prose and a picture. The prose stays in
     // paragraphs and only the picture — with the caption that belongs to it
-    // — becomes a figure. Parking the prose inside the figure would be
-    // worse than losing it: the print stylesheet centres figure text, and
-    // the "no image" mode hides every figure that carries an image, so the
-    // words would print centred and then vanish with the picture.
+    // — becomes a figure. This branch applies to a picture that has no
+    // figure ancestor: with one, that figure is the unit of the picture and
+    // the prose is centred along with it, which is what the reader view
+    // does too (.reader-content figure centres its content).
     const figure = document.createElement('figure');
     figure.className = 'p-figure';
 

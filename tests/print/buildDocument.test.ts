@@ -299,6 +299,9 @@ describe('buildDocument image wrapping', () => {
 
     expect(doc.querySelectorAll('.p-figure')).toHaveLength(1);
     expect(doc.querySelector('.p-figure .p-figure')).toBeNull();
+    // A figure that was built inside the outer one would carry no class of
+    // its own, so the two assertions above would still pass. Count them all.
+    expect(doc.querySelectorAll('figure')).toHaveLength(1);
   });
 
   it('does not nest a figure inside a figure that holds a paragraph', () => {
@@ -315,6 +318,9 @@ describe('buildDocument image wrapping', () => {
     const figure = doc.querySelector('figure');
     expect(doc.querySelectorAll('.p-figure')).toHaveLength(1);
     expect(doc.querySelector('.p-figure .p-figure')).toBeNull();
+    // A figure that was built inside the outer one would carry no class of
+    // its own, so the two assertions above would still pass. Count them all.
+    expect(doc.querySelectorAll('figure')).toHaveLength(1);
     expect(figure?.classList.contains('p-figure')).toBe(true);
     expect(figure?.querySelector('figcaption')?.textContent).toBe('图注');
     expect(figure?.querySelector('figcaption')?.classList.contains('p-caption')).toBe(true);
@@ -333,6 +339,9 @@ describe('buildDocument image wrapping', () => {
     const figure = doc.querySelector('figure');
     expect(doc.querySelectorAll('.p-figure')).toHaveLength(1);
     expect(doc.querySelector('.p-figure .p-figure')).toBeNull();
+    // A figure that was built inside the outer one would carry no class of
+    // its own, so the two assertions above would still pass. Count them all.
+    expect(doc.querySelectorAll('figure')).toHaveLength(1);
     expect(figure?.classList.contains('p-figure')).toBe(true);
     expect(figure?.querySelector('figcaption')?.classList.contains('p-caption')).toBe(true);
     expect(figure?.querySelector('img')).not.toBeNull();
