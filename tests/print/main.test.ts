@@ -800,6 +800,98 @@ describe('print page · image wait gate', () => {
     await flushMicrotasks();
     expect(printButton().disabled).toBe(false);
   });
+
+  it('drops the loading status when the user abandons the wait for 无图', async () => {
+    await boot({ payload: payload(), storedSettings: { imageSize: 'none' } });
+
+    let release!: (r: { loaded: number; failed: number }) => void;
+    mocks.waitForImages.mockReturnValue(
+      new Promise<{ loaded: number; failed: number }>((resolve_) => {
+        release = resolve_;
+      })
+    );
+    vi.useFakeTimers();
+
+    imgSizeButton('small')?.click();
+    await flushMicrotasks();
+    expect(statusEl().textContent).toBe('正在加载图片…');
+
+    imgSizeButton('none')?.click();
+    await flushMicrotasks();
+
+    // The line described the layout being left behind, and a superseded wait
+    // may not write to the status bar to correct the record. Dropping the
+    // images is a new action, and it is the one that gets to clear it.
+    expect(isStatusHidden()).toBe(true);
+    expect(statusEl().textContent).toBe('');
+
+    // The abandoned wait answers late, and it may not put the message back.
+    release({ loaded: 0, failed: 0 });
+    await flushMicrotasks();
+    expect(isStatusHidden()).toBe(true);
+  });
+});
+
+describe('print page · boot wait superseded', () => {
+  /**
+   * The boot image wait is the one meant to finish the boot. When a user
+   * action overtakes it, `main()` returns early and never reaches its own
+   * `bootReady = true` — the gate opens through the re-cut that the action
+   * schedules instead. Nothing pins that today, so moving `bootReady = true`
+   * back to the end of `main()` would leave the print button disabled forever
+   * on this path with every other test still green.
+   */
+  it('opens the gate through the overtaking action when the boot wait is superseded', async () => {
+    const releases: Array<(r: { loaded: number; failed: number }) => void> = [];
+    mocks.waitForImages.mockImplementation(
+      () =>
+        new Promise<{ loaded: number; failed: number }>((resolve_) => {
+          releases.push(resolve_);
+        })
+    );
+
+    // Drive the boot by hand: `boot()` waits for the print button, and on this
+    // path the button only opens once the boot wait has been overtaken.
+    vi.resetModules();
+    mountPage();
+    session.store[`${STORAGE_KEYS.PRINT_PAYLOAD}${TOKEN}`] = payload();
+    window.location.hash = `#${TOKEN}`;
+
+    await bootPromise();
+    await flush();
+
+    expect(statusEl().textContent).toBe('正在加载图片…');
+    expect(printButton().disabled).toBe(true);
+    expect(releases.length, 'the boot wait is in flight').toBe(1);
+
+    vi.useFakeTimers();
+
+    // Another image size overtakes the boot wait.
+    imgSizeButton('small')?.click();
+    await flushMicrotasks();
+    expect(releases.length).toBe(2);
+
+    // The newer wait answers first; the boot wait is now stale.
+    releases[1]?.({ loaded: 2, failed: 0 });
+    await flushMicrotasks();
+    vi.advanceTimersByTime(120);
+
+    expect(
+      printButton().disabled,
+      'the re-cut the action schedules is what completes the boot'
+    ).toBe(false);
+    expect(byId('page-count').textContent).toMatch(/共 \d+ 页/);
+
+    // The boot wait answers late. It describes a layout that no longer
+    // exists, so it may write nothing back — neither a re-cut nor a status.
+    const remarksBefore = remarkCount();
+    releases[0]?.({ loaded: 2, failed: 0 });
+    await flushMicrotasks();
+
+    expect(remarkCount(), 'a superseded wait must not re-cut the document').toBe(remarksBefore);
+    expect(statusEl().textContent).not.toContain('正在加载图片');
+    expect(printButton().disabled).toBe(false);
+  });
 });
 
 describe('print page · print button', () => {

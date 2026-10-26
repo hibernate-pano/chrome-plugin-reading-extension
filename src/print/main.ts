@@ -255,6 +255,11 @@ async function setImageSize(size: PrintImageSize): Promise<void> {
   // for and a dead image host must not delay a text-only printout. A wait
   // still in flight belongs to the layout the user just left — cancel it.
   if (size === 'none') {
+    // The status line describes the layout being left behind, and the wait
+    // that is being abandoned may not write to the status bar to correct the
+    // record. Clearing it is this action's own write: a page with no images
+    // must not keep claiming that images are loading.
+    clearStatus();
     imageWaitPending = false;
     updateControls();
     scheduleRemarking();
