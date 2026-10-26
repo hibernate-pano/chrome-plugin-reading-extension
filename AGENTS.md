@@ -88,7 +88,7 @@ pnpm run lint          # eslint with --max-warnings 0
 pnpm run lint:fix      # eslint --fix
 
 # Tests
-pnpm run test          # vitest --run (all 29 files / 891 tests)
+pnpm run test          # vitest --run (all 29 files / 892 tests)
 pnpm run test:watch    # watch mode
 pnpm run test:coverage # v8 coverage; enforces thresholds (see vitest.config.ts)
 
@@ -115,35 +115,41 @@ npx vitest tests/content/ReaderView.test.tsx
 
 ```
 src/
-├── background/index.ts   # Service worker: message routing, content-script
-│                         # injection, print-payload staging and sweeping
-├── content/              # The reader overlay
-│   ├── index.ts          #   entry: message listener, Shadow DOM mount
-│   ├── extractor.ts      #   Readability wrapper + extraction cache
-│   ├── ReaderView.tsx    #   main reader component
-│   ├── SettingsPanel.tsx #   settings UI
-│   ├── CodeBlock.tsx     #   code block + copy button
-│   ├── errorHandling.ts  #   ErrorBoundary + error reporting
-│   └── styles.css        #   inlined into the shadow root via ?inline
-├── print/                # PDF export page (v3.4.0)
-│   ├── main.ts           #   entry: payload read, toolbar, window.print()
-│   ├── buildDocument.ts  #   sanitized document + filename construction
-│   ├── prepareImages.ts  #   lazy-image backfill, decode wait, height clamping
-│   ├── markBreaks.ts     #   page-break policy for code blocks / tall blocks
-│   ├── paginate.ts       #   measure the laid-out doc; pure break decision
-│   ├── renderSheets.ts   #   cut pages into A4 sheets (place + clip per block)
-│   ├── print.css         #   @media print rules — import LAST, it wins ties
-│   └── preview.css       #   on-screen chrome (toolbar, page stack, sheets)
-├── shared/               # Imported by every surface
-│   ├── types.ts          #   Type-only; excluded from coverage on purpose
-│   ├── constants.ts      #   STORAGE_KEYS, MESSAGE_TYPES, A4 geometry, limits
-│   ├── storage.ts        #   settings load/save/validate
-│   ├── printSettings.ts  #   print settings load/save
-│   ├── history.ts        #   reading history (max 200)
-│   ├── readerThemes.ts   #   light / dark / sepia palettes
-│   ├── sanitize.ts       #   HTML allowlist sanitizer
-│   └── codeHighlight.ts  #   small tokenizer, 15 languages
-└── types/vite-env.d.ts   # Vite ambient types (?inline, ?url, …)
+├── background/index.ts    # Service worker: message routing, content-script
+│                          # injection, print-payload staging and sweeping
+├── content/               # The reader overlay
+│   ├── index.ts           #    entry: message listener, Shadow DOM mount
+│   ├── extractor.ts       #    Readability wrapper + extraction cache
+│   ├── ReaderView.tsx     #    main reader component
+│   ├── SettingsPanel.tsx  #    settings UI
+│   ├── HistoryPanel.tsx   #    floating panel over the reading history
+│   ├── CodeBlock.tsx      #    code block + copy button
+│   ├── icons.tsx          #    Material icon set, paths inlined (no webfont)
+│   ├── errorHandling.tsx  #    ErrorBoundary + error reporting
+│   ├── usePanelDismiss.ts #    shared panel dismissal (Esc, focus trap, click-outside)
+│   ├── styles.css         #    inlined into the shadow root via ?inline
+│   └── host.css           #    host-document styles for the toast
+├── print/                 # PDF export page (v3.4.0)
+│   ├── main.ts            #    entry: payload read, toolbar, window.print()
+│   ├── buildDocument.ts   #    sanitized document + filename construction
+│   ├── prepareImages.ts   #    lazy-image backfill, decode wait, height clamping
+│   ├── markBreaks.ts      #    page-break policy for code blocks / tall blocks
+│   ├── paginate.ts        #    measure the laid-out doc; pure break decision
+│   ├── renderSheets.ts    #    cut pages into A4 sheets (place + clip per block)
+│   ├── trim.ts            #    pure DOM primitives for the tail trim
+│   ├── print.css          #    @media print rules — import LAST, it wins ties
+│   └── preview.css        #    on-screen chrome (toolbar, page stack, sheets)
+├── shared/                # Imported by every surface
+│   ├── types.ts           #    Type-only; excluded from coverage on purpose
+│   ├── constants.ts       #    STORAGE_KEYS, MESSAGE_TYPES, A4 geometry, limits
+│   ├── storage.ts         #    settings load/save/validate
+│   ├── printSettings.ts   #    print settings load/save
+│   ├── history.ts         #    reading history (max 200)
+│   ├── readerThemes.ts    #    light / dark / sepia palettes
+│   ├── sanitize.ts        #    HTML allowlist sanitizer
+│   ├── codeHighlight.ts   #    small tokenizer, 15 languages
+│   └── cjkSpacing.ts      #    CJK / Latin inter-script spacing
+└── types/vite-env.d.ts    # Vite ambient types (?inline, ?url, …)
 
 print.html                # Print-page HTML entry — at the ROOT on purpose, so
                           # Vite emits dist/print.html and the worker can getURL it

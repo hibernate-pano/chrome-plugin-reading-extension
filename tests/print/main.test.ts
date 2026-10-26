@@ -1642,6 +1642,18 @@ describe('print page · export filename', () => {
     (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
   }
 
+  /**
+   * Click a block on a sheet built for this click.
+   *
+   * The sheets are rebuilt from scratch on every re-layout — a cut wipes the
+   * container — so a second cut needs its own sheet rather than the one that
+   * was just cleared.
+   */
+  function clickBlockOnFreshSheet(id: string, top: number): void {
+    const fake = fakeSheet(0, [{ id, top }]);
+    (fake.querySelector(`[data-p-block="${id}"]`) as HTMLElement).click();
+  }
+
   it('carries no marker when nothing was cut', async () => {
     const piece = article();
     await boot({ payload: piece });
@@ -1682,6 +1694,36 @@ describe('print page · export filename', () => {
 
     expect(document.title).toContain(TRIMMED);
     expect(printSpy).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Cut, undo, cut again.
+   *
+   * The name has to follow the *current* cut — not the first one, and not the
+   * name the undo left behind. The undo is where this breaks: an
+   * implementation that only clears the marker when it remembers to will keep
+   * the suffixed name, and a second cut then has nothing left to claim.
+   */
+  it('follows the current cut after an undo and a second cut', async () => {
+    const piece = article();
+    await boot({ payload: piece });
+
+    byId<HTMLButtonElement>('trim-btn').click();
+    clickBlockOnFreshSheet('b1', 0);
+    expect(document.title).toContain(TRIMMED);
+
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flush();
+
+    // The undo gives the name back before the next cut can claim it.
+    expect(document.title).not.toContain(TRIMMED);
+    expect(document.title).toBe(buildFilename(piece));
+
+    // A second cut — at a different block — marks the name again.
+    clickBlockOnFreshSheet('b2', 100);
+
+    expect(document.title).toContain(TRIMMED);
+    expect(document.title).toBe(buildFilename(piece).replace(/\.pdf$/, `${TRIMMED}.pdf`));
   });
 
   it('leaves an uncut export unmarked all the way to the print button', async () => {
