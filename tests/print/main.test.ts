@@ -441,6 +441,23 @@ describe('print page · boot', () => {
   });
 });
 
+describe('print page · boot failure', () => {
+  it('falls back to an empty state instead of hanging on 加载中…', async () => {
+    mocks.eagerizeImages.mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
+
+    await boot({ payload: payload() });
+
+    expect(placeholder()?.querySelector('h1')?.textContent).toBe('打印页初始化失败');
+    expect(placeholder()?.querySelector('p')?.textContent).toContain('重新导出');
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[Print] Print page failed to initialise:',
+      expect.any(Error)
+    );
+  });
+});
+
 describe('print page · image status', () => {
   it('names the images that failed so blanks are not a surprise on paper', async () => {
     await boot({ payload: payload(), images: { loaded: 4, failed: 2 } });
@@ -710,6 +727,78 @@ describe('print page · image size', () => {
 
     expect(remarkCount()).toBe(remarksAtBoot + 1);
     expect(sheet().classList.contains('p-imgsize-small')).toBe(true);
+  });
+});
+
+describe('print page · image wait gate', () => {
+  it('holds the print button while the images of the new size are still loading', async () => {
+    await boot({ payload: payload(), storedSettings: { imageSize: 'none' } });
+
+    let release!: (r: { loaded: number; failed: number }) => void;
+    mocks.waitForImages.mockReturnValue(
+      new Promise<{ loaded: number; failed: number }>((resolve_) => {
+        release = resolve_;
+      })
+    );
+
+    imgSizeButton('small')?.click();
+    await flushMicrotasks();
+
+    expect(printButton().disabled, 'printing mid-load yields blanks').toBe(true);
+
+    release({ loaded: 1, failed: 0 });
+    await flushMicrotasks();
+    expect(printButton().disabled).toBe(false);
+  });
+
+  it('keeps the gate closed when a superseded wait finishes late', async () => {
+    await boot({ payload: payload(), storedSettings: { imageSize: 'none' } });
+
+    const releases: Array<(r: { loaded: number; failed: number }) => void> = [];
+    mocks.waitForImages.mockImplementation(
+      () =>
+        new Promise<{ loaded: number; failed: number }>((resolve_) => {
+          releases.push(resolve_);
+        })
+    );
+
+    imgSizeButton('small')?.click();
+    await flushMicrotasks();
+    imgSizeButton('medium')?.click();
+    await flushMicrotasks();
+    expect(releases.length).toBe(2);
+
+    releases[0]?.({ loaded: 0, failed: 0 }); // the stale one
+    await flushMicrotasks();
+    expect(printButton().disabled, 'a stale wait must not reopen printing').toBe(true);
+
+    releases[1]?.({ loaded: 1, failed: 0 }); // the current one
+    await flushMicrotasks();
+    expect(printButton().disabled).toBe(false);
+  });
+
+  it('cancels a pending wait when the user switches back to 无图', async () => {
+    await boot({ payload: payload(), storedSettings: { imageSize: 'none' } });
+
+    let release!: (r: { loaded: number; failed: number }) => void;
+    mocks.waitForImages.mockReturnValue(
+      new Promise<{ loaded: number; failed: number }>((resolve_) => {
+        release = resolve_;
+      })
+    );
+
+    imgSizeButton('small')?.click();
+    await flushMicrotasks();
+    imgSizeButton('none')?.click();
+    await flushMicrotasks();
+
+    expect(printButton().disabled, '无图 needs no images, so printing is possible again').toBe(
+      false
+    );
+
+    release({ loaded: 0, failed: 0 });
+    await flushMicrotasks();
+    expect(printButton().disabled).toBe(false);
   });
 });
 

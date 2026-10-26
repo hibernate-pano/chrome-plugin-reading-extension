@@ -68,6 +68,44 @@ let currentFilename = 'article.pdf';
  */
 let contentDoc: HTMLElement | null = null;
 
+/**
+ * Whether the document has been cut into pages at least once.
+ *
+ * The print button stays shut until this is true: before the first cut the
+ * page count on screen describes a layout the reader never saw, and a print
+ * taken then reproduces that layout instead of the one on screen.
+ */
+let bootReady = false;
+
+/**
+ * An image wait is in flight.
+ *
+ * While this holds, printing captures the frames before their bitmaps land —
+ * blank boxes on paper, cut to a page count computed from the old layout.
+ */
+let imageWaitPending = false;
+
+/**
+ * Counts image waits, so a superseded one can be recognised.
+ *
+ * Waits overlap: every change of the image size starts its own. Only the
+ * newest one may write back — an older wait resolving late would otherwise
+ * declare the document settled while the current wait is still running, and
+ * the gate would open on a blank frame.
+ */
+let imageWaitGeneration = 0;
+
+/**
+ * The one place that decides what the toolbar allows.
+ *
+ * Every path goes through here, so "may the user print yet?" has exactly one
+ * answer. A second place flipping `printBtn.disabled` would be a back door
+ * around the gate.
+ */
+function updateControls(): void {
+  elements.printBtn.disabled = !(bootReady && !imageWaitPending);
+}
+
 function setStatus(message: string): void {
   elements.status.classList.remove('status--hidden');
   elements.status.textContent = message;
@@ -183,22 +221,54 @@ function setTheme(theme: PrintSettings['theme']): void {
 
 const IMAGE_SIZES: readonly PrintImageSize[] = ['large', 'medium', 'small', 'none'];
 
+/**
+ * Wait for the images of the current layout, holding the print button shut.
+ *
+ * Returns `null` when this wait has been superseded — a newer wait, or a
+ * switch to 无图, took over and this one's conclusion is about a layout that no
+ * longer exists. A superseded wait writes nothing back: not the pending flag,
+ * not the status line, not a re-cut. Its answer is about the past.
+ */
+async function waitForImagesFor(generation: number): Promise<ImageWaitResult | null> {
+  imageWaitPending = true;
+  updateControls();
+
+  const result = await waitForImages(elements.sheet, 5000);
+
+  if (generation !== imageWaitGeneration) return null;
+
+  imageWaitPending = false;
+  updateControls();
+  return result;
+}
+
 async function setImageSize(size: PrintImageSize): Promise<void> {
   if (size === currentSettings.imageSize) return;
-  // 无图 keeps images out of the layout entirely, so boot skipped waiting for
-  // them. Leaving 无图 puts them back into the flow — measuring before their
-  // bitmaps land would cut pages around empty frames and print the wrong
-  // document the moment they arrive.
-  const leavingImageless = currentSettings.imageSize === 'none' && size !== 'none';
+  // Every size change invalidates the waits before it: the layout they were
+  // waiting for is the one being left behind.
+  const generation = ++imageWaitGeneration;
   currentSettings.imageSize = size;
   applySettings();
   void savePrintSettings({ imageSize: size });
 
-  if (leavingImageless) {
-    setStatus('正在加载图片…');
-    const result = await waitForImages(elements.sheet, 5000);
-    reportImageProblems(result);
+  // 无图 keeps images out of the layout entirely, so there is nothing to wait
+  // for and a dead image host must not delay a text-only printout. A wait
+  // still in flight belongs to the layout the user just left — cancel it.
+  if (size === 'none') {
+    imageWaitPending = false;
+    updateControls();
+    scheduleRemarking();
+    return;
   }
+
+  // Any size that shows images has to wait for them: measuring before their
+  // bitmaps land cuts pages around empty frames, and printing then yields the
+  // blanks the reader is about to complain about.
+  setStatus('正在加载图片…');
+  const result = await waitForImagesFor(generation);
+  // Superseded — a newer action owns the gate now, and will re-cut the pages.
+  if (result === null) return;
+  reportImageProblems(result);
   scheduleRemarking();
 }
 
@@ -242,6 +312,13 @@ function repaginate(): void {
   applySheetClasses(sheets);
 
   elements.pageCount.textContent = starts.length === 1 ? '共 1 页' : `共 ${starts.length} 页`;
+
+  // The document now exists as pages, so printing it is meaningful. This lives
+  // here rather than at the end of `main()` because the boot wait can be
+  // overtaken by a user action — that path finishes booting through the
+  // re-cut the action schedules, and would otherwise never open the gate.
+  bootReady = true;
+  updateControls();
 }
 
 function scheduleRemarking(): void {
@@ -373,8 +450,12 @@ async function main(): Promise<void> {
   // 无图 keeps images out of the layout entirely, so there is nothing to wait
   // for and a dead image host must not delay a text-only printout.
   if (currentSettings.imageSize !== 'none') {
+    const generation = ++imageWaitGeneration;
     setStatus('正在加载图片…');
-    const result = await waitForImages(elements.sheet, 5000);
+    const result = await waitForImagesFor(generation);
+    // Overtaken by a user action. That action owns the gate now and schedules
+    // its own re-cut, which is what completes the boot.
+    if (result === null) return;
     reportImageProblems(result);
   }
 
@@ -384,8 +465,11 @@ async function main(): Promise<void> {
   markOversizedBlocks(elements.sheet);
   repaginate();
 
-  elements.printBtn.disabled = false;
+  updateControls();
   elements.printBtn.focus();
 }
 
-void main();
+void main().catch((error: unknown) => {
+  console.error('[Print] Print page failed to initialise:', error);
+  showPlaceholder('打印页初始化失败', '请关闭此页，回到文章后重新导出。');
+});
