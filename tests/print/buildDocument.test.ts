@@ -202,15 +202,7 @@ describe('buildDocument image wrapping', () => {
     expect(doc.querySelector('.p-content > .p-figure img')).not.toBeNull();
   });
 
-  it('loses the caption of a figure it wraps, leaving the branch that styles it unreachable', () => {
-    // `processImage` builds a fresh <figure>, swaps it in for the old one, and
-    // then moves only the <img> across — the <figcaption> stays behind in the
-    // detached old figure. So `figure.querySelector('figcaption')` is always
-    // null and the `p-caption` styling below it can never be applied.
-    //
-    // Characterisation, not endorsement: this asserts what the code does today
-    // so a change here is a deliberate one, and so the loss is visible next to
-    // the dead branch it causes.
+  it('keeps the caption of the figure it wraps', () => {
     const doc = buildDocument(
       payload({
         content:
@@ -218,11 +210,33 @@ describe('buildDocument image wrapping', () => {
       })
     );
 
-    const figure = doc.querySelector('.p-content figure');
-    expect(figure?.className).toBe('p-figure');
-    expect(figure?.querySelector('img')).not.toBeNull();
-    expect(figure?.querySelector('figcaption')).toBeNull();
-    expect(doc.querySelector('.p-caption')).toBeNull();
+    const figure = doc.querySelector('.p-figure');
+    expect(figure?.querySelector('figcaption')?.textContent).toBe('图注');
+    expect(figure?.querySelector('figcaption')?.className).toBe('p-caption');
+  });
+
+  it('keeps the text that sat around an image inside its paragraph', () => {
+    const doc = buildDocument(
+      payload({
+        content: '<p>图前的说明<img src="https://example.com/a.png" alt="a">图后的说明</p>',
+      })
+    );
+
+    const content = doc.querySelector('.p-content');
+    expect(content?.textContent).toContain('图前的说明');
+    expect(content?.textContent).toContain('图后的说明');
+  });
+
+  it('does not nest one figure inside another', () => {
+    const doc = buildDocument(
+      payload({
+        content:
+          '<figure><img src="https://example.com/a.png" alt="a"><figcaption>图注</figcaption></figure>',
+      })
+    );
+
+    expect(doc.querySelectorAll('.p-figure')).toHaveLength(1);
+    expect(doc.querySelector('.p-figure .p-figure')).toBeNull();
   });
 });
 

@@ -103,29 +103,60 @@ function processCodeBlock(block: HTMLElement): void {
 }
 
 /**
+ * Give every caption inside a figure the class the print stylesheet styles.
+ */
+function markCaptions(figure: Element): void {
+  for (const caption of Array.from(figure.querySelectorAll('figcaption'))) {
+    caption.classList.add('p-caption');
+  }
+}
+
+/**
  * Wrap images in a figure and cap their height so a tall image cannot
  * overflow a single page and get clipped.
+ *
+ * The image is not the only thing worth printing. A caption and the prose
+ * that shared a paragraph with the image used to disappear together with the
+ * parent node, so the PDF showed less than the reader saw on screen. Each
+ * branch therefore keeps whatever else the parent held.
  */
 function processImage(image: HTMLImageElement): void {
   image.setAttribute('loading', 'eager');
   image.removeAttribute('width');
   image.removeAttribute('height');
 
+  const parent = image.parentElement;
+
+  if (parent?.tagName === 'FIGURE') {
+    // The parent already is a figure, and it holds the caption. Building a
+    // new one and moving only the image across would drop the caption.
+    parent.classList.add('p-figure');
+    markCaptions(parent);
+    return;
+  }
+
+  if (parent?.tagName === 'P') {
+    // A paragraph that mixes prose and an image: the prose belongs to the
+    // article, so it moves into the figure along with the image instead of
+    // being dropped with the paragraph. The children keep their order — the
+    // picture stays between the words that surrounded it on screen.
+    const figure = document.createElement('figure');
+    figure.className = 'p-figure';
+    for (const child of Array.from(parent.childNodes)) {
+      figure.appendChild(child);
+    }
+    parent.replaceWith(figure);
+    markCaptions(figure);
+    return;
+  }
+
+  // Any other container (a div, a link): the image is wrapped where it
+  // stands, because replacing the container would take its siblings with it.
   const figure = document.createElement('figure');
   figure.className = 'p-figure';
-
-  const parent = image.parentElement;
-  if (parent && (parent.tagName === 'P' || parent.tagName === 'FIGURE')) {
-    parent.replaceWith(figure);
-  } else {
-    image.replaceWith(figure);
-  }
+  image.replaceWith(figure);
   figure.appendChild(image);
-
-  const caption = figure.querySelector('figcaption');
-  if (caption) {
-    caption.className = 'p-caption';
-  }
+  markCaptions(figure);
 }
 
 /**
