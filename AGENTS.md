@@ -88,7 +88,7 @@ pnpm run lint          # eslint with --max-warnings 0
 pnpm run lint:fix      # eslint --fix
 
 # Tests
-pnpm run test          # vitest --run (all 29 files / 892 tests)
+pnpm run test          # vitest --run (all 29 files / 893 tests)
 pnpm run test:watch    # watch mode
 pnpm run test:coverage # v8 coverage; enforces thresholds (see vitest.config.ts)
 
@@ -129,7 +129,7 @@ src/
 │   ├── usePanelDismiss.ts #    shared panel dismissal (Esc, focus trap, click-outside)
 │   ├── styles.css         #    inlined into the shadow root via ?inline
 │   └── host.css           #    host-document styles for the toast
-├── print/                 # PDF export page (v3.4.0)
+├── print/                 # PDF export page (v3.9.0)
 │   ├── main.ts            #    entry: payload read, toolbar, window.print()
 │   ├── buildDocument.ts   #    sanitized document + filename construction
 │   ├── prepareImages.ts   #    lazy-image backfill, decode wait, height clamping
@@ -361,7 +361,7 @@ describe('Feature Name', () => {
 ```
 
 `pnpm run test:coverage` enforces a ratchet in `vitest.config.ts`: statements
-97, branches 92, functions 97, lines 98. `src/shared/types.ts` is excluded from
+97, branches 93, functions 97, lines 98. `src/shared/types.ts` is excluded from
 coverage (type-only, no runtime code). Raise the thresholds as coverage grows —
 a ratchet nobody bumps is a ratchet that rots.
 

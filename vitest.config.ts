@@ -48,7 +48,7 @@ export default defineConfig({
         // threshold that silently rots. CI enforces these via
         // `pnpm run test:coverage`.
         statements: 97,
-        branches: 92,
+        branches: 93,
         functions: 97,
         lines: 98,
       },

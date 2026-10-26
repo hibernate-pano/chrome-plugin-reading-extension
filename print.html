@@ -95,13 +95,14 @@
     <div class="trim-hint" id="trim-hint" hidden>
       点击第一段不要的内容，它之后都不会打印。Esc 退出。
     </div>
-    <div
-      class="status trim-status status--hidden"
-      id="trim-status"
-      role="status"
-      aria-live="polite"
-    >
-      <span id="trim-status-text"></span>
+    <!--
+      The live region belongs on the text alone. `role="status"` announces the
+      whole region whenever it changes, so a focusable button inside it would
+      have its label read out with every update. The container is just a
+      container: it groups the message with the undo button beside it.
+    -->
+    <div class="status trim-status status--hidden" id="trim-status" role="group">
+      <span id="trim-status-text" role="status" aria-live="polite"></span>
       <button class="trim-status__undo" type="button" id="trim-undo">撤销</button>
     </div>
 

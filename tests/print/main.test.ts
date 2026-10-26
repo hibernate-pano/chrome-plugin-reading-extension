@@ -1525,6 +1525,36 @@ describe('print page · trim mode', () => {
 });
 
 /**
+ * The status bar carries a live region *and* a button.
+ *
+ * `role="status"` is for text: a screen reader announces the whole region
+ * when it changes, so a focusable button inside it gets its label read out
+ * along with the message, every single time. The live region belongs on the
+ * text alone, and the undo button has to stay outside it.
+ */
+describe('print page · live region', () => {
+  it('keeps the undo button out of the live region', () => {
+    // The real page, from disk — a hand-written copy would let a renamed id
+    // pass here and fail in the browser.
+    mountPage();
+
+    const text = byId('trim-status-text');
+    const bar = byId('trim-status');
+    const undo = byId('trim-undo');
+
+    expect(text.getAttribute('role')).toBe('status');
+    expect(text.getAttribute('aria-live')).toBe('polite');
+
+    expect(bar.getAttribute('role')).not.toBe('status');
+    expect(bar.hasAttribute('aria-live')).toBe(false);
+
+    // The button is beside the message, not inside it.
+    expect(text.contains(undo)).toBe(false);
+    expect(bar.contains(undo)).toBe(true);
+  });
+});
+
+/**
  * The page shortcut — 「删除本页及之后」 — is for "this whole page is junk":
  * instead of hunting for the paragraph, the reader says "nothing from here
  * on". It must land on the first block that *starts* on the page: a block
