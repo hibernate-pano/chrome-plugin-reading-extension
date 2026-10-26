@@ -200,6 +200,14 @@ describe('buildDocument image wrapping', () => {
 
     expect(doc.querySelector('.p-content p')).toBeNull();
     expect(doc.querySelector('.p-content > .p-figure img')).not.toBeNull();
+
+    // The same holds for a paragraph that held the picture and nothing but
+    // whitespace: an empty paragraph still prints its margins.
+    const padded = buildDocument(
+      payload({ content: '<p> <img src="https://example.com/a.png" alt="a"> </p>' })
+    );
+    expect(padded.querySelector('.p-content > p')).toBeNull();
+    expect(padded.querySelector('.p-content > .p-figure img')).not.toBeNull();
   });
 
   it('keeps the caption of the figure it wraps', () => {
@@ -212,7 +220,7 @@ describe('buildDocument image wrapping', () => {
 
     const figure = doc.querySelector('.p-figure');
     expect(figure?.querySelector('figcaption')?.textContent).toBe('图注');
-    expect(figure?.querySelector('figcaption')?.className).toBe('p-caption');
+    expect(figure?.querySelector('figcaption')?.classList.contains('p-caption')).toBe(true);
   });
 
   it('keeps the text that sat around an image inside its paragraph', () => {
@@ -225,6 +233,60 @@ describe('buildDocument image wrapping', () => {
     const content = doc.querySelector('.p-content');
     expect(content?.textContent).toContain('图前的说明');
     expect(content?.textContent).toContain('图后的说明');
+  });
+
+  it('keeps the prose out of the figure it puts the picture in', () => {
+    // The print stylesheet centres figure text and hides every figure that
+    // carries an image in the "no image" mode. Prose parked inside a figure
+    // would print centred and would disappear with the picture.
+    const doc = buildDocument(
+      payload({
+        content: '<p>图前的说明<img src="https://example.com/a.png" alt="a">图后的说明</p>',
+      })
+    );
+
+    const figure = doc.querySelector('.p-figure');
+    expect(figure?.textContent).not.toContain('图前的说明');
+    expect(figure?.textContent).not.toContain('图后的说明');
+
+    const text = doc.querySelector('.p-content')?.textContent ?? '';
+    expect(text).toContain('图前的说明');
+    expect(text).toContain('图后的说明');
+    expect(text.indexOf('图前的说明')).toBeLessThan(text.indexOf('图后的说明'));
+  });
+
+  it('keeps prose, picture and trailing prose in the order the reader saw', () => {
+    const doc = buildDocument(
+      payload({
+        content: '<p>图前的说明<img src="https://example.com/a.png" alt="a">图后的说明</p>',
+      })
+    );
+
+    const content = doc.querySelector('.p-content');
+    const children = content ? Array.from(content.children) : [];
+    expect(children.map((child) => child.tagName)).toEqual(['P', 'FIGURE', 'P']);
+    expect(children[0]?.textContent).toBe('图前的说明');
+    expect(children[1]?.querySelector('img')?.getAttribute('src')).toBe(
+      'https://example.com/a.png'
+    );
+    expect(children[2]?.textContent).toBe('图后的说明');
+  });
+
+  it('carries a caption written inside the paragraph along with the picture', () => {
+    // A <figcaption> may not live inside a <p>, so the HTML parser hoists it
+    // out and it arrives as the paragraph's next sibling. It still belongs to
+    // the picture.
+    const doc = buildDocument(
+      payload({
+        content:
+          '<p>文字<img src="https://example.com/a.png" alt="a"><figcaption>图注</figcaption></p>',
+      })
+    );
+
+    const caption = doc.querySelector('.p-figure figcaption');
+    expect(caption?.textContent).toBe('图注');
+    expect(caption?.classList.contains('p-caption')).toBe(true);
+    expect(doc.querySelector('.p-content > p figcaption')).toBeNull();
   });
 
   it('does not nest one figure inside another', () => {

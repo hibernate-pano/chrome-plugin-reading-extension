@@ -112,6 +112,24 @@ function markCaptions(figure: Element): void {
 }
 
 /**
+ * Tell whether a node is a caption element.
+ */
+function isCaption(node: Node): boolean {
+  return node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'FIGCAPTION';
+}
+
+/**
+ * Tell whether an element still holds anything a reader would see.
+ *
+ * A paragraph that carried nothing but a picture is empty once the picture
+ * moves into its figure, and an empty paragraph still spends its margins.
+ */
+function isBlank(element: Element): boolean {
+  if (element.children.length > 0) return false;
+  return (element.textContent ?? '').trim() === '';
+}
+
+/**
  * Wrap images in a figure and cap their height so a tall image cannot
  * overflow a single page and get clipped.
  *
@@ -136,16 +154,55 @@ function processImage(image: HTMLImageElement): void {
   }
 
   if (parent?.tagName === 'P') {
-    // A paragraph that mixes prose and an image: the prose belongs to the
-    // article, so it moves into the figure along with the image instead of
-    // being dropped with the paragraph. The children keep their order — the
-    // picture stays between the words that surrounded it on screen.
+    // A paragraph that mixes prose and a picture. The prose stays in
+    // paragraphs and only the picture — with the caption that belongs to it
+    // — becomes a figure. Parking the prose inside the figure would be
+    // worse than losing it: the print stylesheet centres figure text, and
+    // the "no image" mode hides every figure that carries an image, so the
+    // words would print centred and then vanish with the picture.
     const figure = document.createElement('figure');
     figure.className = 'p-figure';
-    for (const child of Array.from(parent.childNodes)) {
-      figure.appendChild(child);
+
+    // Snapshot the children before the picture moves: the split is decided
+    // on what the paragraph held, not on what is left of it afterwards.
+    const nodes = Array.from(parent.childNodes);
+    const imageIndex = nodes.indexOf(image);
+    const trailing = nodes.slice(imageIndex + 1);
+
+    figure.appendChild(image);
+
+    // The caption belongs to the picture. A <figcaption> written inside the
+    // paragraph is hoisted out of it by the HTML parser — a <p> may not hold
+    // one — so it arrives as the paragraph's next sibling.
+    const caption = parent.nextElementSibling;
+    if (caption && isCaption(caption)) {
+      figure.appendChild(caption);
     }
-    parent.replaceWith(figure);
+
+    // The prose that followed the picture starts a second paragraph — a copy
+    // of the first, so that whatever the paragraph carried (a language, a
+    // direction) is carried over as well.
+    let tail: HTMLParagraphElement | null = null;
+    if (trailing.length > 0) {
+      tail = parent.cloneNode(false) as HTMLParagraphElement;
+      for (const node of trailing) {
+        tail.appendChild(node);
+      }
+    }
+
+    // The figure takes the paragraph's place and the second paragraph
+    // follows it, so the order is the one the reader saw on screen.
+    if (isBlank(parent)) {
+      // The paragraph held nothing but the picture: it leaves no empty
+      // paragraph behind.
+      parent.replaceWith(figure);
+    } else {
+      parent.after(figure);
+    }
+    if (tail && !isBlank(tail)) {
+      figure.after(tail);
+    }
+
     markCaptions(figure);
     return;
   }
