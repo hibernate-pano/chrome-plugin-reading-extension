@@ -19,7 +19,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { PRINT_FONT_SIZES, STORAGE_KEYS } from '../../src/shared/constants';
+import {
+  PRINT_FONT_SIZES,
+  PRINT_LINE_HEIGHTS,
+  PRINT_PARAGRAPH_SPACINGS,
+  STORAGE_KEYS,
+} from '../../src/shared/constants';
 import { buildFilename } from '../../src/print/buildDocument';
 import { decorateSheetForTrim } from '../../src/print/trim';
 import type { PrintPayload, PrintSettings } from '../../src/shared/types';
@@ -120,7 +125,11 @@ const REQUIRED_IDS = [
   'font-down',
   'font-up',
   'line-height-value',
+  'line-height-down',
+  'line-height-up',
   'para-gap-value',
+  'para-gap-down',
+  'para-gap-up',
   'trim-btn',
   'trim-status',
   'trim-hint',
@@ -1104,6 +1113,21 @@ describe('print page · density steppers', () => {
     expect(byId<HTMLButtonElement>('para-gap-down').disabled).toBe(true);
     expect(byId<HTMLButtonElement>('para-gap-up').disabled).toBe(false);
   });
+
+  it('disables each stepper at the top of its range', async () => {
+    await boot({
+      payload: payload(),
+      storedSettings: {
+        lineHeight: PRINT_LINE_HEIGHTS[PRINT_LINE_HEIGHTS.length - 1],
+        paragraphSpacing: PRINT_PARAGRAPH_SPACINGS[PRINT_PARAGRAPH_SPACINGS.length - 1],
+      },
+    });
+
+    expect(byId<HTMLButtonElement>('line-height-up').disabled).toBe(true);
+    expect(byId<HTMLButtonElement>('line-height-down').disabled).toBe(false);
+    expect(byId<HTMLButtonElement>('para-gap-up').disabled).toBe(true);
+    expect(byId<HTMLButtonElement>('para-gap-down').disabled).toBe(false);
+  });
 });
 
 describe('print page · block ids', () => {
@@ -1206,6 +1230,28 @@ describe('print page · trim mode', () => {
     expect(sheet().querySelector('[data-p-block="b3"]')).not.toBeNull();
     expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
     expect(byId('trim-badge').hidden).toBe(true);
+    expect(printButton().disabled).toBe(false);
+  });
+
+  it('reopens the print gate when the undo supersedes an image wait', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+
+    // An image-size change starts a wait that never comes back, and it holds
+    // the print gate shut while it is in flight.
+    mocks.waitForImages.mockReturnValue(new Promise<{ loaded: number; failed: number }>(() => {}));
+    imgSizeButton('small')?.click();
+    await flush();
+    expect(printButton().disabled).toBe(true);
+
+    // The undo supersedes that wait, and there is no image of its own to wait
+    // for — so the undo owns the gate and has to open it again.
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flush();
+
+    expect(printButton().disabled).toBe(false);
   });
 
   it('keeps the trim and the undo affordance through a density change', async () => {
@@ -1258,6 +1304,37 @@ describe('print page · trim mode', () => {
     expect(printButton().disabled).toBe(false);
   });
 
+  it('reports the images that failed to come back', async () => {
+    await boot({
+      payload: payload({
+        content: '<p>一</p><p><img src="https://example.com/a.png" alt="a"></p>',
+      }),
+      storedSettings: { imageSize: 'none' },
+    });
+    const image = sheet().querySelector('img') as HTMLImageElement;
+    Object.defineProperty(image, 'complete', { value: false, configurable: true });
+
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b1', top: 0 }]);
+    (fake.querySelector('[data-p-block="b1"]') as HTMLElement).click();
+
+    let release!: (r: { loaded: number; failed: number; pending: number }) => void;
+    mocks.waitForImages.mockReturnValue(
+      new Promise((resolve_) => {
+        release = resolve_;
+      })
+    );
+
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flushMicrotasks();
+    release({ loaded: 0, failed: 2, pending: 0 });
+    await flushMicrotasks();
+
+    // The restored images that never arrived have to be said out loud —
+    // otherwise the reader only sees an empty box on the paper.
+    expect(statusEl().textContent).toContain('2 张未能加载');
+  });
+
   it('replaces an existing cut instead of stacking cuts', async () => {
     await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
     byId<HTMLButtonElement>('trim-btn').click();
@@ -1269,6 +1346,23 @@ describe('print page · trim mode', () => {
 
     expect(sheet().querySelector('[data-p-block="b1"]')).toBeNull();
     expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+  });
+
+  it('keeps the earlier cut when the clicked block is not in the document', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+    const fake = fakeSheet(0, [{ id: 'b2', top: 100 }]);
+    (fake.querySelector('[data-p-block="b2"]') as HTMLElement).click();
+    expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+
+    // A block id the article never had. The cut it asks for cannot happen, so
+    // the earlier cut has to stand — undoing it first would leave the status
+    // line claiming a cut that is no longer in the document.
+    const ghost = fakeSheet(0, [{ id: 'b9', top: 200 }]);
+    (ghost.querySelector('[data-p-block="b9"]') as HTMLElement).click();
+
+    expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+    expect(byId('trim-status-text').textContent).toContain('已裁剪至');
   });
 
   /**

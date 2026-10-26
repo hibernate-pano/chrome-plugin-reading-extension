@@ -345,6 +345,20 @@ describe('ReaderView — read time deduplication', () => {
     expect(meta.textContent).toContain('张三 · 12 分钟阅读');
     expect(meta.textContent).not.toContain('min read');
   });
+
+  it('recognises a read time whatever the case', () => {
+    const { container } = renderReader({ byline: 'Jane Doe · 12 Min read', estimatedReadTime: 22 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent?.match(/min read/gi)).toHaveLength(1);
+  });
+
+  it('recognises the Chinese way of stating it', () => {
+    const { container } = renderReader({ byline: '王小明 · 12 分钟读完', estimatedReadTime: 22 });
+    const meta = container.querySelector('.reader-meta') as HTMLElement;
+
+    expect(meta.textContent?.match(/min read/g)).toBeNull();
+  });
 });
 
 /* ------------------------------------------------------------------ *

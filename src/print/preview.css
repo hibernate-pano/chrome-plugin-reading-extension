@@ -373,7 +373,13 @@ body.is-trimming .p-sheet__trim {
 .p-sheets {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* `safe` matters in a narrow window. The sheet is a fixed 210mm, so a
+     viewport narrower than that overflows on *both* sides — and a browser can
+     only scroll to the right, which strands the overflow on the left where
+     the reader can never reach it. `safe center` centres the sheet while it
+     fits and falls back to start alignment once it does not, so all the
+     overflow is on the right and the whole page can be scrolled into view. */
+  align-items: safe center;
   gap: 20px;
 }
 

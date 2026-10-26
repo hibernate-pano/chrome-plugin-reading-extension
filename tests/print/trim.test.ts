@@ -173,6 +173,23 @@ describe('startsOnPage', () => {
     block.dataset.docTop = '450';
     expect(startsOnPage(block, 500)).toBe(false);
   });
+
+  it('rejects a block that carries no offset at all', () => {
+    const block = document.createElement('p');
+    expect(startsOnPage(block, 500)).toBe(false);
+  });
+
+  it('rejects a block whose offset is empty', () => {
+    const block = document.createElement('p');
+    block.dataset.docTop = '';
+    expect(startsOnPage(block, 0)).toBe(false);
+  });
+
+  it('rejects a block whose offset is not a number', () => {
+    const block = document.createElement('p');
+    block.dataset.docTop = 'top';
+    expect(startsOnPage(block, 500)).toBe(false);
+  });
 });
 
 describe('firstTrimTarget', () => {

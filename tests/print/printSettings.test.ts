@@ -39,10 +39,23 @@ describe('validatePrintSettings', () => {
     expect(validatePrintSettings({ fontSize: 1 }).fontSize).toBe(9);
   });
 
+  it('keeps the earlier step when two are equally close', () => {
+    expect(validatePrintSettings({ fontSize: 10.75 }).fontSize).toBe(10.5);
+  });
+
   it('falls back to the default when the size is not a number', () => {
     expect(validatePrintSettings({ fontSize: NaN }).fontSize).toBe(DEFAULT_PRINT_SETTINGS.fontSize);
     expect(validatePrintSettings({ fontSize: 'big' as never }).fontSize).toBe(
       DEFAULT_PRINT_SETTINGS.fontSize
+    );
+  });
+
+  it('falls back to the default for a value that is not finite', () => {
+    expect(validatePrintSettings({ fontSize: Infinity }).fontSize).toBe(
+      DEFAULT_PRINT_SETTINGS.fontSize
+    );
+    expect(validatePrintSettings({ lineHeight: -Infinity }).lineHeight).toBe(
+      DEFAULT_PRINT_SETTINGS.lineHeight
     );
   });
 

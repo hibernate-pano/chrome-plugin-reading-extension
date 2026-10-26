@@ -169,7 +169,10 @@ body {
 
 .p-content ul,
 .p-content ol {
-  margin: 0 0 1em 1.6em;
+  /* The bottom margin follows the paragraph gap, so a list and the paragraph
+     after it keep the same rhythm as two paragraphs. A hard-coded `1em` would
+     make the list sit twice as far from the next block as a paragraph does. */
+  margin: 0 0 var(--print-para-gap, 0.5em) 1.6em;
 }
 
 .p-content li {
@@ -423,6 +426,13 @@ body {
 
   body.is-trimming [data-trim-eligible='true']:hover::after {
     display: none;
+  }
+
+  /* The hover outline is the screen's marker, not part of the article. The
+     print engine keeps the `:hover` snapshot of the block the pointer was
+     last on, so without this the outline would reach the paper. */
+  body.is-trimming [data-trim-eligible='true']:hover {
+    outline: none;
   }
 
   .p-sheets {

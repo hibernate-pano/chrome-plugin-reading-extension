@@ -34,7 +34,7 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
  */
 function snapToStep(requested: unknown, steps: readonly number[], fallback: number): number {
   const value = typeof requested === 'number' ? requested : NaN;
-  if (Number.isNaN(value)) {
+  if (!Number.isFinite(value)) {
     return fallback;
   }
   return steps.reduce((closest, step) =>

@@ -121,7 +121,6 @@ export function cutTrailingFrom(root: HTMLElement, target: Node): RemovedNode[] 
 export function restoreRemoved(removed: RemovedNode[]): void {
   for (let i = removed.length - 1; i >= 0; i -= 1) {
     const entry = removed[i];
-    if (entry === undefined) continue;
     const { parent, next, node } = entry;
     if (next !== null && next.parentNode === parent) {
       parent.insertBefore(node, next);
@@ -150,7 +149,9 @@ export function restoreRemoved(removed: RemovedNode[]): void {
  * @param pageStart The document offset at which the page begins.
  */
 export function startsOnPage(block: HTMLElement, pageStart: number): boolean {
-  const top = Number(block.dataset.docTop);
+  const raw = block.dataset.docTop;
+  if (raw === undefined || raw === '') return false;
+  const top = Number(raw);
   return Number.isFinite(top) && top >= pageStart - 0.5;
 }
 
@@ -161,6 +162,15 @@ export function startsOnPage(block: HTMLElement, pageStart: number): boolean {
  * also holds the page number, and the first page holds the title and the
  * metadata — none of which are article blocks. A clone without a block id is
  * skipped for the same reason: the header and the footer carry no id.
+ *
+ * The direct-child rule is an invariant rather than a preference:
+ * `renderSheets` appends the clones straight into the slice, so a clone is
+ * always a direct child of `.p-sheet__content`. If the rendering ever
+ * wrapped them one level deeper, this function would quietly return an empty
+ * list — the blocks would stop being marked as cuttable while the clicks
+ * kept working, because a click resolves through `closest('[data-p-block]')`
+ * and never through this list. The marker and the click would then drift
+ * apart without anything failing.
  */
 function blockClones(sheet: HTMLElement): HTMLElement[] {
   const container = sheet.querySelector(`.${PAGE_CLONE_CLASS}`);

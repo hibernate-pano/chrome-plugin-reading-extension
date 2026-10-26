@@ -484,15 +484,18 @@ function applyTrim(blockId: string): void {
   const root = trimRoot();
   if (!root) return;
 
-  if (removedNodes.length > 0) {
-    restoreRemoved(removedNodes);
-    removedNodes = [];
-  }
-
+  // The target is looked up before the previous cut is undone. Restoring first
+  // would put the tail back and then find nothing to cut, leaving the status
+  // line describing a cut that is no longer there.
   const target = Array.from(root.querySelectorAll<HTMLElement>('[data-p-block]')).find(
     (block) => block.dataset.pBlock === blockId
   );
   if (!target) return;
+
+  if (removedNodes.length > 0) {
+    restoreRemoved(removedNodes);
+    removedNodes = [];
+  }
 
   // Read before the cut: afterwards there is nothing left to read.
   trimSnippet = snippetOf(target);
@@ -530,6 +533,12 @@ async function undoTrim(): Promise<void> {
     restoringImages = false;
     // Superseded — a newer action owns the gate now, and will re-cut the pages.
     if (result === null) return;
+    reportImageProblems(result);
+  } else {
+    // The generation bump above superseded any wait that was in flight, and a
+    // superseded wait never lowers the flag. This path owns the gate now.
+    imageWaitPending = false;
+    updateControls();
   }
 
   remarkOversizedBlocks();
@@ -795,8 +804,10 @@ async function main(): Promise<void> {
   eagerizeImages(doc);
   contentDoc = doc;
 
-  // The blocks are labelled before the first measurement, so the ids describe
-  // the document that gets cut rather than one that has already been cut.
+  // The ids have to exist before the first `repaginate()`: that call renders
+  // the sheets, and `renderSheets` copies the source blocks onto them — the
+  // clones carry the `data-p-block` they were copied from. An id handed out
+  // after the first cut would never reach the pages already on screen.
   // Only the article body is labelled: the title and the footer are not
   // article blocks and must not be offered as cut points.
   const articleContent = doc.querySelector<HTMLElement>('.p-content');
