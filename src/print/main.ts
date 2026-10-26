@@ -41,6 +41,8 @@ import { renderSheets, clearSheets } from './renderSheets';
 import {
   assignBlockIds,
   cutTrailingFrom,
+  decorateSheetForTrim,
+  firstTrimTarget,
   restoreRemoved,
   startsOnPage,
   type RemovedNode,
@@ -580,6 +582,11 @@ function repaginate(): void {
   const sheets = renderSheets(layout.blocks, starts, elements.pages, layout.height);
   applySheetClasses(sheets);
 
+  // Every sheet carries its own page shortcut, and the blocks that start on
+  // it are marked as cuttable. The sheets are rebuilt from scratch on every
+  // re-layout, so this is where the shortcuts are made — they never pile up.
+  for (const sheet of sheets) decorateSheetForTrim(sheet);
+
   elements.pageCount.textContent = starts.length === 1 ? '共 1 页' : `共 ${starts.length} 页`;
 
   // The trim status carries the page count too, and it is the only way back to
@@ -678,13 +685,24 @@ function wireTrim(): void {
 
     const target = event.target;
     if (!(target instanceof Element)) return;
-    const block = target.closest<HTMLElement>('[data-p-block]');
-    if (!block) return;
 
-    const page = block.closest<HTMLElement>('.p-sheet');
+    // The page the click landed on. Every cut point lives on a page.
+    const page = target.closest<HTMLElement>('.p-sheet');
     if (!page) return;
     const pageStart = Number(page.dataset.pageStart);
     if (!Number.isFinite(pageStart)) return;
+
+    // The page shortcut is resolved first: its button sits on the paper, in
+    // the margin, and carries no block id of its own — the block lookup
+    // below would reject it outright. It stands for "this page and
+    // everything after it", so it cuts at the first block that *starts* on
+    // this page.
+    const pageButton = target.closest<HTMLElement>('[data-trim-page]');
+    const block =
+      pageButton === null
+        ? target.closest<HTMLElement>('[data-p-block]')
+        : firstTrimTarget(page, pageStart);
+    if (!block) return;
 
     // A block that continues from the previous page is not a cut point:
     // cutting there would throw away the half of it that already fits on the

@@ -1222,4 +1222,136 @@ describe('print page · trim mode', () => {
     expect(getComputedStyle(byId('trim-hint')).display).toBe('none');
     expect(getComputedStyle(byId('trim-badge')).display).toBe('none');
   });
+
+  it('undoes nothing when there is no cut to undo', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+
+    byId<HTMLButtonElement>('trim-undo').click();
+    await flush();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).not.toBeNull();
+    expect(sheet().querySelector('[data-p-block="b2"]')).not.toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
+  });
+
+  it('does not cut at a block that carries no id', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    // A cut is named by the block's id, so a clone without one cannot be
+    // cut at — and the reader must not lose the tail of the article to a
+    // block the page cannot name.
+    const fake = fakeSheet(0, [{ id: '', top: 0 }]);
+    (fake.querySelector('[data-p-block]') as HTMLElement).click();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).not.toBeNull();
+    expect(sheet().querySelector('[data-p-block="b2"]')).not.toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
+  });
+
+  it('cuts nothing when the click lands outside any page', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    // The space between the papers belongs to no page, so it holds no cut
+    // point.
+    (document.getElementById('pages') as HTMLElement).click();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).not.toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
+  });
+});
+
+/**
+ * The page shortcut — 「删除本页及之后」 — is for "this whole page is junk":
+ * instead of hunting for the paragraph, the reader says "nothing from here
+ * on". It must land on the first block that *starts* on the page: a block
+ * that continues from the previous page would take the half of it that
+ * already printed along with it, and the reader would never see what went.
+ */
+describe('print page · page shortcut', () => {
+  it('cuts from the first block that starts on the page', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    const fake = fakeSheet(500, [
+      { id: 'b1', top: 400 },
+      { id: 'b2', top: 500 },
+    ]);
+    fake.querySelector<HTMLButtonElement>('[data-trim-page]')?.click();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).not.toBeNull();
+    expect(sheet().querySelector('[data-p-block="b2"]')).toBeNull();
+    expect(sheet().querySelector('[data-p-block="b3"]')).toBeNull();
+  });
+
+  it('gives every rendered page its shortcut', async () => {
+    await boot({ payload: payload() });
+
+    const pages = document.getElementById('pages') as HTMLElement;
+    expect(pages.querySelectorAll('[data-trim-page]').length).toBe(
+      pages.querySelectorAll('.p-sheet').length
+    );
+  });
+
+  it('puts the shortcut on the paper, outside the text column', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    const fake = fakeSheet(0, [{ id: 'b1', top: 0 }]);
+    const button = fake.querySelector('[data-trim-page]') as HTMLElement;
+
+    // The shortcut belongs to the page it cuts, not to the article — and it
+    // must not sit in the 174mm column, where the article is measured.
+    expect(button.parentElement).toBe(fake);
+    expect(fake.querySelector('.p-sheet__content')?.contains(button)).toBe(false);
+  });
+
+  it('does nothing while the trim mode is off', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p><p>三</p>' }) });
+
+    const fake = fakeSheet(0, [
+      { id: 'b1', top: 0 },
+      { id: 'b2', top: 100 },
+    ]);
+    fake.querySelector<HTMLButtonElement>('[data-trim-page]')?.click();
+
+    expect(sheet().querySelector('[data-p-block="b2"]')).not.toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
+  });
+
+  it('does nothing when the page has no block left to cut at', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+    byId<HTMLButtonElement>('trim-btn').click();
+
+    const fake = fakeSheet(0, [{ id: 'b1', top: 0 }]);
+    // The page lost its block after the shortcut was put on it, so there is
+    // nothing left to cut at — the shortcut must not cut somewhere else.
+    fake.querySelector('[data-p-block="b1"]')?.remove();
+    fake.querySelector<HTMLButtonElement>('[data-trim-page]')?.click();
+
+    expect(sheet().querySelector('[data-p-block="b1"]')).not.toBeNull();
+    expect(byId('trim-status').classList.contains('status--hidden')).toBe(true);
+  });
+});
+
+describe('print page · trim badge', () => {
+  it('sits next to the page count, because that is the number it qualifies', async () => {
+    await boot({ payload: payload() });
+
+    const badge = byId('trim-badge');
+    const count = byId('page-count');
+
+    expect(badge.parentElement).toBe(count.parentElement);
+    expect(count.nextElementSibling).toBe(badge);
+  });
+
+  it('re-enters the trim mode', async () => {
+    await boot({ payload: payload() });
+
+    byId('trim-badge').click();
+
+    expect(document.body.classList.contains('is-trimming')).toBe(true);
+    expect(byId('trim-hint').hidden).toBe(false);
+  });
 });

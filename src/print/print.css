@@ -414,6 +414,17 @@ body {
     display: none !important;
   }
 
+  /* The page shortcut and the hover label belong to the screen, not to the
+     paper: they are the reader's tools, and a page that carries its own
+     delete button prints a page nobody asked for. */
+  .p-sheet__trim {
+    display: none !important;
+  }
+
+  body.is-trimming [data-trim-eligible='true']:hover::after {
+    display: none;
+  }
+
   .p-sheets {
     display: block;
     gap: 0;
