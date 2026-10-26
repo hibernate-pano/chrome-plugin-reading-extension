@@ -62,13 +62,21 @@ describe('getPrintSettings', () => {
 
   it('returns the stored settings when they are valid', async () => {
     await chrome.storage.local.set({
-      [STORAGE_KEYS.PRINT_SETTINGS]: { theme: 'sepia', fontSize: 12, imageSize: 'small' },
+      [STORAGE_KEYS.PRINT_SETTINGS]: {
+        theme: 'sepia',
+        fontSize: 12,
+        imageSize: 'small',
+        lineHeight: 1.8,
+        paragraphSpacing: 0.25,
+      },
     });
 
     expect(await getPrintSettings()).toEqual({
       theme: 'sepia',
       fontSize: 12,
       imageSize: 'small',
+      lineHeight: 1.8,
+      paragraphSpacing: 0.25,
     });
   });
 
@@ -82,6 +90,8 @@ describe('getPrintSettings', () => {
       theme: DEFAULT_PRINT_SETTINGS.theme,
       fontSize: 13,
       imageSize: DEFAULT_PRINT_SETTINGS.imageSize,
+      lineHeight: DEFAULT_PRINT_SETTINGS.lineHeight,
+      paragraphSpacing: DEFAULT_PRINT_SETTINGS.paragraphSpacing,
     });
   });
 
@@ -91,6 +101,20 @@ describe('getPrintSettings', () => {
     expect(await getPrintSettings()).toEqual({
       ...DEFAULT_PRINT_SETTINGS,
       fontSize: 9,
+    });
+  });
+
+  it('fills in the density fields of settings stored by an older version', async () => {
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.PRINT_SETTINGS]: { theme: 'sepia', fontSize: 12, imageSize: 'small' },
+    });
+
+    expect(await getPrintSettings()).toEqual({
+      theme: 'sepia',
+      fontSize: 12,
+      imageSize: 'small',
+      lineHeight: 1.6,
+      paragraphSpacing: 0.5,
     });
   });
 
@@ -128,6 +152,8 @@ describe('savePrintSettings', () => {
     expect(Object.keys(storedPrintSettings() as object).sort()).toEqual([
       'fontSize',
       'imageSize',
+      'lineHeight',
+      'paragraphSpacing',
       'theme',
     ]);
   });
@@ -143,6 +169,8 @@ describe('savePrintSettings', () => {
       theme: 'sepia',
       fontSize: 10.5,
       imageSize: 'small',
+      lineHeight: 1.6,
+      paragraphSpacing: 0.5,
     });
   });
 
@@ -155,6 +183,8 @@ describe('savePrintSettings', () => {
       theme: 'sepia',
       fontSize: 13,
       imageSize: 'medium',
+      lineHeight: 1.6,
+      paragraphSpacing: 0.5,
     });
   });
 
@@ -165,6 +195,8 @@ describe('savePrintSettings', () => {
       theme: DEFAULT_PRINT_SETTINGS.theme,
       fontSize: 9,
       imageSize: DEFAULT_PRINT_SETTINGS.imageSize,
+      lineHeight: DEFAULT_PRINT_SETTINGS.lineHeight,
+      paragraphSpacing: DEFAULT_PRINT_SETTINGS.paragraphSpacing,
     });
   });
 
@@ -252,6 +284,8 @@ describe('savePrintSettings', () => {
       theme: 'sepia',
       fontSize: 10.5,
       imageSize: 'medium',
+      lineHeight: 1.6,
+      paragraphSpacing: 0.5,
     });
   });
 });

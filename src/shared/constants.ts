@@ -77,6 +77,20 @@ export const A4 = {
 export const PRINT_FONT_SIZES = [9, 10.5, 11, 12, 13] as const;
 
 /**
+ * Body line heights offered in the print toolbar, as unitless multipliers.
+ * Discrete steps rather than a free slider: the toolbar has to name the
+ * current value, and a slider would produce heights it cannot display.
+ */
+export const PRINT_LINE_HEIGHTS = [1.4, 1.5, 1.6, 1.7, 1.8, 1.9] as const;
+
+/**
+ * Space between paragraphs offered in the print toolbar, in em.
+ * Discrete steps for the same reason as the line heights: every value on
+ * screen has to be one the toolbar can name.
+ */
+export const PRINT_PARAGRAPH_SPACINGS = [0, 0.25, 0.5, 0.75, 1, 1.25] as const;
+
+/**
  * Code blocks at or above this line count may break across pages.
  * Shorter ones are kept intact. Without this split, a long block forced to
  * avoid page breaks overflows and the browser silently drops its tail.

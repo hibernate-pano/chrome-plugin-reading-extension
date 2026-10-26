@@ -115,6 +115,10 @@ export interface PrintSettings {
   fontSize: number;
   /** Rendered size of article images */
   imageSize: PrintImageSize;
+  /** Body line height (unitless multiplier). Headings and code keep their own. */
+  lineHeight: number;
+  /** Space between paragraphs, in em. */
+  paragraphSpacing: number;
 }
 
 /**

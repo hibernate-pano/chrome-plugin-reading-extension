@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validatePrintSettings, DEFAULT_PRINT_SETTINGS } from '../../src/shared/printSettings';
-import { PRINT_FONT_SIZES, A4 } from '../../src/shared/constants';
+import { PRINT_FONT_SIZES, PRINT_LINE_HEIGHTS, PRINT_PARAGRAPH_SPACINGS, A4 } from '../../src/shared/constants';
 import { detectLanguage, normalizeLanguage, highlightCode } from '../../src/shared/codeHighlight';
 
 describe('validatePrintSettings', () => {
@@ -44,6 +44,37 @@ describe('validatePrintSettings', () => {
     expect(validatePrintSettings({ fontSize: 'big' as never }).fontSize).toBe(
       DEFAULT_PRINT_SETTINGS.fontSize
     );
+  });
+
+  it('accepts every offered line height', () => {
+    for (const value of PRINT_LINE_HEIGHTS) {
+      expect(validatePrintSettings({ lineHeight: value }).lineHeight).toBe(value);
+    }
+  });
+
+  it('snaps an arbitrary line height to the nearest offered step', () => {
+    expect(validatePrintSettings({ lineHeight: 1.62 }).lineHeight).toBe(1.6);
+    expect(validatePrintSettings({ lineHeight: 1.36 }).lineHeight).toBe(1.4);
+    expect(validatePrintSettings({ lineHeight: 9 }).lineHeight).toBe(1.9);
+  });
+
+  it('accepts every offered paragraph spacing', () => {
+    for (const value of PRINT_PARAGRAPH_SPACINGS) {
+      expect(validatePrintSettings({ paragraphSpacing: value }).paragraphSpacing).toBe(value);
+    }
+  });
+
+  it('snaps an arbitrary paragraph spacing to the nearest offered step', () => {
+    expect(validatePrintSettings({ paragraphSpacing: 0.1 }).paragraphSpacing).toBe(0);
+    expect(validatePrintSettings({ paragraphSpacing: 0.6 }).paragraphSpacing).toBe(0.5);
+    expect(validatePrintSettings({ paragraphSpacing: 2 }).paragraphSpacing).toBe(1.25);
+  });
+
+  it('falls back to the defaults for a missing or non-numeric density', () => {
+    expect(validatePrintSettings({}).lineHeight).toBe(DEFAULT_PRINT_SETTINGS.lineHeight);
+    expect(validatePrintSettings({}).paragraphSpacing).toBe(DEFAULT_PRINT_SETTINGS.paragraphSpacing);
+    expect(validatePrintSettings({ lineHeight: 'tight' as never }).lineHeight).toBe(1.6);
+    expect(validatePrintSettings({ paragraphSpacing: NaN }).paragraphSpacing).toBe(0.5);
   });
 });
 
