@@ -1012,3 +1012,14 @@ describe('print page · density steppers', () => {
     expect(byId<HTMLButtonElement>('para-gap-up').disabled).toBe(false);
   });
 });
+
+describe('print page · block ids', () => {
+  it('gives every flow block of the article a stable id', async () => {
+    await boot({ payload: payload({ content: '<p>一</p><p>二</p>' }) });
+
+    const ids = Array.from(sheet().querySelectorAll('.p-content [data-p-block]')).map((el) =>
+      el.getAttribute('data-p-block')
+    );
+    expect(ids).toEqual(['b1', 'b2']);
+  });
+});

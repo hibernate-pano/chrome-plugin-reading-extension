@@ -214,6 +214,18 @@ describe('renderSheets', () => {
   it('renders nothing for an empty page list', () => {
     expect(renderSheets(blocks, [], container, 1000)).toHaveLength(0);
   });
+
+  it('records where each page starts in the document', () => {
+    const sheets = renderSheets(blocks, [0, 500, 1000], container, 1500);
+    expect(sheets.map((s) => s.dataset.pageStart)).toEqual(['0', '500', '1000']);
+  });
+
+  it('carries the source block id onto the copy', () => {
+    blocks[0]!.element.dataset.pBlock = 'b1';
+    renderSheets(blocks, [0], container, 400);
+    const clone = container.querySelector(`.${PAGE_CLONE_CLASS} > *`);
+    expect((clone as HTMLElement).dataset.pBlock).toBe('b1');
+  });
 });
 
 /**

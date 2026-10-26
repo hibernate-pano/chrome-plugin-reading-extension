@@ -38,6 +38,7 @@ import { eagerizeImages, waitForImages, type ImageWaitResult } from './prepareIm
 import { markOversizedBlocks, clearBreakMarks } from './markBreaks';
 import { measureDocument, paginate, PAGE_CONTENT_HEIGHT_PX } from './paginate';
 import { renderSheets, clearSheets } from './renderSheets';
+import { assignBlockIds } from './trim';
 
 // Order matters. Both files style the same selectors at the same specificity —
 // a media query adds none — so the later import wins outright. `print.css`
@@ -534,6 +535,14 @@ async function main(): Promise<void> {
   const doc = buildDocument(payload);
   eagerizeImages(doc);
   contentDoc = doc;
+
+  // The blocks are labelled before the first measurement, so the ids describe
+  // the document that gets cut rather than one that has already been cut.
+  // Only the article body is labelled: the title and the footer are not
+  // article blocks and must not be offered as cut points.
+  const articleContent = doc.querySelector<HTMLElement>('.p-content');
+  if (articleContent) assignBlockIds(articleContent);
+
   elements.sheet.replaceChildren(doc);
 
   applySettings();

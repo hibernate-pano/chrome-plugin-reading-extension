@@ -82,6 +82,9 @@ export function renderSheets(
     // `data-page` is what the stylesheet and the tests key off; it also gives
     // the print rule a stable hook for "every sheet but the last ends a page".
     sheet.dataset.page = String(i + 1);
+    // Where this page begins in the document. The trim shortcut reads it to
+    // find the first block that *starts* here.
+    sheet.dataset.pageStart = String(start);
 
     // The clipping box is the *content* area, not the sheet. Clipping at the
     // sheet's own border box would let the tail of the slice run into the
