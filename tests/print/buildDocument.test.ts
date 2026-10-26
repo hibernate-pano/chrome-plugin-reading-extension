@@ -300,6 +300,69 @@ describe('buildDocument image wrapping', () => {
     expect(doc.querySelectorAll('.p-figure')).toHaveLength(1);
     expect(doc.querySelector('.p-figure .p-figure')).toBeNull();
   });
+
+  it('does not nest a figure inside a figure that holds a paragraph', () => {
+    // The figure is the unit of the picture, however deep the image sits in
+    // it. A figure inside a figure is invalid HTML, and the outer figure
+    // would go without the margins and the caption styles.
+    const doc = buildDocument(
+      payload({
+        content:
+          '<figure><p>文字<img src="https://example.com/a.png" alt="a"></p><figcaption>图注</figcaption></figure>',
+      })
+    );
+
+    const figure = doc.querySelector('figure');
+    expect(doc.querySelectorAll('.p-figure')).toHaveLength(1);
+    expect(doc.querySelector('.p-figure .p-figure')).toBeNull();
+    expect(figure?.classList.contains('p-figure')).toBe(true);
+    expect(figure?.querySelector('figcaption')?.textContent).toBe('图注');
+    expect(figure?.querySelector('figcaption')?.classList.contains('p-caption')).toBe(true);
+    expect(figure?.querySelector('img')).not.toBeNull();
+  });
+
+  it('does not nest a figure inside a figure that holds a div', () => {
+    // The shape WordPress emits: <figure><div><img></div><figcaption>.
+    const doc = buildDocument(
+      payload({
+        content:
+          '<figure><div><img src="https://example.com/a.png" alt="a"></div><figcaption>图注</figcaption></figure>',
+      })
+    );
+
+    const figure = doc.querySelector('figure');
+    expect(doc.querySelectorAll('.p-figure')).toHaveLength(1);
+    expect(doc.querySelector('.p-figure .p-figure')).toBeNull();
+    expect(figure?.classList.contains('p-figure')).toBe(true);
+    expect(figure?.querySelector('figcaption')?.classList.contains('p-caption')).toBe(true);
+    expect(figure?.querySelector('img')).not.toBeNull();
+  });
+
+  it('does not build a paragraph that holds nothing but an empty span', () => {
+    // An empty inline shell shows nothing, so it must not leave an empty
+    // paragraph behind — that paragraph was never on the screen.
+    const doc = buildDocument(
+      payload({
+        content: '<p>文字<img src="https://example.com/a.png" alt="a"><span></span></p>',
+      })
+    );
+
+    const content = doc.querySelector('.p-content');
+    const children = content ? Array.from(content.children) : [];
+    expect(children.map((child) => child.tagName)).toEqual(['P', 'FIGURE']);
+  });
+
+  it('keeps a paragraph whose only content is a line break', () => {
+    // A line break renders an empty line on the screen, so the PDF keeps it.
+    const doc = buildDocument(
+      payload({ content: '<p><br><img src="https://example.com/a.png" alt="a"></p>' })
+    );
+
+    const content = doc.querySelector('.p-content');
+    const children = content ? Array.from(content.children) : [];
+    expect(children.map((child) => child.tagName)).toEqual(['P', 'FIGURE']);
+    expect(children[0]?.querySelector('br')).not.toBeNull();
+  });
 });
 
 describe('buildFilename', () => {

@@ -119,14 +119,44 @@ function isCaption(node: Node): boolean {
 }
 
 /**
+ * Elements that render something of their own.
+ *
+ * An empty inline shell (`<span></span>`) shows nothing, so it must not keep
+ * a paragraph alive on its own. A line break does render — the source had
+ * that empty line on the screen, and the PDF has to show it too.
+ */
+const RENDERED_TAGS = new Set([
+  'IMG',
+  'BR',
+  'HR',
+  'TABLE',
+  'SVG',
+  'CANVAS',
+  'VIDEO',
+  'AUDIO',
+  'IFRAME',
+  'INPUT',
+  'TEXTAREA',
+  'SELECT',
+  'BUTTON',
+  'EMBED',
+  'OBJECT',
+]);
+
+/**
  * Tell whether an element still holds anything a reader would see.
  *
  * A paragraph that carried nothing but a picture is empty once the picture
  * moves into its figure, and an empty paragraph still spends its margins.
+ * "Anything to see" means text, or an element that renders on its own — see
+ * RENDERED_TAGS.
  */
 function isBlank(element: Element): boolean {
-  if (element.children.length > 0) return false;
-  return (element.textContent ?? '').trim() === '';
+  if ((element.textContent ?? '').trim() !== '') return false;
+  for (const child of Array.from(element.querySelectorAll('*'))) {
+    if (RENDERED_TAGS.has(child.tagName)) return false;
+  }
+  return true;
 }
 
 /**
@@ -145,11 +175,16 @@ function processImage(image: HTMLImageElement): void {
 
   const parent = image.parentElement;
 
-  if (parent?.tagName === 'FIGURE') {
-    // The parent already is a figure, and it holds the caption. Building a
-    // new one and moving only the image across would drop the caption.
-    parent.classList.add('p-figure');
-    markCaptions(parent);
+  // The closest figure ancestor is the unit of the picture, however deep the
+  // image sits in it — WordPress writes <figure><div><img></div><figcaption>.
+  // Reusing it is what keeps the document free of nested figures, which are
+  // invalid HTML and would leave the outer figure without the margins and
+  // the caption styles. The reader view centres a figure's content too, so
+  // printing the figure as a whole matches what the screen shows.
+  const figureAncestor = image.closest('figure');
+  if (figureAncestor) {
+    figureAncestor.classList.add('p-figure');
+    markCaptions(figureAncestor);
     return;
   }
 
@@ -173,7 +208,11 @@ function processImage(image: HTMLImageElement): void {
 
     // The caption belongs to the picture. A <figcaption> written inside the
     // paragraph is hoisted out of it by the HTML parser — a <p> may not hold
-    // one — so it arrives as the paragraph's next sibling.
+    // one — so it arrives as the paragraph's next sibling. Adopting it here
+    // is safe: this branch only runs for a picture that has no figure
+    // ancestor, and a legal <figcaption> always lives inside its own
+    // figure, so the one found here was left on its own and belongs to this
+    // picture.
     const caption = parent.nextElementSibling;
     if (caption && isCaption(caption)) {
       figure.appendChild(caption);
