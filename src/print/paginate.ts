@@ -260,6 +260,20 @@ function collectFlowNodes(content: HTMLElement): FlowNode[] {
   return nodes;
 }
 
+/**
+ * The flow blocks of a container, in document order.
+ *
+ * The same walk `measureDocument` uses, filtered to elements — the bare text
+ * runs it also finds have no box of their own and are not blocks. Exported so
+ * the trim code can label exactly the units the paginator measures, instead of
+ * keeping a second copy of the wrapper rules.
+ */
+export function collectFlowBlocks(content: HTMLElement): HTMLElement[] {
+  return collectFlowNodes(content).filter(
+    (node): node is HTMLElement => node instanceof HTMLElement
+  );
+}
+
 /** Classify how a block may be cut. */
 function splittabilityOf(node: FlowNode): Splittability {
   if (!(node instanceof HTMLElement)) return 'lines';
